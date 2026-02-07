@@ -30,7 +30,7 @@ const navSections = [
   { id: "catalog", label: "Catálogo", icon: PackageSearch },
   { id: "stock", label: "Stock", icon: Boxes },
   { id: "tracking", label: "Tracking", icon: Truck },
-  { id: "notes", label: "Notas", icon: MessageCircle },
+  { id: "pendings", label: "Pendings", icon: MessageCircle },
 ];
 
 const kpis = [
@@ -197,18 +197,44 @@ const shipmentsSeed = [
 
 const shipmentStatuses = ["Pendiente pago", "Preparando", "Despachado", "En tránsito", "Hold aduana", "Entregado"];
 
-const notes = [
+const kanbanColumns = [
+  { id: "inbox", title: "Pendientes", color: "bg-slate-100" },
+  { id: "in_progress", title: "En curso", color: "bg-amber-100" },
+  { id: "done", title: "Listo", color: "bg-slate-50" },
+];
+
+const initialKanbanCards = [
   {
-    title: "Checklist nueva tienda Lima",
-    detail: "Enviar merchandising, kit vitrina y capacitación virtual.",
+    id: "task-1",
+    column: "inbox",
+    title: "Actualizar catálogo mayorista",
+    assignee: "Belén",
+    detail: "Sumar nuevos packs 2024 y fotos reales.",
+    due: "Mar 05",
   },
   {
-    title: "Alertar sobre top sellers",
-    detail: "Layering Aura agotará en 7 días. Proponer alternativa.",
+    id: "task-2",
+    column: "in_progress",
+    title: "Armar reposición Capri",
+    assignee: "Aura",
+    detail: "Pulseras + displays, enviar cotización a Córdoba.",
+    due: "Mar 02",
   },
   {
-    title: "Live Shopping MX",
-    detail: "Documentar playbook. Ticket +21% en la última sesión.",
+    id: "task-3",
+    column: "in_progress",
+    title: "Revisar kit Live Shopping",
+    assignee: "Maru",
+    detail: "Confirmar stock y apuntar insights para call.",
+    due: "Hoy",
+  },
+  {
+    id: "task-4",
+    column: "done",
+    title: "Enviar pack bienvenida Lima",
+    assignee: "Equipo Ops",
+    detail: "Check-list firmado y logística agendada.",
+    due: "Feb 28",
   },
 ];
 
@@ -307,6 +333,14 @@ export default function BackofficePage() {
   const [clientFilter, setClientFilter] = useState("all");
   const [noteForm, setNoteForm] = useState({ orderId: shipmentsSeed[0].id, text: "" });
   const [timelineOrder, setTimelineOrder] = useState<string | null>(null);
+  const [kanbanCards, setKanbanCards] = useState(initialKanbanCards);
+  const [newTask, setNewTask] = useState({
+    title: "",
+    assignee: "",
+    detail: "",
+    due: "",
+    column: "inbox",
+  });
 
   const overviewContent = useMemo(() => renderOverview(), [catalogData]);
 
@@ -882,7 +916,7 @@ export default function BackofficePage() {
           </Card>
         </div>
 
-        <Card className="border border-slate-200 bg-white">
+        <Card className="mx-auto max-w-5xl border border-slate-200 bg-white">
           <CardHeader>
             <CardTitle>Bulk pricing</CardTitle>
             <CardDescription>Aplicá markup/markdown a precios mayoristas o minoristas.</CardDescription>
@@ -1482,36 +1516,138 @@ export default function BackofficePage() {
     );
   }
 
-  function renderNotes() {
+  function renderPendings() {
     return (
-      <div className="space-y-4">
+      <div className="space-y-6">
         <div className="space-y-1">
-          <h2 className="text-xl font-semibold text-slate-900">Notas internas</h2>
-          <p className="text-sm text-slate-500">Checklist compartido con el equipo.</p>
+          <h2 className="text-xl font-semibold text-slate-900">Pendings del equipo</h2>
+          <p className="text-sm text-slate-500">Seguimiento Kanban: asigná tareas y cambiá status.</p>
         </div>
-        <div className="grid gap-4 md:grid-cols-2">
-          {notes.map((note) => (
-            <Card key={note.title} className="border border-slate-200 bg-white">
+        <Card className="border border-slate-200 bg-white">
+          <CardHeader>
+            <CardTitle>Agregar tarea</CardTitle>
+            <CardDescription>Crear un nuevo pendiente en cualquier columna.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form
+              className="grid gap-3 md:grid-cols-4"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (!newTask.title.trim()) {
+                  return;
+                }
+                setKanbanCards((prev) => [
+                  ...prev,
+                  {
+                    id: `task-${Date.now()}`,
+                    column: newTask.column,
+                    title: newTask.title,
+                    assignee: newTask.assignee,
+                    detail: newTask.detail,
+                    due: newTask.due,
+                  },
+                ]);
+                setNewTask({ title: "", assignee: "", detail: "", due: "", column: "inbox" });
+              }}
+            >
+              <label className="text-xs uppercase tracking-[0.2em] text-slate-400">
+                Tarea
+                <input
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
+                  value={newTask.title}
+                  onChange={(event) => setNewTask((prev) => ({ ...prev, title: event.target.value }))}
+                  required
+                />
+              </label>
+              <label className="text-xs uppercase tracking-[0.2em] text-slate-400">
+                Asignado
+                <input
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
+                  value={newTask.assignee}
+                  onChange={(event) => setNewTask((prev) => ({ ...prev, assignee: event.target.value }))}
+                />
+              </label>
+              <label className="text-xs uppercase tracking-[0.2em] text-slate-400">
+                Detalle
+                <input
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
+                  value={newTask.detail}
+                  onChange={(event) => setNewTask((prev) => ({ ...prev, detail: event.target.value }))}
+                />
+              </label>
+              <label className="text-xs uppercase tracking-[0.2em] text-slate-400">
+                Due
+                <input
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
+                  value={newTask.due}
+                  onChange={(event) => setNewTask((prev) => ({ ...prev, due: event.target.value }))}
+                />
+              </label>
+              <label className="text-xs uppercase tracking-[0.2em] text-slate-400 md:col-span-2">
+                Columna
+                <select
+                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
+                  value={newTask.column}
+                  onChange={(event) => setNewTask((prev) => ({ ...prev, column: event.target.value }))}
+                >
+                  {kanbanColumns.map((column) => (
+                    <option key={column.id} value={column.id}>
+                      {column.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="md:col-span-2 md:flex md:items-end">
+                <Button type="submit" className="w-full bg-slate-900 text-white">
+                  Añadir a tablero
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+        <div className="mx-auto grid w-full max-w-5xl gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {kanbanColumns.map((column) => (
+            <Card key={column.id} className="border border-slate-200 bg-white">
               <CardHeader>
-                <CardTitle className="text-base">{note.title}</CardTitle>
+                <CardTitle>{column.title}</CardTitle>
+                <CardDescription>
+                  {kanbanCards.filter((card) => card.column === column.id).length} pendientes
+                </CardDescription>
               </CardHeader>
-              <CardContent className="text-sm text-slate-600">{note.detail}</CardContent>
+              <CardContent className="space-y-3">
+                {kanbanCards
+                  .filter((card) => card.column === column.id)
+                  .map((card) => (
+                    <div key={card.id} className="space-y-2 rounded-2xl border border-slate-100 px-3 py-2">
+                      <p className="text-sm font-semibold text-slate-900">{card.title}</p>
+                      {card.detail && <p className="text-xs text-slate-500">{card.detail}</p>}
+                      <div className="flex items-center justify-between text-xs text-slate-500">
+                        <span>{card.assignee || "Unassigned"}</span>
+                        <span>{card.due || "Sin fecha"}</span>
+                      </div>
+                      <select
+                        className="w-full rounded-xl border border-slate-200 px-2 py-1 text-xs"
+                        value={card.column}
+                        onChange={(event) =>
+                          setKanbanCards((prev) =>
+                            prev.map((item) => (item.id === card.id ? { ...item, column: event.target.value } : item)),
+                          )
+                        }
+                      >
+                        {kanbanColumns.map((option) => (
+                          <option key={option.id} value={option.id}>
+                            {option.title}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ))}
+                {kanbanCards.filter((card) => card.column === column.id).length === 0 && (
+                  <p className="text-xs text-slate-400">Sin tareas asignadas.</p>
+                )}
+              </CardContent>
             </Card>
           ))}
-          <Card className="border border-slate-200 bg-white">
-            <CardHeader>
-              <CardTitle>Equipo online</CardTitle>
-              <CardDescription>Disponibilidad de asesoras.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {["Belén · Cono Sur", "Aura · Live Commerce", "Maru · Brasil"].map((advisor) => (
-                <div key={advisor} className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2 text-sm">
-                  <span>{advisor}</span>
-                  <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">Online</span>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
         </div>
       </div>
     );
@@ -1527,8 +1663,8 @@ export default function BackofficePage() {
         return renderStock();
       case "tracking":
         return renderTracking();
-      case "notes":
-        return renderNotes();
+      case "pendings":
+        return renderPendings();
       default:
         return renderCatalog();
     }
@@ -1596,7 +1732,7 @@ function Breadcrumb({ active }: { active: string }) {
     catalog: "Catálogo",
     stock: "Stock",
     tracking: "Tracking",
-    notes: "Notas",
+    pendings: "Pendings",
   };
 
   return (
