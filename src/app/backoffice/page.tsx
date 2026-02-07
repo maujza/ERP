@@ -238,11 +238,11 @@ const initialKanbanCards = [
   },
 ];
 
-const marginByChannel = [
-  { label: "Boutiques", value: 58 },
-  { label: "Marketplace", value: 42 },
-  { label: "Corners", value: 36 },
-  { label: "E-commerce", value: 30 },
+const topClients = [
+  { label: "Luna Concept Store", contribution: 28, growth: "+18%" },
+  { label: "Live Shopping MX", contribution: 23, growth: "+12%" },
+  { label: "Galería Cumbre", contribution: 16, growth: "-5%" },
+  { label: "Concept Palermo", contribution: 11, growth: "+9%" },
 ];
 
 const inventoryProducts = [
@@ -612,23 +612,26 @@ export default function BackofficePage() {
 
           <Card className="border border-slate-200 bg-white">
             <CardHeader>
-              <CardTitle>Margen por canal</CardTitle>
-              <CardDescription>Última semana operativa</CardDescription>
+              <CardTitle>Clientes top por revenue</CardTitle>
+              <CardDescription>Participación sobre el total</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {marginByChannel.map((channel) => (
-                <div key={channel.label}>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="font-semibold text-slate-800">{channel.label}</span>
-                    <span className="text-slate-500">{channel.value}%</span>
+            <CardContent className="space-y-4 text-sm">
+              {topClients.map((client, index) => (
+                <div key={client.label} className="space-y-2 rounded-2xl border border-slate-100 p-3">
+                  <div className="flex items-center justify-between">
+                    <p className="font-semibold text-slate-900">
+                      {index + 1}. {client.label}
+                    </p>
+                    <span className="text-xs text-slate-500">{client.growth} vs mes anterior</span>
                   </div>
-                  <div className="mt-2 h-16 rounded-2xl border border-slate-100 bg-slate-50">
-                    <div
-                      className="flex h-full items-center justify-end rounded-2xl bg-gradient-to-r from-emerald-400 to-emerald-200 pr-2 text-xs font-semibold text-emerald-900"
-                      style={{ width: `${channel.value}%` }}
-                    >
-                      {channel.value}% margen
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 flex-1 rounded-full bg-slate-100">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-200"
+                        style={{ width: `${client.contribution}%` }}
+                      />
                     </div>
+                    <span className="text-sm font-semibold text-slate-800">{client.contribution}%</span>
                   </div>
                 </div>
               ))}
