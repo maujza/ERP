@@ -201,42 +201,52 @@ export default function CatalogPage() {
   };
 
   return (
-    <div className="bg-slate-50">
+    <div className="bg-[#f7f7f7]">
       <div className="relative isolate overflow-hidden">
-        <div className="absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-slate-900 via-slate-900/95 to-transparent" />
+        <div className="absolute inset-x-0 top-0 h-96 bg-gradient-to-b from-[#111111] via-[#1f1f1f]/95 to-[#1f1f1f]/70" />
         <main className="relative mx-auto flex min-h-screen max-w-6xl flex-col gap-10 px-6 py-16 md:px-10">
-          <section className="space-y-6 text-white">
-            <Badge variant="glow" className="bg-white/15 text-white">
+          <section className="space-y-6 pb-6 text-white">
+            <Badge variant="glow" className="bg-white/10 text-white">
               Catálogo mayorista
             </Badge>
             <div className="grid gap-2">
               <h1 className="text-4xl font-semibold leading-tight">
                 Seleccioná packs, filtrá por categoría y levantá tu carrito mayorista.
               </h1>
-              <p className="text-lg text-slate-200">
+              <p className="max-w-2xl text-lg text-white/80 drop-shadow-[0_2px_10px_rgba(0,0,0,0.55)]">
                 Todos los precios incluyen packaging listo para exhibir y etiquetas con precio
                 sugerido. Coordinamos envíos a todo el país en 24/72 horas.
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
-              <Button asChild size="lg" variant="outline" className="text-slate-900">
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="border-white/40 bg-white/5 text-white hover:bg-white/15"
+              >
                 <Link href="/">Volver al home</Link>
               </Button>
-              <Button size="lg" variant="muted" className="bg-amber-400 text-slate-900 hover:bg-amber-300">
+              <Button
+                size="lg"
+                variant="muted"
+              >
                 Descargar lista completa
               </Button>
             </div>
           </section>
 
-          <section className="grid gap-8 lg:grid-cols-[280px_1fr]">
-            <Card className="border-slate-200/80 bg-white/80">
+          <section className="grid gap-8 pt-6 lg:grid-cols-[280px_1fr]">
+            <Card className="border-black/10 bg-white/90">
               <CardHeader>
-                <CardTitle>Filtros</CardTitle>
-                <CardDescription>Ajustá la vista según tus necesidades.</CardDescription>
+                <CardTitle className="text-[#111111]">Filtros</CardTitle>
+                <CardDescription className="text-[#444444]">
+                  Ajustá la vista según tus necesidades.
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#6b6b6b]">
                     Buscar
                   </p>
                   <input
@@ -244,12 +254,12 @@ export default function CatalogPage() {
                     placeholder="Argollas, kits, perlas..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    className="w-full rounded-2xl border border-slate-200/80 bg-white px-4 py-2 text-sm outline-none focus:border-slate-900"
+                    className="w-full rounded-2xl border border-black/10 bg-white px-4 py-2 text-sm text-[#111111] outline-none focus:border-black/50"
                   />
                 </div>
 
                 <div className="space-y-3">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#6b6b6b]">
                     Categorías
                   </p>
                   <div className="flex flex-wrap gap-2">
@@ -261,8 +271,8 @@ export default function CatalogPage() {
                           onClick={() => toggleCategory(category)}
                           className={`rounded-full border px-3 py-1 text-sm transition ${
                             isActive
-                              ? "border-slate-900 bg-slate-900 text-white"
-                              : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
+                              ? "border-[#111111] bg-[#111111] text-white"
+                              : "border-black/10 bg-white text-[#444444] hover:border-black/20"
                           }`}
                         >
                           {category}
@@ -273,7 +283,7 @@ export default function CatalogPage() {
                 </div>
 
                 <div className="space-y-3">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#6b6b6b]">
                     Precio
                   </p>
                   <div className="flex flex-col gap-2">
@@ -287,8 +297,8 @@ export default function CatalogPage() {
                           }
                           className={`rounded-2xl border px-4 py-2 text-left text-sm transition ${
                             isActive
-                              ? "border-amber-500 bg-amber-100 text-amber-900"
-                              : "border-slate-200 bg-white text-slate-700 hover:border-slate-300"
+                              ? "border-[#ff2d55] bg-[#ffe1e8] text-[#111111]"
+                              : "border-black/10 bg-white text-[#444444] hover:border-black/20"
                           }`}
                         >
                           {option.label}
@@ -301,7 +311,7 @@ export default function CatalogPage() {
                 {(search || selectedCategories.length > 0 || activePrice) && (
                   <Button
                     variant="ghost"
-                    className="w-full justify-center text-slate-700 hover:bg-slate-100"
+                    className="w-full justify-center text-[#444444] hover:bg-[#f0f0f0]"
                     onClick={() => {
                       setSearch("");
                       setSelectedCategories([]);
@@ -316,9 +326,9 @@ export default function CatalogPage() {
 
             <div className="space-y-6">
               <div className="flex flex-col gap-2">
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-[#6b6b6b]">
                   {filteredProducts.length} resultados ·{" "}
-                  <span className="font-medium text-slate-900">
+                  <span className="font-medium text-[#111111]">
                     {selectedCategories.length > 0
                       ? selectedCategories.join(" · ")
                       : "Todas las categorías"}
@@ -339,24 +349,26 @@ export default function CatalogPage() {
                           className="object-cover"
                         />
                         <div className="absolute left-4 top-4 flex gap-2">
-                          <Badge variant="outline" className="bg-white/80">
+                          <Badge variant="outline" className="bg-white/90">
                             {product.category}
                           </Badge>
-                          <Badge variant="glow" className="bg-slate-900/80 text-white">
+                          <Badge variant="glow" className="bg-[#111111]/90 text-white">
                             {product.stock}
                           </Badge>
                         </div>
                       </div>
                       <CardHeader className="space-y-2">
-                        <CardTitle>{product.name}</CardTitle>
-                        <CardDescription>{product.description}</CardDescription>
+                        <CardTitle className="text-[#111111]">{product.name}</CardTitle>
+                        <CardDescription className="text-[#444444]">
+                          {product.description}
+                        </CardDescription>
                       </CardHeader>
                       <CardContent className="flex flex-1 flex-col gap-4">
                         <div className="flex flex-wrap gap-2">
                           {product.tags.map((tag) => (
                             <span
                               key={tag}
-                              className="rounded-full bg-slate-100 px-3 py-1 text-xs text-slate-700"
+                              className="rounded-full bg-[#f0f0f0] px-3 py-1 text-xs text-[#444444]"
                             >
                               {tag}
                             </span>
@@ -364,17 +376,22 @@ export default function CatalogPage() {
                         </div>
                         <div className="mt-auto flex items-center justify-between">
                           <div>
-                            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
+                            <p className="text-xs uppercase tracking-[0.2em] text-[#6b6b6b]">
                               {product.pack}
                             </p>
-                            <p className="text-2xl font-semibold text-slate-900">
+                            <p className="text-2xl font-semibold text-[#111111]">
                               {formatPrice(product.price)}
                             </p>
                           </div>
-                          <Button size="lg" onClick={() => handleAddToCart(product.id)}>
+                          <Button
+                            size="lg"
+                            variant="outline"
+                            className="border-black/20 text-[#111111] hover:border-black/30 hover:bg-[#f7f7f7]"
+                            onClick={() => handleAddToCart(product.id)}
+                          >
                             Añadir
                             {quantityInCart > 0 && (
-                              <span className="ml-2 rounded-full bg-white/25 px-2 py-0.5 text-xs">
+                              <span className="ml-2 rounded-full bg-black/10 px-2 py-0.5 text-xs">
                                 {quantityInCart}
                               </span>
                             )}
@@ -389,15 +406,15 @@ export default function CatalogPage() {
           </section>
 
           <section id="cart" className="grid gap-6 lg:grid-cols-[1fr_360px]">
-            <Card className="border-slate-200/80 bg-white/80">
+            <Card className="border-black/10 bg-white/90">
               <CardHeader>
-                <CardTitle>¿Cómo seguimos?</CardTitle>
+                <CardTitle className="text-[#111111]">¿Cómo seguimos?</CardTitle>
                 <CardDescription>
                   Sumá productos al carrito y luego envianos el listado por WhatsApp o email para
                   confirmar stock y envío.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3 text-sm text-slate-600">
+              <CardContent className="space-y-3 text-sm text-[#444444]">
                 <p>
                   Cuando confirmemos tu orden enviamos un link de pago o factura electrónica. El
                   pedido se arma en 24/48h y despachamos con tu logística habitual o la nuestra.
@@ -409,10 +426,10 @@ export default function CatalogPage() {
               </CardContent>
             </Card>
 
-            <Card className="sticky top-10 h-fit border-slate-200/80 bg-white/90 shadow-[0_22px_60px_rgba(15,23,42,0.12)]">
+            <Card className="sticky top-10 h-fit border-black/10 bg-white/95 shadow-[0_22px_60px_rgba(0,0,0,0.12)]">
               <CardHeader className="space-y-1">
-                <CardTitle>Carrito mayorista</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-[#111111]">Carrito mayorista</CardTitle>
+                <CardDescription className="text-[#444444]">
                   {cartItems.length === 0
                     ? "Aún no agregaste productos."
                     : `${cartItems.length} referencias seleccionadas.`}
@@ -420,7 +437,7 @@ export default function CatalogPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 {cartItems.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-slate-200 px-4 py-6 text-sm text-slate-500">
+                  <div className="rounded-2xl border border-dashed border-black/10 px-4 py-6 text-sm text-[#6b6b6b]">
                     Seleccioná los packs que quieras cotizar y aparecerán acá para enviarlos al team
                     comercial.
                   </div>
@@ -429,26 +446,26 @@ export default function CatalogPage() {
                     {cartItems.map(({ product, quantity }) => (
                       <div
                         key={product.id}
-                        className="flex items-start justify-between rounded-2xl border border-slate-100 bg-slate-50/80 p-3"
+                        className="flex items-start justify-between rounded-2xl border border-black/10 bg-[#f5f5f5] p-3"
                       >
                         <div>
-                          <p className="text-sm font-semibold text-slate-900">{product.name}</p>
-                          <p className="text-xs text-slate-500">{product.pack}</p>
-                          <p className="text-sm text-slate-700">
+                          <p className="text-sm font-semibold text-[#111111]">{product.name}</p>
+                          <p className="text-xs text-[#6b6b6b]">{product.pack}</p>
+                          <p className="text-sm text-[#444444]">
                             {formatPrice(product.price)} · {quantity} uds
                           </p>
                         </div>
                         <div className="flex items-center gap-1">
                           <button
                             onClick={() => updateQuantity(product.id, -1)}
-                            className="h-7 w-7 rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-700"
+                            className="h-7 w-7 rounded-full border border-black/10 bg-white text-sm font-semibold text-[#444444]"
                           >
                             -
                           </button>
                           <span className="px-2 text-sm font-semibold">{quantity}</span>
                           <button
                             onClick={() => updateQuantity(product.id, 1)}
-                            className="h-7 w-7 rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-700"
+                            className="h-7 w-7 rounded-full border border-black/10 bg-white text-sm font-semibold text-[#444444]"
                           >
                             +
                           </button>
@@ -458,7 +475,7 @@ export default function CatalogPage() {
                   </div>
                 )}
 
-                <div className="rounded-2xl bg-slate-900 px-4 py-5 text-white">
+                <div className="rounded-2xl bg-[#111111] px-4 py-5 text-white">
                   <div className="flex items-center justify-between text-sm text-white/70">
                     <span>Subtotal estimado</span>
                     <span>{formatPrice(cartTotal)}</span>
@@ -468,7 +485,7 @@ export default function CatalogPage() {
                       asChild
                       size="lg"
                       variant="muted"
-                      className="w-full justify-center bg-amber-400 text-slate-900 hover:bg-amber-300"
+                      className="w-full justify-center"
                       disabled={cartItems.length === 0}
                     >
                       <Link

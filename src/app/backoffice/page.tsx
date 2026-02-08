@@ -41,14 +41,14 @@ const kpis = [
 ];
 
 const revenueTrend = [
-  { month: "Ene", amount: 52 },
-  { month: "Feb", amount: 64 },
-  { month: "Mar", amount: 70 },
-  { month: "Abr", amount: 62 },
-  { month: "May", amount: 78 },
-  { month: "Jun", amount: 83 },
-  { month: "Jul", amount: 96 },
-  { month: "Ago", amount: 105 },
+  { month: "Ene", amount: 78 },
+  { month: "Feb", amount: 80 },
+  { month: "Mar", amount: 82 },
+  { month: "Abr", amount: 79 },
+  { month: "May", amount: 81 },
+  { month: "Jun", amount: 84 },
+  { month: "Jul", amount: 80 },
+  { month: "Ago", amount: 83 },
 ];
 
 const salesByCategory = [
@@ -68,13 +68,13 @@ const orderStatusData = [
 
 const lowStockAlerts = [
   { sku: "AUR-LAY-08", product: "Layering Aura", depot: "CABA", remaining: 24 },
-  { sku: "SET-PER-06", product: "Set Perlas Boreal", depot: "CDMX", remaining: 18 },
-  { sku: "KIT-VIT-80", product: "Kit Vitrina Premium", depot: "CBA", remaining: 12 },
+  { sku: "SET-PER-06", product: "Set Perlas Boreal", depot: "ZONA SUR", remaining: 18 },
+  { sku: "KIT-VIT-80", product: "Kit Vitrina Premium", depot: "CABA", remaining: 12 },
 ];
 
 const stuckOrders = [
   { id: "PED-802", retailer: "Galería Norte", status: "Aprobación", time: "36h" },
-  { id: "PED-799", retailer: "Live Shopping MX", status: "Despacho", time: "30h" },
+  { id: "PED-799", retailer: "Showroom Caballito", status: "Despacho", time: "30h" },
   { id: "PED-780", retailer: "Concept Palermo", status: "Pago", time: "42h" },
 ];
 
@@ -135,8 +135,7 @@ const nearOutOfStock = [
 
 const warehouses = [
   { id: "CABA", location: "Depósito Parque Patricios", available: 420, reserved: 120 },
-  { id: "CBA", location: "Hub Córdoba", available: 280, reserved: 64 },
-  { id: "CDMX", location: "Fulfillment México", available: 190, reserved: 22 },
+  { id: "ZS", location: "Depósito Zona Sur (Lanús)", available: 280, reserved: 64 },
 ];
 
 const shipmentsSeed = [
@@ -157,7 +156,7 @@ const shipmentsSeed = [
   {
     id: "PED-982",
     retailer: "Galería Cumbre",
-    status: "Hold aduana",
+    status: "Demora operador",
     carrier: "Correo Argentino",
     eta: "Revisión",
     hasClaim: true,
@@ -165,15 +164,15 @@ const shipmentsSeed = [
       { type: "status", value: "Pendiente pago", timestamp: "2024-02-01 09:00" },
       { type: "status", value: "Preparando", timestamp: "2024-02-01 13:00" },
       { type: "status", value: "Despachado", timestamp: "2024-02-02 07:00" },
-      { type: "note", value: "Cliente reporta demora en Aduana", timestamp: "2024-02-04 11:20" },
-      { type: "status", value: "Hold aduana", timestamp: "2024-02-04 11:21" },
+      { type: "note", value: "Cliente reporta demora en planta de reparto", timestamp: "2024-02-04 11:20" },
+      { type: "status", value: "Demora operador", timestamp: "2024-02-04 11:21" },
     ],
   },
   {
     id: "PED-983",
-    retailer: "Live Shopping MX",
+    retailer: "Showroom Caballito",
     status: "Despachado",
-    carrier: "FedEx",
+    carrier: "Andreani",
     eta: "Entrega hoy 18hs",
     hasClaim: false,
     history: [
@@ -195,7 +194,14 @@ const shipmentsSeed = [
   },
 ];
 
-const shipmentStatuses = ["Pendiente pago", "Preparando", "Despachado", "En tránsito", "Hold aduana", "Entregado"];
+const shipmentStatuses = [
+  "Pendiente pago",
+  "Preparando",
+  "Despachado",
+  "En tránsito",
+  "Demora operador",
+  "Entregado",
+];
 
 const kanbanColumns = [
   { id: "inbox", title: "Pendientes", color: "bg-slate-100" },
@@ -217,7 +223,7 @@ const initialKanbanCards = [
     column: "in_progress",
     title: "Armar reposición Capri",
     assignee: "Aura",
-    detail: "Pulseras + displays, enviar cotización a Córdoba.",
+    detail: "Pulseras + displays, enviar cotización a Zona Sur.",
     due: "Mar 02",
   },
   {
@@ -231,7 +237,7 @@ const initialKanbanCards = [
   {
     id: "task-4",
     column: "done",
-    title: "Enviar pack bienvenida Lima",
+    title: "Enviar pack bienvenida La Plata",
     assignee: "Equipo Ops",
     detail: "Check-list firmado y logística agendada.",
     due: "Feb 28",
@@ -240,7 +246,7 @@ const initialKanbanCards = [
 
 const topClients = [
   { label: "Luna Concept Store", contribution: 28, growth: "+18%" },
-  { label: "Live Shopping MX", contribution: 23, growth: "+12%" },
+  { label: "Showroom Caballito", contribution: 23, growth: "+12%" },
   { label: "Galería Cumbre", contribution: 16, growth: "-5%" },
   { label: "Concept Palermo", contribution: 11, growth: "+9%" },
 ];
@@ -519,14 +525,16 @@ export default function BackofficePage() {
           <Card className="border border-slate-200 bg-white">
             <CardHeader className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <CardTitle>Total facturado</CardTitle>
-                <CardDescription>Periodo seleccionado · ARS millones</CardDescription>
-              </div>
-              <div className="text-3xl font-semibold text-slate-900">
-                ${" "}
-                {revenueTrend.reduce((acc, point) => acc + point.amount, 0).toLocaleString("es-AR")}
-                M
-              </div>
+              <CardTitle>Facturación mensual promedio</CardTitle>
+              <CardDescription>Argentina · ARS millones</CardDescription>
+            </div>
+            <div className="text-3xl font-semibold text-slate-900">
+              ${" "}
+              {Math.round(
+                revenueTrend.reduce((acc, point) => acc + point.amount, 0) / revenueTrend.length,
+              ).toLocaleString("es-AR")}
+              M
+            </div>
             </CardHeader>
             <CardContent>
               <div className="relative h-52 w-full">
@@ -1262,7 +1270,9 @@ export default function BackofficePage() {
               <p className="text-3xl font-semibold text-slate-900">
                 {
                   shipmentsData.filter((shipment) =>
-                    ["Preparando", "Despachado", "En tránsito", "Hold aduana"].includes(shipment.status),
+                    ["Preparando", "Despachado", "En tránsito", "Demora operador"].includes(
+                      shipment.status,
+                    ),
                   ).length
                 }
               </p>
