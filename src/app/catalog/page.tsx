@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
+import { useLanguage } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -26,124 +27,312 @@ type Product = {
   image: string;
 };
 
-const products: Product[] = [
-  {
-    id: "siena-pack",
-    name: "Pack Argollas Siena",
-    description: "Micro circonias, baño oro 18K y tres diámetros combinables.",
-    category: "Aros",
-    price: 18900,
-    pack: "Pack x12 · $18.900 + IVA",
-    stock: "En stock",
-    tags: ["Níquel free", "Backing card incluida"],
-    image:
-      "https://images.unsplash.com/photo-1590166223826-12dee1677420?auto=format&fit=crop&w=1200&q=80",
+const catalogContent = {
+  es: {
+    heroBadge: "Catálogo mayorista",
+    heroTitle: "Seleccioná packs, filtrá por categoría y armá tu carrito mayorista.",
+    heroDescription:
+      "Todos los precios incluyen packaging listo para exhibir y etiquetas con precio sugerido. Coordinamos envíos a todo el país en 24/72 horas.",
+    backHome: "Volver al home",
+    downloadList: "Descargar lista completa",
+    filtersTitle: "Filtros",
+    filtersDesc: "Ajustá la vista según tus necesidades.",
+    searchLabel: "Buscar",
+    searchPlaceholder: "Argollas, kits, perlas...",
+    categoriesLabel: "Categorías",
+    priceLabel: "Precio",
+    clearFilters: "Limpiar filtros",
+    allCategories: "Todas las categorías",
+    resultsLabel: "resultados",
+    addButton: "Añadir",
+    nextStepsTitle: "¿Cómo seguimos?",
+    nextStepsDesc:
+      "Sumá productos al carrito y luego envianos el listado por WhatsApp o email para confirmar stock y envío.",
+    nextStepP1:
+      "Cuando confirmemos tu orden enviamos un link de pago o factura electrónica. El pedido se arma en 24/48h y despachamos con tu logística habitual o la nuestra.",
+    nextStepP2:
+      "Si necesitás sugerencias de mix, escribinos y armamos un carrito pre-curado según tu ticket promedio, geografía y tipo de negocio.",
+    cartTitle: "Carrito mayorista",
+    cartEmptySummary: "Aún no agregaste productos.",
+    cartFilledSummary: "referencias seleccionadas.",
+    cartEmptyHint:
+      "Seleccioná los packs que quieras cotizar y aparecerán acá para enviarlos al equipo comercial.",
+    subtotal: "Subtotal estimado",
+    requestOrder: "Solicitar pedido",
+    sendWhatsapp: "Enviar por WhatsApp",
+    units: "uds",
+    emailSubject: "Pedido mayorista",
+    emailIntro: "Hola Aurelia, quiero confirmar estos packs:",
+    whatsappIntro: "Hola, quiero pedir:",
+    emailSubtotal: "Subtotal estimado",
+    priceFilters: [
+      { id: "low", label: "Hasta $20.000", range: [0, 20000] as [number, number] },
+      { id: "mid", label: "$20.000 - $30.000", range: [20000, 30000] as [number, number] },
+      { id: "high", label: "Más de $30.000", range: [30000, Infinity] as [number, number] },
+    ],
+    products: [
+      {
+        id: "siena-pack",
+        name: "Pack Argollas Siena",
+        description: "Micro circonias, baño oro 18K y tres diámetros combinables.",
+        category: "Aros",
+        price: 18900,
+        pack: "Pack x12 · $18.900 + IVA",
+        stock: "En stock",
+        tags: ["Níquel free", "Backing card incluida"],
+        image:
+          "https://images.unsplash.com/photo-1590166223826-12dee1677420?auto=format&fit=crop&w=1200&q=80",
+      },
+      {
+        id: "layering-aura",
+        name: "Layering Aura",
+        description: "Stack de 5 collares con cierres magnéticos y largos escalonados.",
+        category: "Collares",
+        price: 24500,
+        pack: "Pack x8 · $24.500 + IVA",
+        stock: "Stock bajo",
+        tags: ["Cierres imantados", "Tarjeta guía"],
+        image:
+          "https://images.unsplash.com/photo-1601821765780-754fa98637c1?auto=format&fit=crop&w=1200&q=80",
+      },
+      {
+        id: "capri-pulseras",
+        name: "Mix Pulseras Capri",
+        description: "Acero 316L pulido, esmaltes pasteles y ajuste deslizable.",
+        category: "Pulseras",
+        price: 21700,
+        pack: "Pack x18 · $21.700 + IVA",
+        stock: "En stock",
+        tags: ["Esmalte italiano", "Incluye display"],
+        image:
+          "https://images.unsplash.com/photo-1765852550345-ddb23c794d01?auto=format&fit=crop&w=1200&q=80",
+      },
+      {
+        id: "statement-fiesta",
+        name: "Statement Éclair",
+        description: "Aros bold con cristales premium y terminación pavé luminosa.",
+        category: "Aros",
+        price: 16500,
+        pack: "Pack x10 · $16.500 + IVA",
+        stock: "En stock",
+        tags: ["Cristales premium", "Test de brillo"],
+        image:
+          "https://images.unsplash.com/photo-1553926297-57bb350c4f08?auto=format&fit=crop&w=1200&q=80",
+      },
+      {
+        id: "materia-collar",
+        name: "Cadenas Materia Prima",
+        description: "Layering neutro en acero quirúrgico con baños mixtos.",
+        category: "Collares",
+        price: 20900,
+        pack: "Pack x10 · $20.900 + IVA",
+        stock: "Entrega 48h",
+        tags: ["Hipoalergénico", "Pack curado"],
+        image:
+          "https://images.unsplash.com/photo-1652865866859-3913fe2d2406?auto=format&fit=crop&w=1200&q=80",
+      },
+      {
+        id: "kit-vitrina",
+        name: "Kit Vitrina Premium",
+        description: "Set completo de 80 piezas + exhibidores y visuales impresos.",
+        category: "Kits",
+        price: 98500,
+        pack: "Kit completo · $98.500 + IVA",
+        stock: "Disponible",
+        tags: ["Incluye displays", "QR reposición"],
+        image:
+          "https://images.unsplash.com/photo-1767210338407-54b9264c326b?auto=format&fit=crop&w=1200&q=80",
+      },
+      {
+        id: "acero-siena",
+        name: "Argollas Acero Siena",
+        description: "Aros hipoalergénicos con micro pavé cristal y cierre seguro.",
+        category: "Aros",
+        price: 13200,
+        pack: "Pack x15 · $13.200 + IVA",
+        stock: "Nuevo ingreso",
+        tags: ["Garantía 90 días", "Stock permanente"],
+        image:
+          "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1200&q=80",
+      },
+      {
+        id: "set-perlas",
+        name: "Set Perlas Boreal",
+        description: "Collar + aros con perlas eau y cadenas bañadas en oro.",
+        category: "Sets",
+        price: 23800,
+        pack: "Pack x6 · $23.800 + IVA",
+        stock: "En stock",
+        tags: ["Perlas de agua dulce", "Caja de regalo"],
+        image:
+          "https://images.unsplash.com/photo-1595345705177-ffe090eb0784?auto=format&fit=crop&w=1200&q=80",
+      },
+    ] as Product[],
   },
-  {
-    id: "layering-aura",
-    name: "Layering Aura",
-    description: "Stack de 5 collares con cierres magnéticos y largos escalonados.",
-    category: "Collares",
-    price: 24500,
-    pack: "Pack x8 · $24.500 + IVA",
-    stock: "Stock bajo",
-    tags: ["Cierres imantados", "Tip card"],
-    image:
-      "https://images.unsplash.com/photo-1601821765780-754fa98637c1?auto=format&fit=crop&w=1200&q=80",
+  ko: {
+    heroBadge: "도매 카탈로그",
+    heroTitle: "팩을 고르고 카테고리 필터로 도매 장바구니를 구성하세요.",
+    heroDescription:
+      "모든 가격에는 진열용 패키징과 권장가 라벨이 포함됩니다. 전국 배송을 24/72시간 내 조율합니다.",
+    backHome: "홈으로 돌아가기",
+    downloadList: "전체 목록 다운로드",
+    filtersTitle: "필터",
+    filtersDesc: "필요에 맞게 화면을 조정하세요.",
+    searchLabel: "검색",
+    searchPlaceholder: "후프, 키트, 진주...",
+    categoriesLabel: "카테고리",
+    priceLabel: "가격",
+    clearFilters: "필터 초기화",
+    allCategories: "전체 카테고리",
+    resultsLabel: "결과",
+    addButton: "추가",
+    nextStepsTitle: "다음 단계",
+    nextStepsDesc:
+      "장바구니에 상품을 담은 뒤 WhatsApp 또는 이메일로 목록을 보내주시면 재고와 배송을 확인해드립니다.",
+    nextStepP1:
+      "주문 확인 후 결제 링크 또는 전자세금계산서를 발송합니다. 주문은 24/48시간 내 준비되며 귀사 물류 또는 당사 물류로 발송됩니다.",
+    nextStepP2:
+      "구성 추천이 필요하면 문의 주세요. 평균 객단가, 지역, 업종에 맞춘 사전 큐레이션 장바구니를 제안해드립니다.",
+    cartTitle: "도매 장바구니",
+    cartEmptySummary: "아직 추가된 상품이 없습니다.",
+    cartFilledSummary: "개 항목이 선택되었습니다.",
+    cartEmptyHint: "견적을 원하는 팩을 선택하면 여기 표시되어 영업팀에 바로 전송할 수 있습니다.",
+    subtotal: "예상 소계",
+    requestOrder: "주문 요청",
+    sendWhatsapp: "WhatsApp으로 보내기",
+    units: "개",
+    emailSubject: "도매 주문",
+    emailIntro: "안녕하세요 Aurelia, 아래 팩 주문을 확인하고 싶습니다:",
+    whatsappIntro: "안녕하세요! 아래 상품을 주문하고 싶습니다:",
+    emailSubtotal: "예상 소계",
+    priceFilters: [
+      { id: "low", label: "$20,000 이하", range: [0, 20000] as [number, number] },
+      { id: "mid", label: "$20,000 - $30,000", range: [20000, 30000] as [number, number] },
+      { id: "high", label: "$30,000 이상", range: [30000, Infinity] as [number, number] },
+    ],
+    products: [
+      {
+        id: "siena-pack",
+        name: "시에나 후프 팩",
+        description: "마이크로 지르코니아, 18K 골드 도금, 3가지 지름 구성.",
+        category: "귀걸이",
+        price: 18900,
+        pack: "팩 x12 · $18,900 + VAT",
+        stock: "재고 있음",
+        tags: ["니켈 프리", "백킹 카드 포함"],
+        image:
+          "https://images.unsplash.com/photo-1590166223826-12dee1677420?auto=format&fit=crop&w=1200&q=80",
+      },
+      {
+        id: "layering-aura",
+        name: "아우라 레이어링",
+        description: "자석 잠금과 단계별 길이의 5개 네크리스 스택.",
+        category: "목걸이",
+        price: 24500,
+        pack: "팩 x8 · $24,500 + VAT",
+        stock: "재고 적음",
+        tags: ["자석 잠금", "팁 카드"],
+        image:
+          "https://images.unsplash.com/photo-1601821765780-754fa98637c1?auto=format&fit=crop&w=1200&q=80",
+      },
+      {
+        id: "capri-pulseras",
+        name: "카프리 브레이슬릿 믹스",
+        description: "316L 폴리시드 스틸, 파스텔 에나멜, 슬라이딩 조절.",
+        category: "팔찌",
+        price: 21700,
+        pack: "팩 x18 · $21,700 + VAT",
+        stock: "재고 있음",
+        tags: ["이탈리아 에나멜", "디스플레이 포함"],
+        image:
+          "https://images.unsplash.com/photo-1765852550345-ddb23c794d01?auto=format&fit=crop&w=1200&q=80",
+      },
+      {
+        id: "statement-fiesta",
+        name: "스테이트먼트 에끌레어",
+        description: "프리미엄 크리스털과 밝은 파베 마감의 볼드 이어링.",
+        category: "귀걸이",
+        price: 16500,
+        pack: "팩 x10 · $16,500 + VAT",
+        stock: "재고 있음",
+        tags: ["프리미엄 크리스털", "광택 테스트"],
+        image:
+          "https://images.unsplash.com/photo-1553926297-57bb350c4f08?auto=format&fit=crop&w=1200&q=80",
+      },
+      {
+        id: "materia-collar",
+        name: "마테리아 체인",
+        description: "혼합 도금 마감의 뉴트럴 스틸 레이어링.",
+        category: "목걸이",
+        price: 20900,
+        pack: "팩 x10 · $20,900 + VAT",
+        stock: "48시간 배송",
+        tags: ["저자극", "큐레이션 팩"],
+        image:
+          "https://images.unsplash.com/photo-1652865866859-3913fe2d2406?auto=format&fit=crop&w=1200&q=80",
+      },
+      {
+        id: "kit-vitrina",
+        name: "프리미엄 쇼케이스 키트",
+        description: "80개 상품 + 디스플레이 + 인쇄 비주얼 풀세트.",
+        category: "키트",
+        price: 98500,
+        pack: "풀 키트 · $98,500 + VAT",
+        stock: "구매 가능",
+        tags: ["디스플레이 포함", "재입고 QR"],
+        image:
+          "https://images.unsplash.com/photo-1767210338407-54b9264c326b?auto=format&fit=crop&w=1200&q=80",
+      },
+      {
+        id: "acero-siena",
+        name: "시에나 스틸 후프",
+        description: "마이크로 크리스털 파베와 안전 잠금의 저자극 이어링.",
+        category: "귀걸이",
+        price: 13200,
+        pack: "팩 x15 · $13,200 + VAT",
+        stock: "신상품",
+        tags: ["90일 보증", "상시 재고"],
+        image:
+          "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1200&q=80",
+      },
+      {
+        id: "set-perlas",
+        name: "보레알 펄 세트",
+        description: "eau 진주와 골드 도금 체인의 목걸이 + 이어링 세트.",
+        category: "세트",
+        price: 23800,
+        pack: "팩 x6 · $23,800 + VAT",
+        stock: "재고 있음",
+        tags: ["담수 진주", "기프트 박스"],
+        image:
+          "https://images.unsplash.com/photo-1595345705177-ffe090eb0784?auto=format&fit=crop&w=1200&q=80",
+      },
+    ] as Product[],
   },
-  {
-    id: "capri-pulseras",
-    name: "Mix Pulseras Capri",
-    description: "Acero 316L pulido, esmaltes pasteles y ajuste deslizable.",
-    category: "Pulseras",
-    price: 21700,
-    pack: "Pack x18 · $21.700 + IVA",
-    stock: "En stock",
-    tags: ["Esmalte italiano", "Incluye display"],
-    image:
-      "https://images.unsplash.com/photo-1765852550345-ddb23c794d01?auto=format&fit=crop&w=1200&q=80",
-  },
-  {
-    id: "statement-fiesta",
-    name: "Statement Éclair",
-    description: "Aros bold con cristales premium y terminación pavé luminosa.",
-    category: "Aros",
-    price: 16500,
-    pack: "Pack x10 · $16.500 + IVA",
-    stock: "En stock",
-    tags: ["Cristales premium", "Test de brillo"],
-    image:
-      "https://images.unsplash.com/photo-1553926297-57bb350c4f08?auto=format&fit=crop&w=1200&q=80",
-  },
-  {
-    id: "materia-collar",
-    name: "Cadenas Materia Prima",
-    description: "Layering neutro en acero quirúrgico con baños mixtos.",
-    category: "Collares",
-    price: 20900,
-    pack: "Pack x10 · $20.900 + IVA",
-    stock: "Entrega 48h",
-    tags: ["Hipoalergénico", "Pack curado"],
-    image:
-      "https://images.unsplash.com/photo-1652865866859-3913fe2d2406?auto=format&fit=crop&w=1200&q=80",
-  },
-  {
-    id: "kit-vitrina",
-    name: "Kit Vitrina Premium",
-    description: "Set completo de 80 piezas + exhibidores y visuales impresos.",
-    category: "Kits",
-    price: 98500,
-    pack: "Kit completo · $98.500 + IVA",
-    stock: "Disponible",
-    tags: ["Incluye displays", "QR reposición"],
-    image:
-      "https://images.unsplash.com/photo-1767210338407-54b9264c326b?auto=format&fit=crop&w=1200&q=80",
-  },
-  {
-    id: "acero-siena",
-    name: "Argollas Acero Siena",
-    description: "Aros hipoalergénicos con micro pavé cristal y cierre seguro.",
-    category: "Aros",
-    price: 13200,
-    pack: "Pack x15 · $13.200 + IVA",
-    stock: "Nuevo ingreso",
-    tags: ["Garantía 90 días", "Stock permanente"],
-    image:
-      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=1200&q=80",
-  },
-  {
-    id: "set-perlas",
-    name: "Set Perlas Boreal",
-    description: "Collar + aros con perlas eau y cadenas bañadas en oro.",
-    category: "Sets",
-    price: 23800,
-    pack: "Pack x6 · $23.800 + IVA",
-    stock: "En stock",
-    tags: ["Perlas freshwater", "Gift box"],
-    image:
-      "https://images.unsplash.com/photo-1595345705177-ffe090eb0784?auto=format&fit=crop&w=1200&q=80",
-  },
-];
-
-const priceFilters = [
-  { id: "low", label: "Hasta $20.000", range: [0, 20000] as [number, number] },
-  { id: "mid", label: "$20.000 - $30.000", range: [20000, 30000] as [number, number] },
-  { id: "high", label: "Más de $30.000", range: [30000, Infinity] as [number, number] },
-];
-
-const categories = Array.from(new Set(products.map((p) => p.category)));
-
-const formatPrice = (value: number) =>
-  value.toLocaleString("es-AR", { style: "currency", currency: "ARS" });
+} as const;
 
 export default function CatalogPage() {
+  const { language } = useLanguage();
+  const t = catalogContent[language];
+
   const [search, setSearch] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [activePrice, setActivePrice] = useState<string | null>(null);
   const [cart, setCart] = useState<Record<string, number>>({});
 
+  const categories = useMemo(
+    () => Array.from(new Set(t.products.map((product) => product.category))),
+    [t.products],
+  );
+
+  const formatPrice = (value: number) =>
+    value.toLocaleString(language === "ko" ? "ko-KR" : "es-AR", {
+      style: "currency",
+      currency: "ARS",
+    });
+
   const filteredProducts = useMemo(() => {
-    return products.filter((product) => {
+    return t.products.filter((product) => {
       const matchSearch =
         search.length === 0 ||
         product.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -154,26 +343,26 @@ export default function CatalogPage() {
 
       const matchPrice = (() => {
         if (!activePrice) return true;
-        const range = priceFilters.find((p) => p.id === activePrice)?.range;
+        const range = t.priceFilters.find((price) => price.id === activePrice)?.range;
         if (!range) return true;
         return product.price >= range[0] && product.price <= range[1];
       })();
 
       return matchSearch && matchCategory && matchPrice;
     });
-  }, [search, selectedCategories, activePrice]);
+  }, [t.products, t.priceFilters, search, selectedCategories, activePrice]);
 
   const cartItems = useMemo(() => {
     return Object.entries(cart)
       .map(([id, quantity]) => {
-        const product = products.find((p) => p.id === id);
+        const product = t.products.find((item) => item.id === id);
         if (!product) {
           return null;
         }
         return { product, quantity, subtotal: product.price * quantity };
       })
       .filter(Boolean) as { product: Product; quantity: number; subtotal: number }[];
-  }, [cart]);
+  }, [cart, t.products]);
 
   const cartTotal = cartItems.reduce((acc, item) => acc + item.subtotal, 0);
 
@@ -207,15 +396,12 @@ export default function CatalogPage() {
         <main className="relative mx-auto flex min-h-screen max-w-6xl flex-col gap-10 px-6 py-16 md:px-10">
           <section className="space-y-6 pb-6 text-white">
             <Badge variant="glow" className="bg-white/10 text-white">
-              Catálogo mayorista
+              {t.heroBadge}
             </Badge>
             <div className="grid gap-2">
-              <h1 className="text-4xl font-semibold leading-tight">
-                Seleccioná packs, filtrá por categoría y levantá tu carrito mayorista.
-              </h1>
+              <h1 className="text-4xl font-semibold leading-tight">{t.heroTitle}</h1>
               <p className="max-w-2xl text-lg text-white/80 drop-shadow-[0_2px_10px_rgba(0,0,0,0.55)]">
-                Todos los precios incluyen packaging listo para exhibir y etiquetas con precio
-                sugerido. Coordinamos envíos a todo el país en 24/72 horas.
+                {t.heroDescription}
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
@@ -225,13 +411,10 @@ export default function CatalogPage() {
                 variant="outline"
                 className="border-white/40 bg-white/5 text-white hover:bg-white/15"
               >
-                <Link href="/">Volver al home</Link>
+                <Link href="/">{t.backHome}</Link>
               </Button>
-              <Button
-                size="lg"
-                variant="muted"
-              >
-                Descargar lista completa
+              <Button size="lg" variant="muted">
+                {t.downloadList}
               </Button>
             </div>
           </section>
@@ -239,19 +422,17 @@ export default function CatalogPage() {
           <section className="grid gap-8 pt-6 lg:grid-cols-[280px_1fr]">
             <Card className="border-black/10 bg-white/90">
               <CardHeader>
-                <CardTitle className="text-[#111111]">Filtros</CardTitle>
-                <CardDescription className="text-[#444444]">
-                  Ajustá la vista según tus necesidades.
-                </CardDescription>
+                <CardTitle className="text-[#111111]">{t.filtersTitle}</CardTitle>
+                <CardDescription className="text-[#444444]">{t.filtersDesc}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-2">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#6b6b6b]">
-                    Buscar
+                    {t.searchLabel}
                   </p>
                   <input
                     type="text"
-                    placeholder="Argollas, kits, perlas..."
+                    placeholder={t.searchPlaceholder}
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     className="w-full rounded-2xl border border-black/10 bg-white px-4 py-2 text-sm text-[#111111] outline-none focus:border-black/50"
@@ -260,7 +441,7 @@ export default function CatalogPage() {
 
                 <div className="space-y-3">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#6b6b6b]">
-                    Categorías
+                    {t.categoriesLabel}
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {categories.map((category) => {
@@ -284,10 +465,10 @@ export default function CatalogPage() {
 
                 <div className="space-y-3">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#6b6b6b]">
-                    Precio
+                    {t.priceLabel}
                   </p>
                   <div className="flex flex-col gap-2">
-                    {priceFilters.map((option) => {
+                    {t.priceFilters.map((option) => {
                       const isActive = option.id === activePrice;
                       return (
                         <button
@@ -318,7 +499,7 @@ export default function CatalogPage() {
                       setActivePrice(null);
                     }}
                   >
-                    Limpiar filtros
+                    {t.clearFilters}
                   </Button>
                 )}
               </CardContent>
@@ -327,11 +508,11 @@ export default function CatalogPage() {
             <div className="space-y-6">
               <div className="flex flex-col gap-2">
                 <p className="text-sm text-[#6b6b6b]">
-                  {filteredProducts.length} resultados ·{" "}
+                  {filteredProducts.length} {t.resultsLabel} ·{" "}
                   <span className="font-medium text-[#111111]">
                     {selectedCategories.length > 0
                       ? selectedCategories.join(" · ")
-                      : "Todas las categorías"}
+                      : t.allCategories}
                   </span>
                 </p>
               </div>
@@ -389,7 +570,7 @@ export default function CatalogPage() {
                             className="border-black/20 text-[#111111] hover:border-black/30 hover:bg-[#f7f7f7]"
                             onClick={() => handleAddToCart(product.id)}
                           >
-                            Añadir
+                            {t.addButton}
                             {quantityInCart > 0 && (
                               <span className="ml-2 rounded-full bg-black/10 px-2 py-0.5 text-xs">
                                 {quantityInCart}
@@ -408,38 +589,28 @@ export default function CatalogPage() {
           <section id="cart" className="grid gap-6 lg:grid-cols-[1fr_360px]">
             <Card className="border-black/10 bg-white/90">
               <CardHeader>
-                <CardTitle className="text-[#111111]">¿Cómo seguimos?</CardTitle>
-                <CardDescription>
-                  Sumá productos al carrito y luego envianos el listado por WhatsApp o email para
-                  confirmar stock y envío.
-                </CardDescription>
+                <CardTitle className="text-[#111111]">{t.nextStepsTitle}</CardTitle>
+                <CardDescription>{t.nextStepsDesc}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3 text-sm text-[#444444]">
-                <p>
-                  Cuando confirmemos tu orden enviamos un link de pago o factura electrónica. El
-                  pedido se arma en 24/48h y despachamos con tu logística habitual o la nuestra.
-                </p>
-                <p>
-                  Si necesitás sugerencias de mix, escribinos y armamos un carrito pre-curado según tu
-                  ticket promedio, geografía y tipo de negocio.
-                </p>
+                <p>{t.nextStepP1}</p>
+                <p>{t.nextStepP2}</p>
               </CardContent>
             </Card>
 
             <Card className="sticky top-10 h-fit border-black/10 bg-white/95 shadow-[0_22px_60px_rgba(0,0,0,0.12)]">
               <CardHeader className="space-y-1">
-                <CardTitle className="text-[#111111]">Carrito mayorista</CardTitle>
+                <CardTitle className="text-[#111111]">{t.cartTitle}</CardTitle>
                 <CardDescription className="text-[#444444]">
                   {cartItems.length === 0
-                    ? "Aún no agregaste productos."
-                    : `${cartItems.length} referencias seleccionadas.`}
+                    ? t.cartEmptySummary
+                    : `${cartItems.length} ${t.cartFilledSummary}`}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {cartItems.length === 0 ? (
                   <div className="rounded-2xl border border-dashed border-black/10 px-4 py-6 text-sm text-[#6b6b6b]">
-                    Seleccioná los packs que quieras cotizar y aparecerán acá para enviarlos al team
-                    comercial.
+                    {t.cartEmptyHint}
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -452,7 +623,7 @@ export default function CatalogPage() {
                           <p className="text-sm font-semibold text-[#111111]">{product.name}</p>
                           <p className="text-xs text-[#6b6b6b]">{product.pack}</p>
                           <p className="text-sm text-[#444444]">
-                            {formatPrice(product.price)} · {quantity} uds
+                            {formatPrice(product.price)} · {quantity} {t.units}
                           </p>
                         </div>
                         <div className="flex items-center gap-1">
@@ -477,7 +648,7 @@ export default function CatalogPage() {
 
                 <div className="rounded-2xl bg-[#111111] px-4 py-5 text-white">
                   <div className="flex items-center justify-between text-sm text-white/70">
-                    <span>Subtotal estimado</span>
+                    <span>{t.subtotal}</span>
                     <span>{formatPrice(cartTotal)}</span>
                   </div>
                   <div className="mt-4 flex flex-col gap-3 text-sm">
@@ -492,17 +663,17 @@ export default function CatalogPage() {
                         href={
                           cartItems.length === 0
                             ? "#cart"
-                            : `mailto:hola@aurelia.com?subject=Pedido mayorista&body=${encodeURIComponent(
-                                `Hola Aurelia, quiero confirmar estos packs:\n\n${cartItems
+                            : `mailto:hola@aurelia.com?subject=${encodeURIComponent(t.emailSubject)}&body=${encodeURIComponent(
+                                `${t.emailIntro}\n\n${cartItems
                                   .map(
                                     (item) =>
                                       `- ${item.product.name} x${item.quantity} (${item.product.pack})`,
                                   )
-                                  .join("\n")}\n\nSubtotal estimado: ${formatPrice(cartTotal)}.`,
+                                  .join("\n")}\n\n${t.emailSubtotal}: ${formatPrice(cartTotal)}.`,
                               )}`
                         }
                       >
-                        Solicitar pedido
+                        {t.requestOrder}
                       </Link>
                     </Button>
                     <Button
@@ -516,16 +687,16 @@ export default function CatalogPage() {
                           cartItems.length === 0
                             ? "#cart"
                             : `https://wa.me/5491112345678?text=${encodeURIComponent(
-                                `Hola! Quiero pedir:\n${cartItems
+                                `${t.whatsappIntro}\n${cartItems
                                   .map(
                                     (item) =>
                                       `• ${item.product.name} x${item.quantity} (${item.product.pack})`,
                                   )
-                                  .join("\n")}\nSubtotal estimado: ${formatPrice(cartTotal)}.`,
+                                  .join("\n")}\n${t.emailSubtotal}: ${formatPrice(cartTotal)}.`,
                               )}`
                         }
                       >
-                        Enviar por WhatsApp
+                        {t.sendWhatsapp}
                       </Link>
                     </Button>
                   </div>

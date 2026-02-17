@@ -1,21 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import Image from "next/image";
+import { useState } from "react";
 import {
   BadgeCheck,
   Boxes,
   ClipboardList,
   DollarSign,
-  Home,
   LayoutDashboard,
   MessageCircle,
   PackageSearch,
-  PlusCircle,
   Truck,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { useLanguage } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -26,11 +26,11 @@ import {
 } from "@/components/ui/card";
 
 const navSections = [
-  { id: "overview", label: "Dashboard", icon: LayoutDashboard },
+  { id: "overview", label: "Tablero", icon: LayoutDashboard },
   { id: "catalog", label: "Catálogo", icon: PackageSearch },
   { id: "stock", label: "Stock", icon: Boxes },
-  { id: "tracking", label: "Tracking", icon: Truck },
-  { id: "pendings", label: "Pendings", icon: MessageCircle },
+  { id: "tracking", label: "Seguimiento", icon: Truck },
+  { id: "pendings", label: "Pendientes", icon: MessageCircle },
 ];
 
 const kpis = [
@@ -316,6 +316,46 @@ const supplierOrders = [
 ];
 
 export default function BackofficePage() {
+  const { language } = useLanguage();
+  const isKorean = language === "ko";
+  const ui = isKorean
+    ? {
+        backofficeTitle: "백오피스",
+        needHelp: "도움이 필요하신가요?",
+        contactSupport: "지원팀 문의",
+        panelTitle: "운영 패널",
+        panelDesc: "상세 작업을 위해 모듈을 선택하세요.",
+        downloadReport: "리포트 다운로드",
+        confirmOrders: "주문 확정",
+        navLabels: {
+          overview: "대시보드",
+          catalog: "카탈로그",
+          stock: "재고",
+          tracking: "추적",
+          pendings: "대기 업무",
+        } as Record<string, string>,
+      }
+    : {
+        backofficeTitle: "Backoffice",
+        needHelp: "¿Necesitás ayuda?",
+        contactSupport: "Contactar soporte",
+        panelTitle: "Panel Operativo",
+        panelDesc: "Seleccioná un módulo para trabajar en detalle.",
+        downloadReport: "Descargar reporte",
+        confirmOrders: "Confirmar pedidos",
+        navLabels: {
+          overview: "Tablero",
+          catalog: "Catálogo",
+          stock: "Stock",
+          tracking: "Seguimiento",
+          pendings: "Pendientes",
+        } as Record<string, string>,
+      };
+  const navItems = navSections.map((section) => ({
+    ...section,
+    label: ui.navLabels[section.id] ?? section.label,
+  }));
+
   const [activeSection, setActiveSection] = useState<string>("overview");
   const [catalogData, setCatalogData] = useState(initialCatalogProducts);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -347,8 +387,483 @@ export default function BackofficePage() {
     due: "",
     column: "inbox",
   });
-
-  const overviewContent = useMemo(() => renderOverview(), [catalogData]);
+  const overviewText = isKorean
+    ? {
+        period: "기간",
+        periodOptions: ["최근 90일", "이번 달", "이번 주"],
+        exportCsv: "CSV 내보내기",
+        refresh: "업데이트",
+        avgRevenueTitle: "월 평균 매출",
+        avgRevenueDesc: "아르헨티나 · ARS 백만",
+        orderStatusTitle: "주문 상태",
+        orderStatusDesc: "상태별 분포",
+        orders: "주문",
+        soldByCategoryTitle: "카테고리별 판매 제품",
+        soldByCategoryDesc: "최근 30일 총 수량",
+        unitsShort: "개",
+        topClientsTitle: "매출 상위 고객",
+        topClientsDesc: "총 매출 기여도",
+        vsLastMonth: "전월 대비",
+        stockAlertsTitle: "재고 알림",
+        stockAlertsDesc: "주의 필요 상품",
+        warehouse: "창고",
+        stuckOrdersTitle: "지연 주문",
+        stuckOrdersDesc: "24시간 이상 상태 변경 없음",
+      }
+    : {
+        period: "Periodo",
+        periodOptions: ["Últimos 90 días", "Este mes", "Semana actual"],
+        exportCsv: "Exportar CSV",
+        refresh: "Actualizar",
+        avgRevenueTitle: "Facturación mensual promedio",
+        avgRevenueDesc: "Argentina · ARS millones",
+        orderStatusTitle: "Estado de pedidos",
+        orderStatusDesc: "Distribución por status",
+        orders: "Pedidos",
+        soldByCategoryTitle: "Productos vendidos por categoría",
+        soldByCategoryDesc: "Unidades totales últimos 30 días",
+        unitsShort: "uds",
+        topClientsTitle: "Clientes top por revenue",
+        topClientsDesc: "Participación sobre el total",
+        vsLastMonth: "vs mes anterior",
+        stockAlertsTitle: "Alertas de stock",
+        stockAlertsDesc: "Productos críticos",
+        warehouse: "Depósito",
+        stuckOrdersTitle: "Pedidos detenidos",
+        stuckOrdersDesc: "Status sin cambios > 24h",
+      };
+  const kpisView = isKorean
+    ? kpis.map((item) => ({
+        ...item,
+        label:
+          item.label === "Pedidos activos"
+            ? "활성 주문"
+            : item.label === "Ticket promedio"
+              ? "평균 객단가"
+              : item.label === "Reposiciones listas"
+                ? "준비된 재입고"
+                : "중요 알림",
+      }))
+    : kpis;
+  const revenueTrendView = isKorean
+    ? revenueTrend.map((point) => ({
+        ...point,
+        month:
+          point.month === "Ene"
+            ? "1월"
+            : point.month === "Feb"
+              ? "2월"
+              : point.month === "Mar"
+                ? "3월"
+                : point.month === "Abr"
+                  ? "4월"
+                  : point.month === "May"
+                    ? "5월"
+                    : point.month === "Jun"
+                      ? "6월"
+                      : point.month === "Jul"
+                        ? "7월"
+                        : "8월",
+      }))
+    : revenueTrend;
+  const orderStatusDataView = isKorean
+    ? orderStatusData.map((status) => ({
+        ...status,
+        label:
+          status.label === "Pendiente pago"
+            ? "결제 대기"
+            : status.label === "Preparando"
+              ? "준비 중"
+              : status.label === "En tránsito"
+                ? "배송 중"
+                : "배송 완료",
+      }))
+    : orderStatusData;
+  const salesByCategoryView = isKorean
+    ? salesByCategory.map((item) => ({
+        ...item,
+        category:
+          item.category === "Aros"
+            ? "귀걸이"
+            : item.category === "Collares"
+              ? "목걸이"
+              : item.category === "Pulseras"
+                ? "팔찌"
+                : item.category === "Kits"
+                  ? "키트"
+                  : "진주",
+      }))
+    : salesByCategory;
+  const lowStockAlertsView = isKorean
+    ? lowStockAlerts.map((item) => ({
+        ...item,
+        depot: item.depot === "ZONA SUR" ? "남부 권역" : "CABA",
+      }))
+    : lowStockAlerts;
+  const stuckOrdersView = isKorean
+    ? stuckOrders.map((item) => ({
+        ...item,
+        status:
+          item.status === "Aprobación"
+            ? "승인 대기"
+            : item.status === "Despacho"
+              ? "출고"
+              : "결제",
+      }))
+    : stuckOrders;
+  const catalogText = isKorean
+    ? {
+        projectedShortages: "예상 부족 수량",
+        projectedShortagesDesc: "다음 달 · 전체 카테고리",
+        includesPreorders: "확정된 선주문 포함.",
+        productsAtRisk: "위험 제품",
+        productsAtRiskDesc: "재고 커버리지 2주 미만",
+        reviewFactory: "공장 발주 검토 필요.",
+        availableStock: "가용 재고",
+        availableStockDesc: "활성 카탈로그 기준",
+        wholesaleSum: "도매 합계.",
+        unit: "개",
+        loadEditProduct: "상품 등록/수정",
+        loadEditProductDesc: "사진, 가격, 상태를 관리하세요.",
+        name: "이름",
+        sku: "SKU",
+        category: "카테고리",
+        wholesalePrice: "도매가",
+        retailPrice: "소매가",
+        availableQty: "가용 재고",
+        status: "상태",
+        active: "활성",
+        paused: "일시중지",
+        imageUrls: "이미지 URL",
+        imagePlaceholder: "https://...jpg, https://...jpg",
+        uploadPhoto: "사진 업로드 (선택)",
+        preview: "미리보기",
+        cancel: "취소",
+        update: "업데이트",
+        addProduct: "상품 추가",
+        projectionAlerts: "예측 및 알림",
+        projectionAlertsDesc: "재입고 계획을 정리하세요.",
+        shortagesByWeek: "주차별 부족 수량",
+        almostOut: "재고 임박",
+        coverage: "커버리지",
+        bulkPricing: "일괄 가격 조정",
+        bulkPricingDesc: "도매/소매 가격에 마크업/마크다운을 적용합니다.",
+        target: "대상",
+        action: "작업",
+        applyAdjustments: "일괄 적용",
+        both: "모두",
+        wholesale: "도매",
+        retail: "소매",
+        markup: "마크업 (+)",
+        markdown: "마크다운 (-)",
+        categoryFilter: "카테고리",
+        actions: "작업",
+        search: "검색",
+        root: "루트",
+        bulkActions: "일괄 작업",
+        activate: "활성화",
+        deactivate: "비활성화",
+        searchPlaceholder: "SKU 또는 이름",
+        table: {
+          name: "이름",
+          category: "카테고리",
+          wholesale: "도매가",
+          retail: "소매가",
+          stock: "재고",
+          photos: "사진",
+          status: "상태",
+          actions: "작업",
+          photo: "사진",
+          edit: "수정",
+        },
+      }
+    : {
+        projectedShortages: "Faltantes proyectados",
+        projectedShortagesDesc: "Próximo mes · todas las categorías",
+        includesPreorders: "Incluye preventas confirmadas.",
+        productsAtRisk: "Productos en riesgo",
+        productsAtRiskDesc: "Cobertura < 2 semanas",
+        reviewFactory: "Revisar pedidos a fábrica.",
+        availableStock: "Stock disponible",
+        availableStockDesc: "Catálogo activo",
+        wholesaleSum: "Sumatoria mayorista.",
+        unit: "uds",
+        loadEditProduct: "Cargar/editar producto",
+        loadEditProductDesc: "Gestioná fotos, precios y estado.",
+        name: "Nombre",
+        sku: "SKU",
+        category: "Categoría",
+        wholesalePrice: "Precio mayorista",
+        retailPrice: "Precio minorista",
+        availableQty: "Stock disponible",
+        status: "Estado",
+        active: "Activo",
+        paused: "Pausado",
+        imageUrls: "URLs de imagen",
+        imagePlaceholder: "https://...jpg, https://...jpg",
+        uploadPhoto: "Subir foto (opcional)",
+        preview: "Previsualización",
+        cancel: "Cancelar",
+        update: "Actualizar",
+        addProduct: "Agregar producto",
+        projectionAlerts: "Proyección & alertas",
+        projectionAlertsDesc: "Organizá la reposición.",
+        shortagesByWeek: "Faltantes por semana",
+        almostOut: "Casi sin stock",
+        coverage: "Cobertura",
+        bulkPricing: "Precios masivos",
+        bulkPricingDesc: "Aplicá aumento/rebaja a precios mayoristas o minoristas.",
+        target: "Objetivo",
+        action: "Acción",
+        applyAdjustments: "Aplicar ajustes",
+        both: "Ambos",
+        wholesale: "Mayorista",
+        retail: "Minorista",
+        markup: "Markup (+)",
+        markdown: "Markdown (-)",
+        categoryFilter: "Categoría",
+        actions: "Acciones",
+        search: "Buscar",
+        root: "Raíz",
+        bulkActions: "Acciones masivas",
+        activate: "Activar",
+        deactivate: "Desactivar",
+        searchPlaceholder: "SKU o nombre",
+        table: {
+          name: "Nombre",
+          category: "Categoría",
+          wholesale: "Mayorista",
+          retail: "Minorista",
+          stock: "Stock",
+          photos: "Fotos",
+          status: "Estado",
+          actions: "Acciones",
+          photo: "Foto",
+          edit: "Editar",
+        },
+      };
+  const stockText = isKorean
+    ? {
+        totalStock: "총 재고",
+        totalStockDesc: "전체 카탈로그",
+        includesSuspended: "중단 상품 포함.",
+        available: "가용",
+        availableDesc: "판매 가능 수량",
+        reserved: "예약",
+        reservedDesc: "확정 주문",
+        availableRate: "가용",
+        preparingRate: "준비 중",
+        inventoryByProduct: "상품별 재고",
+        inventoryByProductDesc: "총/가용/예약",
+        total: "총계",
+        categoryStock: "카테고리별 재고",
+        categoryStockDesc: "재고 비중",
+        projectedShortages: "예상 부족 수량",
+        projectedShortagesDesc: "판매/재입고 기반",
+        supplierOrders: "공급사 발주",
+        supplierOrdersDesc: "준비 중인 오더",
+        qty: "수량",
+        warehouseStock: "창고별 재고",
+        warehouseStockDesc: "가용 및 활성 예약",
+        warehouse: "창고",
+        location: "위치",
+      }
+    : {
+        totalStock: "Stock total",
+        totalStockDesc: "Todo el catálogo",
+        includesSuspended: "Incluye productos suspendidos.",
+        available: "Disponible",
+        availableDesc: "Liberado para venta",
+        reserved: "Reservado",
+        reservedDesc: "Pedidos confirmados",
+        availableRate: "disponible",
+        preparingRate: "en preparación",
+        inventoryByProduct: "Inventario por producto",
+        inventoryByProductDesc: "Total, disponible y reservado",
+        total: "Total",
+        categoryStock: "Stock por categoría",
+        categoryStockDesc: "Proporción del inventario",
+        projectedShortages: "Faltantes proyectados",
+        projectedShortagesDesc: "En base a ventas y reposiciones",
+        supplierOrders: "Pedidos a proveedores",
+        supplierOrdersDesc: "Órdenes en preparación",
+        qty: "Qty",
+        warehouseStock: "Stock por depósito",
+        warehouseStockDesc: "Disponibilidad y reservas activas.",
+        warehouse: "Depósito",
+        location: "Ubicación",
+      };
+  const trackingText = isKorean
+    ? {
+        newClaims: "신규 클레임",
+        newClaimsDesc: "최근 48시간",
+        reviewTickets: "열린 티켓 확인 필요.",
+        activeOrders: "활성 주문",
+        activeOrdersDesc: "배송 중 또는 준비 중",
+        liveTracking: "실시간 추적",
+        deliveredOrders: "배송 완료 주문",
+        deliveredOrdersDesc: "최근 1주",
+        noClaims: "클레임 없음.",
+        statusDashboard: "상태 대시보드",
+        statusDashboardDesc: "주문 분포",
+        totalOrders: "총 주문",
+        quickActions: "빠른 작업",
+        ordersWithClaims: "클레임 주문",
+        recentNotes: "최근 메모",
+        searchPlaceholder: "주문 또는 고객 검색",
+        allClients: "전체 고객",
+        table: {
+          order: "주문",
+          retailer: "리테일러",
+          carrier: "택배사",
+          eta: "도착 예정",
+          status: "상태",
+          notes: "메모",
+          claim: "클레임",
+          history: "이력",
+          noNotes: "메모 없음",
+          activeClaim: "클레임 진행중",
+          notesButton: "메모",
+        },
+        timelineTitle: "주문 타임라인",
+        timelineDesc: "상태 및 메모 이력",
+        close: "닫기",
+        addNote: "메모 추가",
+        notePlaceholder: "재고 업데이트, 클레임 등",
+        saveNote: "메모 저장",
+        notesHistoryTitle: "메모 이력",
+        notesHistoryDesc: "최근 항목",
+        statusPrefix: "상태",
+        ordersWord: "주문",
+      }
+    : {
+        newClaims: "Reclamos nuevos",
+        newClaimsDesc: "Últimas 48hs",
+        reviewTickets: "Revisar tickets abiertos.",
+        activeOrders: "Pedidos activos",
+        activeOrdersDesc: "En tránsito o preparando",
+        liveTracking: "Seguimiento en vivo",
+        deliveredOrders: "Pedidos entregados",
+        deliveredOrdersDesc: "Última semana",
+        noClaims: "Sin reclamos.",
+        statusDashboard: "Panel de estados",
+        statusDashboardDesc: "Distribución de pedidos",
+        totalOrders: "Pedidos totales",
+        quickActions: "Acciones rápidas",
+        ordersWithClaims: "Pedidos con reclamos",
+        recentNotes: "Notas recientes",
+        searchPlaceholder: "Buscar por pedido o cliente",
+        allClients: "Todos los clientes",
+        table: {
+          order: "Pedido",
+          retailer: "Retailer",
+          carrier: "Transporte",
+          eta: "ETA",
+          status: "Estado",
+          notes: "Notas",
+          claim: "Reclamo",
+          history: "Historial",
+          noNotes: "Sin notas",
+          activeClaim: "Reclamo activo",
+          notesButton: "Notas",
+        },
+        timelineTitle: "Timeline del pedido",
+        timelineDesc: "Evolución de status y notas",
+        close: "Cerrar",
+        addNote: "Agregar nota",
+        notePlaceholder: "Actualización de inventario, reclamo, etc.",
+        saveNote: "Guardar nota",
+        notesHistoryTitle: "Historial de notas",
+        notesHistoryDesc: "Últimas entradas",
+        statusPrefix: "Status",
+        ordersWord: "pedidos",
+      };
+  const pendingsText = isKorean
+    ? {
+        title: "팀 대기 업무",
+        desc: "칸반 추적: 작업을 배정하고 상태를 변경하세요.",
+        addTaskTitle: "작업 추가",
+        addTaskDesc: "어떤 컬럼이든 새 대기 업무를 생성합니다.",
+        task: "작업",
+        assignee: "담당자",
+        detail: "상세",
+        due: "기한",
+        column: "컬럼",
+        addToBoard: "보드에 추가",
+        pendingCount: "개 대기",
+        unassigned: "미지정",
+        noDue: "기한 없음",
+        noTasks: "배정된 작업이 없습니다.",
+      }
+    : {
+        title: "Pendientes del equipo",
+        desc: "Seguimiento Kanban: asigná tareas y cambiá status.",
+        addTaskTitle: "Agregar tarea",
+        addTaskDesc: "Crear un nuevo pendiente en cualquier columna.",
+        task: "Tarea",
+        assignee: "Asignado",
+        detail: "Detalle",
+        due: "Fecha",
+        column: "Columna",
+        addToBoard: "Añadir a tablero",
+        pendingCount: "pendientes",
+        unassigned: "Sin asignar",
+        noDue: "Sin fecha",
+        noTasks: "Sin tareas asignadas.",
+      };
+  const categoryLabel = (value: string) => {
+    if (!isKorean) return value;
+    const labels: Record<string, string> = {
+      Aros: "귀걸이",
+      Collares: "목걸이",
+      Pulseras: "팔찌",
+      Kits: "키트",
+      Perlas: "진주",
+      Sets: "세트",
+    };
+    return labels[value] ?? value;
+  };
+  const shipmentStatusLabel = (value: string) => {
+    if (!isKorean) return value;
+    const labels: Record<string, string> = {
+      "Pendiente pago": "결제 대기",
+      Preparando: "준비 중",
+      Despachado: "출고 완료",
+      "En tránsito": "배송 중",
+      "Demora operador": "운송 지연",
+      Entregado: "배송 완료",
+    };
+    return labels[value] ?? value;
+  };
+  const weekLabel = (value: string) => {
+    if (!isKorean) return value;
+    const labels: Record<string, string> = {
+      "Semana 1": "1주차",
+      "Semana 2": "2주차",
+      "Semana 3": "3주차",
+      "Semana 4": "4주차",
+    };
+    return labels[value] ?? value;
+  };
+  const etaLabel = (value: string) => {
+    if (!isKorean) return value;
+    const labels: Record<string, string> = {
+      "Entrega mañana 10hs": "내일 오전 10시 도착",
+      Revisión: "검토 중",
+      "Entrega hoy 18hs": "오늘 18시 도착",
+      "Esperando confirmación": "확인 대기",
+    };
+    return labels[value] ?? value;
+  };
+  const kanbanColumnTitle = (id: string, fallback: string) => {
+    if (!isKorean) return fallback;
+    const labels: Record<string, string> = {
+      inbox: "대기",
+      in_progress: "진행 중",
+      done: "완료",
+    };
+    return labels[id] ?? fallback;
+  };
 
   function handleProductSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -465,17 +980,17 @@ export default function BackofficePage() {
   }
 
   function renderOverview() {
-    const maxRevenue = Math.max(...revenueTrend.map((point) => point.amount));
-    const revenuePoints = revenueTrend
+    const maxRevenue = Math.max(...revenueTrendView.map((point) => point.amount));
+    const revenuePoints = revenueTrendView
       .map((point, index) => {
-        const x = (index / (revenueTrend.length - 1)) * 100;
+        const x = (index / (revenueTrendView.length - 1)) * 100;
         const y = 100 - (point.amount / maxRevenue) * 100;
         return `${x},${y}`;
       })
       .join(" ");
 
     let start = 0;
-    const donutSegments = orderStatusData
+    const donutSegments = orderStatusDataView
       .map((status, index) => {
         const end = start + status.percent;
         const color = ["#f97316", "#fb923c", "#fdba74", "#fed7aa"][index % 4];
@@ -488,7 +1003,7 @@ export default function BackofficePage() {
     return (
       <div className="space-y-6">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {kpis.map((item) => (
+          {kpisView.map((item) => (
             <Card key={item.label} className="border border-slate-200 bg-white">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm text-slate-500">{item.label}</CardTitle>
@@ -504,19 +1019,19 @@ export default function BackofficePage() {
 
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm">
           <div className="flex items-center gap-2 text-slate-500">
-            <span>Periodo</span>
+            <span>{overviewText.period}</span>
             <select className="rounded-lg border border-slate-200 px-3 py-1">
-              <option>Últimos 90 días</option>
-              <option>Este mes</option>
-              <option>Semana actual</option>
+              {overviewText.periodOptions.map((option) => (
+                <option key={option}>{option}</option>
+              ))}
             </select>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" className="border-slate-200 text-slate-700">
-              Exportar CSV
+              {overviewText.exportCsv}
             </Button>
             <Button className="bg-slate-900 text-white">
-              <BadgeCheck className="mr-2 h-4 w-4" /> Actualizar
+              <BadgeCheck className="mr-2 h-4 w-4" /> {overviewText.refresh}
             </Button>
           </div>
         </div>
@@ -525,13 +1040,13 @@ export default function BackofficePage() {
           <Card className="border border-slate-200 bg-white">
             <CardHeader className="flex flex-wrap items-center justify-between gap-3">
               <div>
-              <CardTitle>Facturación mensual promedio</CardTitle>
-              <CardDescription>Argentina · ARS millones</CardDescription>
+              <CardTitle>{overviewText.avgRevenueTitle}</CardTitle>
+              <CardDescription>{overviewText.avgRevenueDesc}</CardDescription>
             </div>
             <div className="text-3xl font-semibold text-slate-900">
               ${" "}
               {Math.round(
-                revenueTrend.reduce((acc, point) => acc + point.amount, 0) / revenueTrend.length,
+                revenueTrendView.reduce((acc, point) => acc + point.amount, 0) / revenueTrendView.length,
               ).toLocaleString("es-AR")}
               M
             </div>
@@ -549,7 +1064,7 @@ export default function BackofficePage() {
                   <polyline fill="none" stroke="#0f172a" strokeWidth="1.5" strokeLinecap="round" points={revenuePoints} />
                 </svg>
                 <div className="absolute inset-0 flex items-end justify-between px-1 text-xs text-slate-400">
-                  {revenueTrend.map((point) => (
+                  {revenueTrendView.map((point) => (
                     <span key={point.month}>{point.month}</span>
                   ))}
                 </div>
@@ -559,22 +1074,22 @@ export default function BackofficePage() {
 
           <Card className="border border-slate-200 bg-white">
             <CardHeader>
-              <CardTitle>Estado de pedidos</CardTitle>
-              <CardDescription>Distribución por status</CardDescription>
+              <CardTitle>{overviewText.orderStatusTitle}</CardTitle>
+              <CardDescription>{overviewText.orderStatusDesc}</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4 lg:grid-cols-[1fr_1fr]">
               <div className="flex items-center justify-center">
                 <div className="relative h-40 w-40 rounded-full" style={{ background: `conic-gradient(${donutSegments})` }}>
                   <div className="absolute inset-[18%] rounded-full bg-white/90 text-center">
                     <p className="pt-8 text-2xl font-semibold text-slate-900">
-                      {orderStatusData.reduce((acc, data) => acc + data.total, 0)}
+                      {orderStatusDataView.reduce((acc, data) => acc + data.total, 0)}
                     </p>
-                    <p className="text-xs text-slate-500">Pedidos</p>
+                    <p className="text-xs text-slate-500">{overviewText.orders}</p>
                   </div>
                 </div>
               </div>
               <div className="space-y-3 text-sm">
-                {orderStatusData.map((status, index) => (
+                {orderStatusDataView.map((status, index) => (
                   <div key={status.label} className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span
@@ -585,7 +1100,9 @@ export default function BackofficePage() {
                     </div>
                     <div className="text-right text-slate-500">
                       <p>{status.percent}%</p>
-                      <p className="text-xs">{status.total} pedidos</p>
+                      <p className="text-xs">
+                        {status.total} {overviewText.orders}
+                      </p>
                     </div>
                   </div>
                 ))}
@@ -597,17 +1114,19 @@ export default function BackofficePage() {
         <div className="grid gap-6 lg:grid-cols-2">
           <Card className="border border-slate-200 bg-white">
             <CardHeader>
-              <CardTitle>Productos vendidos por categoría</CardTitle>
-              <CardDescription>Unidades totales últimos 30 días</CardDescription>
+              <CardTitle>{overviewText.soldByCategoryTitle}</CardTitle>
+              <CardDescription>{overviewText.soldByCategoryDesc}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {salesByCategory.map((category) => {
-                const percentage = Math.round((category.units / salesByCategory[0].units) * 100);
+              {salesByCategoryView.map((category) => {
+                const percentage = Math.round((category.units / salesByCategoryView[0].units) * 100);
                 return (
                   <div key={category.category}>
                     <div className="flex items-center justify-between text-sm">
                       <span className="font-semibold text-slate-800">{category.category}</span>
-                      <span className="text-slate-500">{category.units} uds</span>
+                      <span className="text-slate-500">
+                        {category.units} {overviewText.unitsShort}
+                      </span>
                     </div>
                     <div className="mt-2 h-2 rounded-full bg-slate-100">
                       <div className="h-full rounded-full bg-gradient-to-r from-slate-900 to-slate-500" style={{ width: `${percentage}%` }} />
@@ -620,8 +1139,8 @@ export default function BackofficePage() {
 
           <Card className="border border-slate-200 bg-white">
             <CardHeader>
-              <CardTitle>Clientes top por revenue</CardTitle>
-              <CardDescription>Participación sobre el total</CardDescription>
+              <CardTitle>{overviewText.topClientsTitle}</CardTitle>
+              <CardDescription>{overviewText.topClientsDesc}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 text-sm">
               {topClients.map((client, index) => (
@@ -630,7 +1149,9 @@ export default function BackofficePage() {
                     <p className="font-semibold text-slate-900">
                       {index + 1}. {client.label}
                     </p>
-                    <span className="text-xs text-slate-500">{client.growth} vs mes anterior</span>
+                    <span className="text-xs text-slate-500">
+                      {client.growth} {overviewText.vsLastMonth}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="h-8 flex-1 rounded-full bg-slate-100">
@@ -650,18 +1171,20 @@ export default function BackofficePage() {
         <div className="grid gap-6 lg:grid-cols-2">
           <Card className="border border-slate-200 bg-white">
             <CardHeader>
-              <CardTitle>Alertas de stock</CardTitle>
-              <CardDescription>Productos críticos</CardDescription>
+              <CardTitle>{overviewText.stockAlertsTitle}</CardTitle>
+              <CardDescription>{overviewText.stockAlertsDesc}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
-              {lowStockAlerts.map((alert) => (
+              {lowStockAlertsView.map((alert) => (
                 <div key={alert.sku} className="flex items-center justify-between rounded-xl border border-slate-100 px-3 py-2">
                   <div>
                     <p className="font-semibold text-slate-900">{alert.product}</p>
-                    <p className="text-xs text-slate-500">SKU {alert.sku} · Depósito {alert.depot}</p>
+                    <p className="text-xs text-slate-500">
+                      SKU {alert.sku} · {overviewText.warehouse} {alert.depot}
+                    </p>
                   </div>
                   <Badge variant="outline" className="border-amber-300 text-amber-600">
-                    {alert.remaining} uds
+                    {alert.remaining} {overviewText.unitsShort}
                   </Badge>
                 </div>
               ))}
@@ -670,11 +1193,11 @@ export default function BackofficePage() {
 
           <Card className="border border-slate-200 bg-white">
             <CardHeader>
-              <CardTitle>Pedidos detenidos</CardTitle>
-              <CardDescription>Status sin cambios &gt; 24h</CardDescription>
+              <CardTitle>{overviewText.stuckOrdersTitle}</CardTitle>
+              <CardDescription>{overviewText.stuckOrdersDesc}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
-              {stuckOrders.map((order) => (
+              {stuckOrdersView.map((order) => (
                 <div key={order.id} className="flex items-center justify-between rounded-xl border border-slate-100 px-3 py-2">
                   <div>
                     <p className="font-semibold text-slate-900">{order.retailer}</p>
@@ -707,34 +1230,36 @@ export default function BackofficePage() {
         <div className="grid gap-4 md:grid-cols-3">
           <Card className="border border-slate-200 bg-white">
             <CardHeader>
-              <CardTitle>Faltantes proyectados</CardTitle>
-              <CardDescription>Próximo mes · todas las categorías</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-semibold text-slate-900">{monthlyShortage} uds</p>
-              <p className="text-xs text-slate-500">Incluye preventas confirmadas.</p>
-            </CardContent>
-          </Card>
-          <Card className="border border-slate-200 bg-white">
-            <CardHeader>
-              <CardTitle>Productos en riesgo</CardTitle>
-              <CardDescription>Cobertura &lt; 2 semanas</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-3xl font-semibold text-slate-900">{nearOutOfStock.length}</p>
-              <p className="text-xs text-slate-500">Revisar pedidos a fábrica.</p>
-            </CardContent>
-          </Card>
-          <Card className="border border-slate-200 bg-white">
-            <CardHeader>
-              <CardTitle>Stock disponible</CardTitle>
-              <CardDescription>Catálogo activo</CardDescription>
+              <CardTitle>{catalogText.projectedShortages}</CardTitle>
+              <CardDescription>{catalogText.projectedShortagesDesc}</CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-semibold text-slate-900">
-                {catalogData.reduce((acc, product) => acc + product.quantity, 0)} uds
+                {monthlyShortage} {catalogText.unit}
               </p>
-              <p className="text-xs text-slate-500">Sumatoria mayorista.</p>
+              <p className="text-xs text-slate-500">{catalogText.includesPreorders}</p>
+            </CardContent>
+          </Card>
+          <Card className="border border-slate-200 bg-white">
+            <CardHeader>
+              <CardTitle>{catalogText.productsAtRisk}</CardTitle>
+              <CardDescription>{catalogText.productsAtRiskDesc}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-semibold text-slate-900">{nearOutOfStock.length}</p>
+              <p className="text-xs text-slate-500">{catalogText.reviewFactory}</p>
+            </CardContent>
+          </Card>
+          <Card className="border border-slate-200 bg-white">
+            <CardHeader>
+              <CardTitle>{catalogText.availableStock}</CardTitle>
+              <CardDescription>{catalogText.availableStockDesc}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-semibold text-slate-900">
+                {catalogData.reduce((acc, product) => acc + product.quantity, 0)} {catalogText.unit}
+              </p>
+              <p className="text-xs text-slate-500">{catalogText.wholesaleSum}</p>
             </CardContent>
           </Card>
         </div>
@@ -742,14 +1267,14 @@ export default function BackofficePage() {
         <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
           <Card className="border border-slate-200 bg-white">
             <CardHeader>
-              <CardTitle>Cargar/editar producto</CardTitle>
-              <CardDescription>Gestioná fotos, precios y estado.</CardDescription>
+              <CardTitle>{catalogText.loadEditProduct}</CardTitle>
+              <CardDescription>{catalogText.loadEditProductDesc}</CardDescription>
             </CardHeader>
             <CardContent>
               <form className="grid gap-4" onSubmit={handleProductSubmit}>
                 <div className="grid gap-3 md:grid-cols-2">
                   <label className="text-sm text-slate-600">
-                    Nombre
+                    {catalogText.name}
                     <input
                       className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
                       value={productForm.name}
@@ -758,7 +1283,7 @@ export default function BackofficePage() {
                     />
                   </label>
                   <label className="text-sm text-slate-600">
-                    SKU
+                    {catalogText.sku}
                     <input
                       className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 uppercase"
                       value={productForm.id}
@@ -768,21 +1293,21 @@ export default function BackofficePage() {
                 </div>
                 <div className="grid gap-3 md:grid-cols-3">
                   <label className="text-sm text-slate-600">
-                    Categoría
+                    {catalogText.category}
                     <select
                       className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
                       value={productForm.category}
                       onChange={(event) => setProductForm((prev) => ({ ...prev, category: event.target.value }))}
                     >
-                      <option>Aros</option>
-                      <option>Collares</option>
-                      <option>Pulseras</option>
-                      <option>Kits</option>
-                      <option>Perlas</option>
+                      <option value="Aros">{categoryLabel("Aros")}</option>
+                      <option value="Collares">{categoryLabel("Collares")}</option>
+                      <option value="Pulseras">{categoryLabel("Pulseras")}</option>
+                      <option value="Kits">{categoryLabel("Kits")}</option>
+                      <option value="Perlas">{categoryLabel("Perlas")}</option>
                     </select>
                   </label>
                   <label className="text-sm text-slate-600">
-                    Precio mayorista
+                    {catalogText.wholesalePrice}
                     <input
                       type="number"
                       className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
@@ -792,7 +1317,7 @@ export default function BackofficePage() {
                     />
                   </label>
                   <label className="text-sm text-slate-600">
-                    Precio minorista
+                    {catalogText.retailPrice}
                     <input
                       type="number"
                       className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
@@ -804,7 +1329,7 @@ export default function BackofficePage() {
                 </div>
                 <div className="grid gap-3 md:grid-cols-3">
                   <label className="text-sm text-slate-600">
-                    Stock disponible
+                    {catalogText.availableQty}
                     <input
                       type="number"
                       className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
@@ -814,28 +1339,28 @@ export default function BackofficePage() {
                     />
                   </label>
                   <label className="text-sm text-slate-600">
-                    Estado
+                    {catalogText.status}
                     <select
                       className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
                       value={productForm.status ? "activo" : "pausado"}
                       onChange={(event) => setProductForm((prev) => ({ ...prev, status: event.target.value === "activo" }))}
                     >
-                      <option value="activo">Activo</option>
-                      <option value="pausado">Pausado</option>
+                      <option value="activo">{catalogText.active}</option>
+                      <option value="pausado">{catalogText.paused}</option>
                     </select>
                   </label>
                   <label className="text-sm text-slate-600">
-                    URLs de imagen
+                    {catalogText.imageUrls}
                     <textarea
                       className="mt-1 h-10 w-full rounded-xl border border-slate-200 px-3 py-2 text-xs"
-                      placeholder="https://...jpg, https://...jpg"
+                      placeholder={catalogText.imagePlaceholder}
                       value={productForm.images}
                       onChange={(event) => setProductForm((prev) => ({ ...prev, images: event.target.value }))}
                     />
                   </label>
                 </div>
                 <label className="text-sm text-slate-600">
-                  Subir foto (opcional)
+                  {catalogText.uploadPhoto}
                   <input
                     type="file"
                     accept="image/*"
@@ -852,11 +1377,11 @@ export default function BackofficePage() {
                 </label>
                 {previewImages.length > 0 && (
                   <div className="grid gap-2">
-                    <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Previsualización</p>
+                    <p className="text-xs uppercase tracking-[0.2em] text-slate-400">{catalogText.preview}</p>
                     <div className="flex flex-wrap gap-3">
                       {previewImages.map((img) => (
                         <div key={img} className="relative h-20 w-24 overflow-hidden rounded-xl border border-slate-200">
-                          <img src={img} alt="preview" className="h-full w-full object-cover" />
+                          <Image src={img} alt="preview" fill sizes="96px" className="object-cover" unoptimized />
                         </div>
                       ))}
                     </div>
@@ -874,11 +1399,11 @@ export default function BackofficePage() {
                         setPreviewImages([]);
                       }}
                     >
-                      Cancelar
+                      {catalogText.cancel}
                     </Button>
                   )}
                   <Button type="submit" className="bg-slate-900 text-white">
-                    {editingId ? "Actualizar" : "Agregar producto"}
+                    {editingId ? catalogText.update : catalogText.addProduct}
                   </Button>
                 </div>
               </form>
@@ -887,37 +1412,39 @@ export default function BackofficePage() {
 
           <Card className="border border-slate-200 bg-white">
             <CardHeader>
-              <CardTitle>Proyección & alertas</CardTitle>
-              <CardDescription>Organizá la reposición.</CardDescription>
+              <CardTitle>{catalogText.projectionAlerts}</CardTitle>
+              <CardDescription>{catalogText.projectionAlertsDesc}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 text-sm">
               <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Faltantes por semana</p>
+                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">{catalogText.shortagesByWeek}</p>
                 <div className="mt-3 space-y-2">
                   {forecastShortages.map((item) => (
                     <div key={item.product} className="flex items-center justify-between rounded-xl border border-slate-100 px-3 py-2">
                       <div>
                         <p className="font-semibold text-slate-900">{item.product}</p>
-                        <p className="text-xs text-slate-500">{item.week}</p>
+                        <p className="text-xs text-slate-500">{weekLabel(item.week)}</p>
                       </div>
                       <Badge variant="outline" className="border-rose-200 text-rose-600">
-                        -{item.shortage} uds
+                        -{item.shortage} {catalogText.unit}
                       </Badge>
                     </div>
                   ))}
                 </div>
               </div>
               <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Casi sin stock</p>
+                <p className="text-xs uppercase tracking-[0.2em] text-slate-400">{catalogText.almostOut}</p>
                 <div className="mt-3 space-y-2">
                   {nearOutOfStock.map((item) => (
                     <div key={item.product} className="flex items-center justify-between rounded-xl border border-slate-100 px-3 py-2">
                       <div>
                         <p className="font-semibold text-slate-900">{item.product}</p>
-                        <p className="text-xs text-slate-500">Cobertura {item.coverage}</p>
+                        <p className="text-xs text-slate-500">
+                          {catalogText.coverage} {isKorean ? item.coverage.replace(" semanas", "주") : item.coverage}
+                        </p>
                       </div>
                       <Badge variant="outline" className="border-amber-200 text-amber-600">
-                        {item.remaining} uds
+                        {item.remaining} {catalogText.unit}
                       </Badge>
                     </div>
                   ))}
@@ -929,31 +1456,31 @@ export default function BackofficePage() {
 
         <Card className="mx-auto max-w-5xl border border-slate-200 bg-white">
           <CardHeader>
-            <CardTitle>Bulk pricing</CardTitle>
-            <CardDescription>Aplicá markup/markdown a precios mayoristas o minoristas.</CardDescription>
+            <CardTitle>{catalogText.bulkPricing}</CardTitle>
+            <CardDescription>{catalogText.bulkPricingDesc}</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-4">
             <label className="text-sm text-slate-600">
-              Target
+              {catalogText.target}
               <select
                 className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
                 value={bulkPricing.target}
                 onChange={(event) => setBulkPricing((prev) => ({ ...prev, target: event.target.value }))}
               >
-                <option value="wholesale">Mayorista</option>
-                <option value="retail">Minorista</option>
-                <option value="both">Ambos</option>
+                <option value="wholesale">{catalogText.wholesale}</option>
+                <option value="retail">{catalogText.retail}</option>
+                <option value="both">{catalogText.both}</option>
               </select>
             </label>
             <label className="text-sm text-slate-600">
-              Acción
+              {catalogText.action}
               <select
                 className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
                 value={bulkPricing.mode}
                 onChange={(event) => setBulkPricing((prev) => ({ ...prev, mode: event.target.value }))}
               >
-                <option value="markup">Markup (+)</option>
-                <option value="markdown">Markdown (-)</option>
+                <option value="markup">{catalogText.markup}</option>
+                <option value="markdown">{catalogText.markdown}</option>
               </select>
             </label>
             <label className="text-sm text-slate-600">
@@ -967,7 +1494,7 @@ export default function BackofficePage() {
             </label>
             <div className="flex items-end">
               <Button className="w-full bg-slate-900 text-white" onClick={handleBulkPricing}>
-                Aplicar ajustes
+                {catalogText.applyAdjustments}
               </Button>
             </div>
           </CardContent>
@@ -975,27 +1502,27 @@ export default function BackofficePage() {
 
         <div className="flex flex-wrap gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm">
           <div className="flex items-center gap-2">
-            <span className="text-slate-500">Categoría</span>
+            <span className="text-slate-500">{catalogText.categoryFilter}</span>
             <select className="rounded-lg border border-slate-200 px-3 py-1">
-              <option>Root</option>
-              <option>Aros</option>
-              <option>Collares</option>
+              <option>{catalogText.root}</option>
+              <option>{categoryLabel("Aros")}</option>
+              <option>{categoryLabel("Collares")}</option>
             </select>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-slate-500">Acciones</span>
+            <span className="text-slate-500">{catalogText.actions}</span>
             <select className="rounded-lg border border-slate-200 px-3 py-1">
-              <option>Bulk actions</option>
-              <option>Activar</option>
-              <option>Desactivar</option>
+              <option>{catalogText.bulkActions}</option>
+              <option>{catalogText.activate}</option>
+              <option>{catalogText.deactivate}</option>
             </select>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-slate-500">Buscar</span>
+            <span className="text-slate-500">{catalogText.search}</span>
             <input
               type="text"
               className="rounded-lg border border-slate-200 px-3 py-1"
-              placeholder="SKU o nombre"
+              placeholder={catalogText.searchPlaceholder}
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
@@ -1008,14 +1535,14 @@ export default function BackofficePage() {
               <thead className="border-b border-slate-200 bg-slate-50 text-[12px] uppercase tracking-wide text-slate-500">
                 <tr>
                   <th className="px-4 py-3">SKU</th>
-                  <th className="px-4 py-3">Nombre</th>
-                  <th className="px-4 py-3">Categoría</th>
-                  <th className="px-4 py-3">Mayorista</th>
-                  <th className="px-4 py-3">Minorista</th>
-                  <th className="px-4 py-3">Stock</th>
-                  <th className="px-4 py-3">Fotos</th>
-                  <th className="px-4 py-3">Estado</th>
-                  <th className="px-4 py-3">Acciones</th>
+                  <th className="px-4 py-3">{catalogText.table.name}</th>
+                  <th className="px-4 py-3">{catalogText.table.category}</th>
+                  <th className="px-4 py-3">{catalogText.table.wholesale}</th>
+                  <th className="px-4 py-3">{catalogText.table.retail}</th>
+                  <th className="px-4 py-3">{catalogText.table.stock}</th>
+                  <th className="px-4 py-3">{catalogText.table.photos}</th>
+                  <th className="px-4 py-3">{catalogText.table.status}</th>
+                  <th className="px-4 py-3">{catalogText.table.actions}</th>
                 </tr>
               </thead>
               <tbody>
@@ -1023,7 +1550,7 @@ export default function BackofficePage() {
                   <tr key={product.id} className="border-b border-slate-100 text-slate-700">
                     <td className="px-4 py-3 text-slate-500">{product.id}</td>
                     <td className="px-4 py-3 font-medium text-slate-900">{product.name}</td>
-                    <td className="px-4 py-3">{product.category}</td>
+                    <td className="px-4 py-3">{categoryLabel(product.category)}</td>
                     <td className="px-4 py-3">${product.wholesalePrice.toLocaleString("es-AR")}</td>
                     <td className="px-4 py-3">${product.retailPrice.toLocaleString("es-AR")}</td>
                     <td className="px-4 py-3">{product.quantity}</td>
@@ -1031,7 +1558,7 @@ export default function BackofficePage() {
                       <div className="flex flex-wrap gap-1">
                         {product.images.slice(0, 2).map((img) => (
                           <span key={img} className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-500">
-                            Foto
+                            {catalogText.table.photo}
                           </span>
                         ))}
                       </div>
@@ -1041,12 +1568,12 @@ export default function BackofficePage() {
                         className={`rounded-full px-3 py-1 text-xs font-semibold ${product.status ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-500"}`}
                         onClick={() => handleToggleStatus(product.id)}
                       >
-                        {product.status ? "Activo" : "Pausado"}
+                        {product.status ? catalogText.active : catalogText.paused}
                       </button>
                     </td>
                     <td className="px-4 py-3">
                       <button className="text-slate-500 underline" onClick={() => handleEditProduct(product.id)}>
-                        Editar
+                        {catalogText.table.edit}
                       </button>
                     </td>
                   </tr>
@@ -1068,35 +1595,35 @@ export default function BackofficePage() {
         <div className="grid gap-4 md:grid-cols-3">
           <Card className="border border-slate-200 bg-white">
             <CardHeader>
-              <CardTitle>Stock total</CardTitle>
-              <CardDescription>Todo el catálogo</CardDescription>
+              <CardTitle>{stockText.totalStock}</CardTitle>
+              <CardDescription>{stockText.totalStockDesc}</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-semibold text-slate-900">{totalStock} uds</p>
-              <p className="text-xs text-slate-500">Incluye productos suspendidos.</p>
+              <p className="text-3xl font-semibold text-slate-900">{totalStock} {catalogText.unit}</p>
+              <p className="text-xs text-slate-500">{stockText.includesSuspended}</p>
             </CardContent>
           </Card>
           <Card className="border border-slate-200 bg-white">
             <CardHeader>
-              <CardTitle>Disponible</CardTitle>
-              <CardDescription>Liberado para venta</CardDescription>
+              <CardTitle>{stockText.available}</CardTitle>
+              <CardDescription>{stockText.availableDesc}</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-semibold text-slate-900">{totalAvailable} uds</p>
+              <p className="text-3xl font-semibold text-slate-900">{totalAvailable} {catalogText.unit}</p>
               <p className="text-xs text-emerald-600">
-                {(totalAvailable / totalStock * 100).toFixed(0)}% disponible
+                {(totalAvailable / totalStock * 100).toFixed(0)}% {stockText.availableRate}
               </p>
             </CardContent>
           </Card>
           <Card className="border border-slate-200 bg-white">
             <CardHeader>
-              <CardTitle>Reservado</CardTitle>
-              <CardDescription>Pedidos confirmados</CardDescription>
+              <CardTitle>{stockText.reserved}</CardTitle>
+              <CardDescription>{stockText.reservedDesc}</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-semibold text-slate-900">{totalReserved} uds</p>
+              <p className="text-3xl font-semibold text-slate-900">{totalReserved} {catalogText.unit}</p>
               <p className="text-xs text-amber-600">
-                {(totalReserved / totalStock * 100).toFixed(0)}% en preparación
+                {(totalReserved / totalStock * 100).toFixed(0)}% {stockText.preparingRate}
               </p>
             </CardContent>
           </Card>
@@ -1105,19 +1632,19 @@ export default function BackofficePage() {
         <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
           <Card className="border border-slate-200 bg-white">
             <CardHeader>
-              <CardTitle>Inventario por producto</CardTitle>
-              <CardDescription>Total, disponible y reservado</CardDescription>
+              <CardTitle>{stockText.inventoryByProduct}</CardTitle>
+              <CardDescription>{stockText.inventoryByProductDesc}</CardDescription>
             </CardHeader>
             <CardContent className="overflow-x-auto p-0">
               <table className="w-full text-left text-sm">
                 <thead className="border-b border-slate-200 bg-slate-50 text-slate-500">
                   <tr>
                     <th className="px-4 py-3">SKU</th>
-                    <th className="px-4 py-3">Producto</th>
-                    <th className="px-4 py-3">Categoría</th>
-                    <th className="px-4 py-3">Total</th>
-                    <th className="px-4 py-3">Disponible</th>
-                    <th className="px-4 py-3">Reservado</th>
+                    <th className="px-4 py-3">{catalogText.name}</th>
+                    <th className="px-4 py-3">{catalogText.category}</th>
+                    <th className="px-4 py-3">{stockText.total}</th>
+                    <th className="px-4 py-3">{stockText.available}</th>
+                    <th className="px-4 py-3">{stockText.reserved}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1125,7 +1652,7 @@ export default function BackofficePage() {
                     <tr key={product.id} className="border-b border-slate-100">
                       <td className="px-4 py-3 font-medium text-slate-900">{product.id}</td>
                       <td className="px-4 py-3">{product.name}</td>
-                      <td className="px-4 py-3">{product.category}</td>
+                      <td className="px-4 py-3">{categoryLabel(product.category)}</td>
                       <td className="px-4 py-3">{product.totalStock}</td>
                       <td className="px-4 py-3 text-emerald-700">{product.available}</td>
                       <td className="px-4 py-3 text-amber-600">{product.reserved}</td>
@@ -1138,15 +1665,15 @@ export default function BackofficePage() {
 
           <Card className="border border-slate-200 bg-white">
             <CardHeader>
-              <CardTitle>Stock por categoría</CardTitle>
-              <CardDescription>Proporción del inventario</CardDescription>
+              <CardTitle>{stockText.categoryStock}</CardTitle>
+              <CardDescription>{stockText.categoryStockDesc}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {categoryStock.map((category) => (
                 <div key={category.category}>
                   <div className="flex items-center justify-between text-sm">
-                    <span className="font-semibold text-slate-800">{category.category}</span>
-                    <span className="text-slate-500">{category.total} uds</span>
+                    <span className="font-semibold text-slate-800">{categoryLabel(category.category)}</span>
+                    <span className="text-slate-500">{category.total} {catalogText.unit}</span>
                   </div>
                   <div className="mt-2 h-2 rounded-full bg-slate-100">
                     <div
@@ -1163,18 +1690,18 @@ export default function BackofficePage() {
         <div className="grid gap-6 lg:grid-cols-2">
           <Card className="border border-slate-200 bg-white">
             <CardHeader>
-              <CardTitle>Faltantes proyectados</CardTitle>
-              <CardDescription>En base a ventas y reposiciones</CardDescription>
+              <CardTitle>{stockText.projectedShortages}</CardTitle>
+              <CardDescription>{stockText.projectedShortagesDesc}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               {upcomingShortages.map((item) => (
                 <div key={item.week} className="flex items-center justify-between rounded-xl border border-slate-100 px-3 py-2">
                   <div>
                     <p className="font-semibold text-slate-900">{item.product}</p>
-                    <p className="text-xs text-slate-500">{item.week}</p>
+                    <p className="text-xs text-slate-500">{weekLabel(item.week)}</p>
                   </div>
                   <Badge variant="outline" className="border-rose-200 text-rose-600">
-                    {item.expected} uds
+                    {item.expected} {catalogText.unit}
                   </Badge>
                 </div>
               ))}
@@ -1183,8 +1710,8 @@ export default function BackofficePage() {
 
           <Card className="border border-slate-200 bg-white">
             <CardHeader>
-              <CardTitle>Pedidos a proveedores</CardTitle>
-              <CardDescription>Órdenes en preparación</CardDescription>
+              <CardTitle>{stockText.supplierOrders}</CardTitle>
+              <CardDescription>{stockText.supplierOrdersDesc}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               {supplierOrders.map((order) => (
@@ -1192,11 +1719,13 @@ export default function BackofficePage() {
                   <div className="flex items-center justify-between">
                     <p className="font-semibold text-slate-900">{order.supplier}</p>
                     <Badge variant="outline" className="border-slate-200 text-slate-600">
-                      {order.eta}
+                      {isKorean ? order.eta.replace(" días", "일") : order.eta}
                     </Badge>
                   </div>
                   <p className="text-xs text-slate-500">{order.products}</p>
-                  <p className="text-xs text-slate-400">Qty {order.qty} uds</p>
+                  <p className="text-xs text-slate-400">
+                    {stockText.qty} {order.qty} {catalogText.unit}
+                  </p>
                 </div>
               ))}
             </CardContent>
@@ -1205,26 +1734,32 @@ export default function BackofficePage() {
 
         <Card className="border border-slate-200 bg-white">
           <CardHeader>
-            <CardTitle>Stock por depósito</CardTitle>
-            <CardDescription>Disponibilidad y reservas activas.</CardDescription>
+            <CardTitle>{stockText.warehouseStock}</CardTitle>
+            <CardDescription>{stockText.warehouseStockDesc}</CardDescription>
           </CardHeader>
           <CardContent className="overflow-x-auto p-0">
             <table className="w-full text-left text-sm">
               <thead className="border-b border-slate-200 bg-slate-50 text-slate-500">
                 <tr>
-                  <th className="px-4 py-3">Depósito</th>
-                  <th className="px-4 py-3">Ubicación</th>
-                  <th className="px-4 py-3">Disponible</th>
-                  <th className="px-4 py-3">Reservado</th>
+                  <th className="px-4 py-3">{stockText.warehouse}</th>
+                  <th className="px-4 py-3">{stockText.location}</th>
+                  <th className="px-4 py-3">{stockText.available}</th>
+                  <th className="px-4 py-3">{stockText.reserved}</th>
                 </tr>
               </thead>
               <tbody>
                 {warehouses.map((warehouse) => (
                   <tr key={warehouse.id} className="border-b border-slate-100">
                     <td className="px-4 py-3 font-medium text-slate-900">{warehouse.id}</td>
-                    <td className="px-4 py-3">{warehouse.location}</td>
-                    <td className="px-4 py-3">{warehouse.available} uds</td>
-                    <td className="px-4 py-3 text-amber-600">{warehouse.reserved} uds</td>
+                    <td className="px-4 py-3">
+                      {isKorean
+                        ? warehouse.location
+                            .replace("Depósito Parque Patricios", "파르케 파트리시오스 창고")
+                            .replace("Depósito Zona Sur (Lanús)", "남부권(라누스) 창고")
+                        : warehouse.location}
+                    </td>
+                    <td className="px-4 py-3">{warehouse.available} {catalogText.unit}</td>
+                    <td className="px-4 py-3 text-amber-600">{warehouse.reserved} {catalogText.unit}</td>
                   </tr>
                 ))}
               </tbody>
@@ -1253,18 +1788,18 @@ export default function BackofficePage() {
         <div className="grid gap-4 md:grid-cols-3">
           <Card className="border border-slate-200 bg-white">
             <CardHeader>
-              <CardTitle>Reclamos nuevos</CardTitle>
-              <CardDescription>Últimas 48hs</CardDescription>
+              <CardTitle>{trackingText.newClaims}</CardTitle>
+              <CardDescription>{trackingText.newClaimsDesc}</CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-semibold text-slate-900">{complaints.length}</p>
-              <p className="text-xs text-rose-600">Revisar tickets abiertos.</p>
+              <p className="text-xs text-rose-600">{trackingText.reviewTickets}</p>
             </CardContent>
           </Card>
           <Card className="border border-slate-200 bg-white">
             <CardHeader>
-              <CardTitle>Pedidos activos</CardTitle>
-              <CardDescription>En tránsito o preparando</CardDescription>
+              <CardTitle>{trackingText.activeOrders}</CardTitle>
+              <CardDescription>{trackingText.activeOrdersDesc}</CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-semibold text-slate-900">
@@ -1276,27 +1811,27 @@ export default function BackofficePage() {
                   ).length
                 }
               </p>
-              <p className="text-xs text-slate-500">Seguimiento en vivo</p>
+              <p className="text-xs text-slate-500">{trackingText.liveTracking}</p>
             </CardContent>
           </Card>
           <Card className="border border-slate-200 bg-white">
             <CardHeader>
-              <CardTitle>Pedidos entregados</CardTitle>
-              <CardDescription>Última semana</CardDescription>
+              <CardTitle>{trackingText.deliveredOrders}</CardTitle>
+              <CardDescription>{trackingText.deliveredOrdersDesc}</CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-semibold text-slate-900">
                 {shipmentsData.filter((shipment) => shipment.status === "Entregado").length}
               </p>
-              <p className="text-xs text-emerald-600">Sin reclamos.</p>
+              <p className="text-xs text-emerald-600">{trackingText.noClaims}</p>
             </CardContent>
           </Card>
         </div>
 
         <Card className="border border-slate-200 bg-white">
           <CardHeader>
-            <CardTitle>Dashboard de status</CardTitle>
-            <CardDescription>Distribución de pedidos</CardDescription>
+            <CardTitle>{trackingText.statusDashboard}</CardTitle>
+            <CardDescription>{trackingText.statusDashboardDesc}</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
             <div className="flex items-center justify-center">
@@ -1318,7 +1853,7 @@ export default function BackofficePage() {
               >
                 <div className="absolute inset-[18%] rounded-full bg-white text-center" style={{ transform: "rotate(-180deg)" }}>
                   <p className="pt-10 text-3xl font-semibold text-slate-900">{shipmentsData.length}</p>
-                  <p className="text-xs text-slate-500">Pedidos totales</p>
+                  <p className="text-xs text-slate-500">{trackingText.totalOrders}</p>
                 </div>
               </div>
             </div>
@@ -1330,20 +1865,22 @@ export default function BackofficePage() {
                       className="h-2 w-2 rounded-full"
                       style={{ backgroundColor: ["#f97316", "#fb923c", "#fdba74", "#fed7aa", "#fecdd3", "#fca5a5"][index % 6] }}
                     />
-                    <span className="font-semibold text-slate-800">{status.status}</span>
+                    <span className="font-semibold text-slate-800">{shipmentStatusLabel(status.status)}</span>
                   </div>
                   <div className="text-right text-slate-500">
                     <p>{((status.total / shipmentsData.length) * 100).toFixed(0)}%</p>
-                    <p className="text-xs">{status.total} pedidos</p>
+                    <p className="text-xs">
+                      {status.total} {trackingText.ordersWord}
+                    </p>
                   </div>
                 </div>
               ))}
             </div>
           </CardContent>
           <CardContent className="space-y-3 text-sm">
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Acciones rápidas</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">{trackingText.quickActions}</p>
             <div className="rounded-xl border border-slate-100 px-3 py-2 text-slate-600">
-              <p className="font-semibold text-slate-900">Pedidos con reclamos</p>
+              <p className="font-semibold text-slate-900">{trackingText.ordersWithClaims}</p>
               {complaints.map((shipment) => (
                 <p key={shipment.id} className="text-sm">
                   {shipment.id} · {shipment.retailer}
@@ -1351,7 +1888,7 @@ export default function BackofficePage() {
               ))}
             </div>
             <div className="rounded-xl border border-slate-100 px-3 py-2 text-slate-600">
-              <p className="font-semibold text-slate-900">Notas recientes</p>
+              <p className="font-semibold text-slate-900">{trackingText.recentNotes}</p>
                 {shipmentsData
                   .filter((shipment) => shipment.history.some((entry) => entry.type === "note"))
                   .slice(0, 3)
@@ -1370,7 +1907,7 @@ export default function BackofficePage() {
         <div className="flex flex-wrap gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm">
           <input
             type="text"
-            placeholder="Buscar por pedido o cliente"
+            placeholder={trackingText.searchPlaceholder}
             className="flex-1 rounded-xl border border-slate-200 px-3 py-2"
             value={shipmentSearch}
             onChange={(event) => setShipmentSearch(event.target.value)}
@@ -1380,7 +1917,7 @@ export default function BackofficePage() {
             value={clientFilter}
             onChange={(event) => setClientFilter(event.target.value)}
           >
-            <option value="all">Todos los clientes</option>
+            <option value="all">{trackingText.allClients}</option>
             {Array.from(new Set(shipmentsData.map((shipment) => shipment.retailer))).map((retailer) => (
               <option key={retailer} value={retailer}>
                 {retailer}
@@ -1394,14 +1931,14 @@ export default function BackofficePage() {
             <table className="w-full text-left text-sm">
               <thead className="border-b border-slate-200 bg-slate-50 text-slate-500">
                 <tr>
-                  <th className="px-4 py-3">Pedido</th>
-                  <th className="px-4 py-3">Retailer</th>
-                  <th className="px-4 py-3">Carrier</th>
-                  <th className="px-4 py-3">ETA</th>
-                  <th className="px-4 py-3">Estado</th>
-                  <th className="px-4 py-3">Notas</th>
-                  <th className="px-4 py-3">Reclamo</th>
-                  <th className="px-4 py-3 text-center">Historial</th>
+                  <th className="px-4 py-3">{trackingText.table.order}</th>
+                  <th className="px-4 py-3">{trackingText.table.retailer}</th>
+                  <th className="px-4 py-3">{trackingText.table.carrier}</th>
+                  <th className="px-4 py-3">{trackingText.table.eta}</th>
+                  <th className="px-4 py-3">{trackingText.table.status}</th>
+                  <th className="px-4 py-3">{trackingText.table.notes}</th>
+                  <th className="px-4 py-3">{trackingText.table.claim}</th>
+                  <th className="px-4 py-3 text-center">{trackingText.table.history}</th>
                 </tr>
               </thead>
               <tbody>
@@ -1410,7 +1947,7 @@ export default function BackofficePage() {
                     <td className="px-4 py-3 font-medium text-slate-900">{shipment.id}</td>
                     <td className="px-4 py-3">{shipment.retailer}</td>
                     <td className="px-4 py-3">{shipment.carrier}</td>
-                    <td className="px-4 py-3">{shipment.eta}</td>
+                    <td className="px-4 py-3">{etaLabel(shipment.eta)}</td>
                     <td className="px-4 py-3">
                       <select
                         className="rounded-full border border-slate-200 px-3 py-1 text-xs"
@@ -1419,20 +1956,20 @@ export default function BackofficePage() {
                       >
                         {shipmentStatuses.map((status) => (
                           <option key={status} value={status}>
-                            {status}
+                            {shipmentStatusLabel(status)}
                           </option>
                         ))}
                       </select>
                     </td>
                     <td className="px-4 py-3 text-slate-500">
                       {shipment.history.filter((entry) => entry.type === "note").length === 0
-                        ? "Sin notas"
+                        ? trackingText.table.noNotes
                         : shipment.history.filter((entry) => entry.type === "note")[shipment.history.filter((entry) => entry.type === "note").length - 1].value}
                     </td>
                     <td className="px-4 py-3 text-center">
                       {shipment.hasClaim ? (
                         <Badge variant="glow" className="bg-rose-100 px-4 text-rose-700">
-                          Reclamo activo
+                          {trackingText.table.activeClaim}
                         </Badge>
                       ) : (
                         <span className="text-sm text-slate-400">-</span>
@@ -1446,7 +1983,7 @@ export default function BackofficePage() {
                           setNoteForm({ orderId: shipment.id, text: "" });
                         }}
                       >
-                        Notas
+                        {trackingText.table.notesButton}
                       </button>
                     </td>
                   </tr>
@@ -1460,11 +1997,13 @@ export default function BackofficePage() {
           <Card className="border border-slate-200 bg-white">
             <CardHeader className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <CardTitle>Timeline del pedido {timelineOrder}</CardTitle>
-                <CardDescription>Evolución de status y notas</CardDescription>
+                <CardTitle>
+                  {trackingText.timelineTitle} {timelineOrder}
+                </CardTitle>
+                <CardDescription>{trackingText.timelineDesc}</CardDescription>
               </div>
               <Button variant="outline" className="border-slate-200 text-slate-600" onClick={() => setTimelineOrder(null)}>
-                Cerrar
+                {trackingText.close}
               </Button>
             </CardHeader>
             <CardContent className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
@@ -1479,22 +2018,24 @@ export default function BackofficePage() {
                       <div className="flex-1 rounded-2xl border border-slate-100 px-4 py-2">
                         <p className="text-xs text-slate-400">{entry.timestamp}</p>
                         <p className="text-sm font-semibold text-slate-900">
-                          {entry.type === "status" ? `Status: ${entry.value}` : entry.value}
+                          {entry.type === "status"
+                            ? `${trackingText.statusPrefix}: ${shipmentStatusLabel(entry.value)}`
+                            : entry.value}
                         </p>
                       </div>
                     </div>
                   ))}
               </div>
               <form className="grid gap-3" onSubmit={handleAddShipmentNote}>
-                <p className="text-sm font-semibold text-slate-800">Agregar nota</p>
+                <p className="text-sm font-semibold text-slate-800">{trackingText.addNote}</p>
                 <textarea
                   className="h-24 w-full rounded-xl border border-slate-200 px-3 py-2"
-                  placeholder="Actualización de inventario, reclamo, etc."
+                  placeholder={trackingText.notePlaceholder}
                   value={noteForm.text}
                   onChange={(event) => setNoteForm((prev) => ({ ...prev, text: event.target.value }))}
                 />
                 <Button type="submit" className="bg-slate-900 text-white">
-                  Guardar nota
+                  {trackingText.saveNote}
                 </Button>
               </form>
             </CardContent>
@@ -1503,8 +2044,8 @@ export default function BackofficePage() {
 
         <Card className="border border-slate-200 bg-white">
           <CardHeader>
-            <CardTitle>Historial de notas</CardTitle>
-            <CardDescription>Últimas entradas</CardDescription>
+            <CardTitle>{trackingText.notesHistoryTitle}</CardTitle>
+            <CardDescription>{trackingText.notesHistoryDesc}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             {shipmentsData
@@ -1533,13 +2074,13 @@ export default function BackofficePage() {
     return (
       <div className="space-y-6">
         <div className="space-y-1">
-          <h2 className="text-xl font-semibold text-slate-900">Pendings del equipo</h2>
-          <p className="text-sm text-slate-500">Seguimiento Kanban: asigná tareas y cambiá status.</p>
+          <h2 className="text-xl font-semibold text-slate-900">{pendingsText.title}</h2>
+          <p className="text-sm text-slate-500">{pendingsText.desc}</p>
         </div>
         <Card className="border border-slate-200 bg-white">
           <CardHeader>
-            <CardTitle>Agregar tarea</CardTitle>
-            <CardDescription>Crear un nuevo pendiente en cualquier columna.</CardDescription>
+            <CardTitle>{pendingsText.addTaskTitle}</CardTitle>
+            <CardDescription>{pendingsText.addTaskDesc}</CardDescription>
           </CardHeader>
           <CardContent>
             <form
@@ -1564,7 +2105,7 @@ export default function BackofficePage() {
               }}
             >
               <label className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                Tarea
+                {pendingsText.task}
                 <input
                   className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
                   value={newTask.title}
@@ -1573,7 +2114,7 @@ export default function BackofficePage() {
                 />
               </label>
               <label className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                Asignado
+                {pendingsText.assignee}
                 <input
                   className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
                   value={newTask.assignee}
@@ -1581,7 +2122,7 @@ export default function BackofficePage() {
                 />
               </label>
               <label className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                Detalle
+                {pendingsText.detail}
                 <input
                   className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
                   value={newTask.detail}
@@ -1589,7 +2130,7 @@ export default function BackofficePage() {
                 />
               </label>
               <label className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                Due
+                {pendingsText.due}
                 <input
                   className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
                   value={newTask.due}
@@ -1597,7 +2138,7 @@ export default function BackofficePage() {
                 />
               </label>
               <label className="text-xs uppercase tracking-[0.2em] text-slate-400 md:col-span-2">
-                Columna
+                {pendingsText.column}
                 <select
                   className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2"
                   value={newTask.column}
@@ -1605,14 +2146,14 @@ export default function BackofficePage() {
                 >
                   {kanbanColumns.map((column) => (
                     <option key={column.id} value={column.id}>
-                      {column.title}
+                      {kanbanColumnTitle(column.id, column.title)}
                     </option>
                   ))}
                 </select>
               </label>
               <div className="md:col-span-2 md:flex md:items-end">
                 <Button type="submit" className="w-full bg-slate-900 text-white">
-                  Añadir a tablero
+                  {pendingsText.addToBoard}
                 </Button>
               </div>
             </form>
@@ -1622,9 +2163,9 @@ export default function BackofficePage() {
           {kanbanColumns.map((column) => (
             <Card key={column.id} className="border border-slate-200 bg-white">
               <CardHeader>
-                <CardTitle>{column.title}</CardTitle>
+                <CardTitle>{kanbanColumnTitle(column.id, column.title)}</CardTitle>
                 <CardDescription>
-                  {kanbanCards.filter((card) => card.column === column.id).length} pendientes
+                  {kanbanCards.filter((card) => card.column === column.id).length} {pendingsText.pendingCount}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -1635,8 +2176,8 @@ export default function BackofficePage() {
                       <p className="text-sm font-semibold text-slate-900">{card.title}</p>
                       {card.detail && <p className="text-xs text-slate-500">{card.detail}</p>}
                       <div className="flex items-center justify-between text-xs text-slate-500">
-                        <span>{card.assignee || "Unassigned"}</span>
-                        <span>{card.due || "Sin fecha"}</span>
+                        <span>{card.assignee || pendingsText.unassigned}</span>
+                        <span>{card.due || pendingsText.noDue}</span>
                       </div>
                       <select
                         className="w-full rounded-xl border border-slate-200 px-2 py-1 text-xs"
@@ -1649,14 +2190,14 @@ export default function BackofficePage() {
                       >
                         {kanbanColumns.map((option) => (
                           <option key={option.id} value={option.id}>
-                            {option.title}
+                            {kanbanColumnTitle(option.id, option.title)}
                           </option>
                         ))}
                       </select>
                     </div>
                   ))}
                 {kanbanCards.filter((card) => card.column === column.id).length === 0 && (
-                  <p className="text-xs text-slate-400">Sin tareas asignadas.</p>
+                  <p className="text-xs text-slate-400">{pendingsText.noTasks}</p>
                 )}
               </CardContent>
             </Card>
@@ -1669,7 +2210,7 @@ export default function BackofficePage() {
   const renderContent = () => {
     switch (activeSection) {
       case "overview":
-        return overviewContent;
+        return renderOverview();
       case "catalog":
         return renderCatalog();
       case "stock":
@@ -1688,10 +2229,10 @@ export default function BackofficePage() {
       <aside className="hidden w-64 flex-shrink-0 flex-col bg-slate-900 text-slate-100 lg:flex">
         <div className="border-b border-white/10 px-5 py-6">
           <p className="text-sm uppercase tracking-[0.3em] text-slate-300">Aurelia</p>
-          <p className="text-xl font-semibold">Backoffice</p>
+          <p className="text-xl font-semibold">{ui.backofficeTitle}</p>
         </div>
         <nav className="flex-1 space-y-1 px-4 py-6">
-          {navSections.map((section) => {
+          {navItems.map((section) => {
             const Icon = section.icon;
             const isActive = activeSection === section.id;
             return (
@@ -1709,9 +2250,9 @@ export default function BackofficePage() {
           })}
         </nav>
         <div className="border-t border-white/10 px-4 py-4 text-xs text-slate-400">
-          <p>¿Necesitás ayuda?</p>
+          <p>{ui.needHelp}</p>
           <Button variant="outline" className="mt-2 w-full border-white/40 text-white hover:bg-white/10">
-            <Link href="mailto:hola@aurelia.com">Contactar soporte</Link>
+            <Link href="mailto:hola@aurelia.com">{ui.contactSupport}</Link>
           </Button>
         </div>
       </aside>
@@ -1719,16 +2260,16 @@ export default function BackofficePage() {
       <main className="flex-1 space-y-6 px-6 py-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <Breadcrumb active={activeSection} />
-            <p className="text-2xl font-semibold text-slate-900">Panel Operativo</p>
-            <p className="text-sm text-slate-500">Seleccioná un módulo para trabajar en detalle.</p>
+            <Breadcrumb active={activeSection} language={language} />
+            <p className="text-2xl font-semibold text-slate-900">{ui.panelTitle}</p>
+            <p className="text-sm text-slate-500">{ui.panelDesc}</p>
           </div>
           <div className="flex gap-3 text-sm">
             <Button variant="outline" className="border-slate-300 text-slate-700">
-              Descargar reporte
+              {ui.downloadReport}
             </Button>
             <Button className="bg-slate-900 text-white">
-              <BadgeCheck className="mr-2 h-4 w-4" /> Confirmar pedidos
+              <BadgeCheck className="mr-2 h-4 w-4" /> {ui.confirmOrders}
             </Button>
           </div>
         </div>
@@ -1739,20 +2280,29 @@ export default function BackofficePage() {
   );
 }
 
-function Breadcrumb({ active }: { active: string }) {
-  const labels: Record<string, string> = {
-    overview: "Dashboard",
-    catalog: "Catálogo",
-    stock: "Stock",
-    tracking: "Tracking",
-    pendings: "Pendings",
+function Breadcrumb({ active, language }: { active: string; language: "es" | "ko" }) {
+  const labels: Record<"es" | "ko", Record<string, string>> = {
+    es: {
+      overview: "Tablero",
+      catalog: "Catálogo",
+      stock: "Stock",
+      tracking: "Seguimiento",
+      pendings: "Pendientes",
+    },
+    ko: {
+      overview: "대시보드",
+      catalog: "카탈로그",
+      stock: "재고",
+      tracking: "추적",
+      pendings: "대기 업무",
+    },
   };
 
   return (
     <div className="mb-1 flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.3em] text-slate-400">
-      <span>Home</span>
+      <span>{language === "ko" ? "홈" : "Inicio"}</span>
       <span>/</span>
-      <span>{labels[active]}</span>
+      <span>{labels[language][active]}</span>
     </div>
   );
 }
