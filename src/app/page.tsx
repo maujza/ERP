@@ -451,44 +451,44 @@ export default function Home() {
     <div lang={language} className="relative isolate overflow-hidden bg-[#f7f7f7]">
       <div className="absolute -left-24 top-10 h-72 w-72 rounded-full bg-[#f0f0f0] blur-3xl" />
       <div className="absolute right-0 top-0 h-80 w-80 rounded-full bg-[#ffd2dc] blur-3xl" />
-      <main className="relative mx-auto flex max-w-6xl flex-col gap-16 px-6 py-16 md:px-10 lg:py-20">
-        <section className="grid items-center gap-10 lg:grid-cols-[1.2fr_1fr]">
+      <main className="relative mx-auto flex w-full max-w-[1500px] flex-col gap-12 px-4 py-10 sm:px-6 sm:py-12 md:px-8 lg:gap-16 lg:py-20 xl:px-6">
+        <section className="grid items-center gap-8 md:grid-cols-[1.1fr_0.9fr] lg:gap-10">
           <div className="space-y-6">
             <Badge variant="glow">{t.hero.badge}</Badge>
             <div className="space-y-4">
-              <h1 className="text-4xl font-semibold leading-tight text-[#111111] sm:text-5xl">
+              <h1 className="text-3xl font-semibold leading-tight text-[#111111] sm:text-4xl lg:text-5xl">
                 {t.hero.title}
               </h1>
-              <p className="text-lg leading-relaxed text-[#444444]">{t.hero.description}</p>
+              <p className="text-base leading-relaxed text-[#444444] sm:text-lg">{t.hero.description}</p>
             </div>
             <div className="flex flex-wrap gap-3">
-              <Button asChild size="lg">
+              <Button asChild className="w-full sm:w-auto" size="lg">
                 <Link href="/catalog">
                   {t.hero.catalogCta}
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
-              <Button asChild variant="outline" size="lg">
+              <Button asChild variant="outline" className="w-full sm:w-auto" size="lg">
                 <Link href="#contacto">
                   {t.hero.chatCta}
                   <PhoneCall className="h-4 w-4" />
                 </Link>
               </Button>
             </div>
-            <div className="grid max-w-xl grid-cols-3 gap-4 text-sm text-[#444444]">
+            <div className="grid max-w-xl grid-cols-2 gap-3 text-sm text-[#444444] sm:grid-cols-3 sm:gap-4">
               {t.hero.stats.map((stat) => (
                 <div
                   key={stat.label}
-                  className="rounded-2xl border border-black/10 bg-white/90 px-4 py-3 shadow-sm"
+                  className="rounded-2xl border border-black/10 bg-white/90 px-3 py-3 shadow-sm sm:px-4"
                 >
                   <p className="text-xs uppercase tracking-[0.18em] text-[#6b6b6b]">{stat.label}</p>
-                  <p className="text-2xl font-semibold text-[#111111]">{stat.value}</p>
+                  <p className="text-xl font-semibold text-[#111111] sm:text-2xl">{stat.value}</p>
                   <p className="text-xs text-[#6b6b6b]">{stat.detail}</p>
                 </div>
               ))}
             </div>
           </div>
-          <Card className="relative min-h-[420px] overflow-hidden border-0 bg-[#111111] text-white">
+          <Card className="relative min-h-[360px] overflow-hidden border-0 bg-[#111111] text-white sm:min-h-[420px]">
             <Image
               src="https://images.unsplash.com/photo-1522312346375-d1a52e2b99b3?auto=format&fit=crop&w=1200&q=80"
               alt={t.kit.imageAlt}
@@ -503,11 +503,11 @@ export default function Home() {
               <Badge variant="outline" className="bg-white/10 text-white">
                 {t.kit.badge}
               </Badge>
-              <CardTitle className="text-2xl font-semibold text-white">{t.kit.title}</CardTitle>
+              <CardTitle className="text-xl font-semibold text-white sm:text-2xl">{t.kit.title}</CardTitle>
               <CardDescription className="text-white/80">{t.kit.description}</CardDescription>
             </CardHeader>
             <CardContent className="relative z-10 grid gap-4">
-              <div className="grid grid-cols-3 gap-3 text-sm">
+              <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
                 {t.kit.highlights.map((item) => (
                   <div
                     key={item.label}
@@ -533,10 +533,10 @@ export default function Home() {
               {t.collectionsSection.meta}
             </span>
           </div>
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-2 sm:gap-6">
             {t.collectionsSection.items.map((item) => (
               <Card key={item.title} className="overflow-hidden p-0">
-                <div className="relative h-44 w-full">
+                <div className="relative h-36 w-full sm:h-44">
                   <Image
                     src={item.image}
                     alt={item.title}
@@ -550,9 +550,9 @@ export default function Home() {
                     {item.title}
                   </div>
                 </div>
-                <div className="space-y-4 p-6">
+                <div className="space-y-4 p-4 sm:p-6">
                   <div className="flex flex-col gap-1">
-                    <h3 className="text-xl font-semibold text-[#111111]">{item.title}</h3>
+                    <h3 className="text-lg font-semibold text-[#111111] sm:text-xl">{item.title}</h3>
                     <p className="text-sm text-[#444444]">{item.desc}</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -571,11 +571,11 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
-          <div className="rounded-[38px] border border-black/10 bg-white/90 p-6 shadow-[0_32px_80px_rgba(0,0,0,0.08)] backdrop-blur">
+        <section className="grid gap-8 md:grid-cols-[1.1fr_0.9fr] md:items-start">
+          <div className="rounded-[30px] border border-black/10 bg-white/90 p-4 shadow-[0_32px_80px_rgba(0,0,0,0.08)] backdrop-blur sm:rounded-[38px] sm:p-6">
             <div className="space-y-3">
               <Badge variant="outline">{t.moodboard.badge}</Badge>
-              <h2 className="text-3xl font-semibold text-[#111111]">{t.moodboard.title}</h2>
+              <h2 className="text-2xl font-semibold text-[#111111] sm:text-3xl">{t.moodboard.title}</h2>
               <p className="text-base text-[#444444]">{t.moodboard.description}</p>
             </div>
             <div className="mt-6 grid gap-4 sm:auto-rows-[220px] sm:grid-cols-2">
@@ -606,11 +606,11 @@ export default function Home() {
               ))}
             </div>
             <Card className="mt-6 overflow-hidden border-0 bg-[#111111] text-white shadow-[0_30px_90px_rgba(0,0,0,0.5)]">
-              <div className="relative z-10 space-y-4 p-6">
+              <div className="relative z-10 space-y-4 p-5 sm:p-6">
                 <Badge variant="outline" className="bg-white/10 text-white">
                   {t.supportCard.badge}
                 </Badge>
-                <CardTitle className="text-2xl">{t.supportCard.title}</CardTitle>
+                <CardTitle className="text-xl sm:text-2xl">{t.supportCard.title}</CardTitle>
                 <CardDescription className="text-white/80">{t.supportCard.description}</CardDescription>
                 <div className="flex flex-wrap gap-3 text-sm">
                   {t.supportCard.tags.map((tag) => (
@@ -638,13 +638,13 @@ export default function Home() {
           <div className="space-y-4">
             <div className="space-y-2">
               <Badge variant="outline">{t.bestSellers.badge}</Badge>
-              <p className="text-2xl font-semibold text-[#111111]">{t.bestSellers.title}</p>
+              <p className="text-xl font-semibold text-[#111111] sm:text-2xl">{t.bestSellers.title}</p>
               <p className="text-sm text-[#444444]">{t.bestSellers.description}</p>
             </div>
             <div className="space-y-5">
               {t.bestSellers.items.map((item) => (
                 <Card key={item.name} className="overflow-hidden border-black/10">
-                  <div className="relative h-48 w-full">
+                  <div className="relative h-40 w-full sm:h-48">
                     <Image
                       src={item.src}
                       alt={item.name}
@@ -680,12 +680,12 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="grid gap-6 lg:grid-cols-[1.2fr_1fr] lg:items-center">
+        <section className="grid gap-6 md:grid-cols-[1.2fr_1fr] md:items-center">
           <div className="space-y-4">
             <Badge variant="outline">{t.partner.badge}</Badge>
-            <h2 className="text-3xl font-semibold text-[#111111]">{t.partner.title}</h2>
+            <h2 className="text-2xl font-semibold text-[#111111] sm:text-3xl">{t.partner.title}</h2>
             <p className="text-base text-[#444444]">{t.partner.description}</p>
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {t.partner.reasons.map((reason) => (
                 <Card key={reason.title} className="border-black/10">
                   <CardHeader className="space-y-3">
@@ -730,12 +730,12 @@ export default function Home() {
           id="contacto"
           className="overflow-hidden rounded-3xl bg-[#111111] text-white shadow-[0_32px_80px_rgba(0,0,0,0.35)]"
         >
-          <div className="relative isolate flex max-w-full flex-col gap-8 p-10 md:flex-row md:items-center md:justify-between">
+          <div className="relative isolate flex max-w-full flex-col gap-8 p-5 sm:p-8 md:flex-row md:items-center md:justify-between md:p-10">
             <div className="max-w-xl space-y-4">
               <Badge variant="glow" className="bg-white/10 text-white">
                 {t.contact.badge}
               </Badge>
-              <h3 className="text-3xl font-semibold">{t.contact.title}</h3>
+              <h3 className="text-2xl font-semibold sm:text-3xl">{t.contact.title}</h3>
               <p className="text-white/80">{t.contact.description}</p>
               <div className="flex flex-wrap gap-3">
                 <Button

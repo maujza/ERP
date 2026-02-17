@@ -1002,7 +1002,7 @@ export default function BackofficePage() {
 
     return (
       <div className="space-y-6">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
           {kpisView.map((item) => (
             <Card key={item.label} className="border border-slate-200 bg-white">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -1036,7 +1036,7 @@ export default function BackofficePage() {
           </div>
         </div>
 
-        <div className="grid gap-6 xl:grid-cols-[1.8fr_1.1fr]">
+        <div className="grid gap-6 lg:grid-cols-[1.8fr_1.1fr]">
           <Card className="border border-slate-200 bg-white">
             <CardHeader className="flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -1077,7 +1077,7 @@ export default function BackofficePage() {
               <CardTitle>{overviewText.orderStatusTitle}</CardTitle>
               <CardDescription>{overviewText.orderStatusDesc}</CardDescription>
             </CardHeader>
-            <CardContent className="grid gap-4 lg:grid-cols-[1fr_1fr]">
+            <CardContent className="grid gap-4 md:grid-cols-[1fr_1fr]">
               <div className="flex items-center justify-center">
                 <div className="relative h-40 w-40 rounded-full" style={{ background: `conic-gradient(${donutSegments})` }}>
                   <div className="absolute inset-[18%] rounded-full bg-white/90 text-center">
@@ -1111,7 +1111,7 @@ export default function BackofficePage() {
           </Card>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-2">
           <Card className="border border-slate-200 bg-white">
             <CardHeader>
               <CardTitle>{overviewText.soldByCategoryTitle}</CardTitle>
@@ -1168,7 +1168,7 @@ export default function BackofficePage() {
           </Card>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-2">
           <Card className="border border-slate-200 bg-white">
             <CardHeader>
               <CardTitle>{overviewText.stockAlertsTitle}</CardTitle>
@@ -1264,7 +1264,7 @@ export default function BackofficePage() {
           </Card>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
+        <div className="grid gap-6 md:grid-cols-[1.5fr_1fr]">
           <Card className="border border-slate-200 bg-white">
             <CardHeader>
               <CardTitle>{catalogText.loadEditProduct}</CardTitle>
@@ -1629,7 +1629,7 @@ export default function BackofficePage() {
           </Card>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
+        <div className="grid gap-6 md:grid-cols-[1.6fr_1fr]">
           <Card className="border border-slate-200 bg-white">
             <CardHeader>
               <CardTitle>{stockText.inventoryByProduct}</CardTitle>
@@ -1687,7 +1687,7 @@ export default function BackofficePage() {
           </Card>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-2">
           <Card className="border border-slate-200 bg-white">
             <CardHeader>
               <CardTitle>{stockText.projectedShortages}</CardTitle>
@@ -1833,7 +1833,7 @@ export default function BackofficePage() {
             <CardTitle>{trackingText.statusDashboard}</CardTitle>
             <CardDescription>{trackingText.statusDashboardDesc}</CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+          <CardContent className="grid gap-6 md:grid-cols-[1.2fr_0.8fr]">
             <div className="flex items-center justify-center">
               <div
                 className="relative h-52 w-52 rounded-full"
@@ -2006,7 +2006,7 @@ export default function BackofficePage() {
                 {trackingText.close}
               </Button>
             </CardHeader>
-            <CardContent className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+            <CardContent className="grid gap-6 md:grid-cols-[1.2fr_0.8fr]">
               <div className="space-y-4">
                 {shipmentsData
                   .find((shipment) => shipment.id === timelineOrder)
@@ -2159,7 +2159,7 @@ export default function BackofficePage() {
             </form>
           </CardContent>
         </Card>
-        <div className="mx-auto grid w-full max-w-5xl gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="mx-auto grid w-full max-w-5xl gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {kanbanColumns.map((column) => (
             <Card key={column.id} className="border border-slate-200 bg-white">
               <CardHeader>
@@ -2257,14 +2257,14 @@ export default function BackofficePage() {
         </div>
       </aside>
 
-      <main className="flex-1 space-y-6 px-6 py-8">
+      <main className="flex-1 space-y-6 px-4 py-6 sm:px-6 sm:py-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <Breadcrumb active={activeSection} language={language} />
-            <p className="text-2xl font-semibold text-slate-900">{ui.panelTitle}</p>
+            <p className="text-xl font-semibold text-slate-900 sm:text-2xl">{ui.panelTitle}</p>
             <p className="text-sm text-slate-500">{ui.panelDesc}</p>
           </div>
-          <div className="flex gap-3 text-sm">
+          <div className="flex w-full flex-wrap gap-3 text-sm sm:w-auto">
             <Button variant="outline" className="border-slate-300 text-slate-700">
               {ui.downloadReport}
             </Button>
@@ -2272,6 +2272,25 @@ export default function BackofficePage() {
               <BadgeCheck className="mr-2 h-4 w-4" /> {ui.confirmOrders}
             </Button>
           </div>
+        </div>
+
+        <div className="flex gap-2 overflow-x-auto pb-1 lg:hidden">
+          {navItems.map((section) => {
+            const isActive = activeSection === section.id;
+            return (
+              <button
+                key={section.id}
+                onClick={() => setActiveSection(section.id)}
+                className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                  isActive
+                    ? "border-slate-900 bg-slate-900 text-white"
+                    : "border-slate-300 bg-white text-slate-700"
+                }`}
+              >
+                {section.label}
+              </button>
+            );
+          })}
         </div>
 
         {renderContent()}
@@ -2298,11 +2317,14 @@ function Breadcrumb({ active, language }: { active: string; language: "es" | "ko
     },
   };
 
+  const safeLanguage = language === "ko" ? "ko" : "es";
+  const activeLabel = labels[safeLanguage][active] ?? labels[safeLanguage].catalog;
+
   return (
     <div className="mb-1 flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.3em] text-slate-400">
-      <span>{language === "ko" ? "홈" : "Inicio"}</span>
+      <span>{safeLanguage === "ko" ? "홈" : "Inicio"}</span>
       <span>/</span>
-      <span>{labels[language][active]}</span>
+      <span>{activeLabel}</span>
     </div>
   );
 }

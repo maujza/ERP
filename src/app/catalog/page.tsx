@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { Heart, Search, ShoppingBag, User } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { useLanguage } from "@/components/language-provider";
@@ -318,6 +319,7 @@ export default function CatalogPage() {
   const [search, setSearch] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [activePrice, setActivePrice] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<"recommended" | "price_asc" | "price_desc">("recommended");
   const [cart, setCart] = useState<Record<string, number>>({});
 
   const categories = useMemo(
@@ -364,7 +366,21 @@ export default function CatalogPage() {
       .filter(Boolean) as { product: Product; quantity: number; subtotal: number }[];
   }, [cart, t.products]);
 
+  const displayedProducts = useMemo(() => {
+    const products = [...filteredProducts];
+    if (sortBy === "price_asc") {
+      products.sort((a, b) => a.price - b.price);
+    } else if (sortBy === "price_desc") {
+      products.sort((a, b) => b.price - a.price);
+    }
+    return products;
+  }, [filteredProducts, sortBy]);
+
   const cartTotal = cartItems.reduce((acc, item) => acc + item.subtotal, 0);
+  const navLinks =
+    language === "ko"
+      ? ["추천", "신상품", "베스트", "귀걸이", "목걸이", "팔찌", "세트", "키트"]
+      : ["Recomendados", "Novedades", "Más vendidos", "Aros", "Collares", "Pulseras", "Sets", "Kits"];
 
   const toggleCategory = (category: string) => {
     setSelectedCategories((prev) =>
@@ -390,37 +406,48 @@ export default function CatalogPage() {
   };
 
   return (
-    <div className="bg-[#f7f7f7]">
-      <div className="relative isolate overflow-hidden">
-        <div className="absolute inset-x-0 top-0 h-96 bg-gradient-to-b from-[#111111] via-[#1f1f1f]/95 to-[#1f1f1f]/70" />
-        <main className="relative mx-auto flex min-h-screen max-w-6xl flex-col gap-10 px-6 py-16 md:px-10">
-          <section className="space-y-6 pb-6 text-white">
-            <Badge variant="glow" className="bg-white/10 text-white">
-              {t.heroBadge}
-            </Badge>
-            <div className="grid gap-2">
-              <h1 className="text-4xl font-semibold leading-tight">{t.heroTitle}</h1>
-              <p className="max-w-2xl text-lg text-white/80 drop-shadow-[0_2px_10px_rgba(0,0,0,0.55)]">
-                {t.heroDescription}
-              </p>
+    <div className="bg-[#f1f1f1]">
+      <main className="mx-auto flex min-h-screen w-full max-w-[1750px] flex-col gap-5 px-3 py-4 sm:px-5 md:px-6">
+        <section className="overflow-hidden rounded-2xl border border-black/10 bg-white">
+          <div className="flex flex-wrap items-center gap-3 border-b border-black/10 px-4 py-3 md:flex-nowrap md:px-6">
+            <Link href="/" className="text-2xl font-black tracking-[0.18em] text-black md:text-3xl">
+              AURELIA
+            </Link>
+            <div className="flex w-full items-center rounded-md border border-black/20 bg-white md:max-w-2xl">
+              <input
+                type="text"
+                placeholder={t.searchPlaceholder}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="h-10 w-full bg-transparent px-3 text-sm text-[#111111] outline-none"
+              />
+              <button className="grid h-10 w-10 place-items-center border-l border-black/20">
+                <Search className="h-4 w-4 text-black" />
+              </button>
             </div>
-            <div className="flex flex-wrap gap-3">
-              <Button
-                asChild
-                size="lg"
-                variant="outline"
-                className="border-white/40 bg-white/5 text-white hover:bg-white/15"
-              >
-                <Link href="/">{t.backHome}</Link>
-              </Button>
-              <Button size="lg" variant="muted">
-                {t.downloadList}
-              </Button>
+            <div className="ml-auto flex items-center gap-4 text-[#111111]">
+              <User className="h-4 w-4" />
+              <Heart className="h-4 w-4" />
+              <ShoppingBag className="h-4 w-4" />
             </div>
-          </section>
+          </div>
+          <div className="flex gap-5 overflow-x-auto px-4 py-3 text-sm text-[#2f2f2f] md:px-6">
+            {navLinks.map((item) => (
+              <button key={item} className="whitespace-nowrap hover:text-black">
+                {item}
+              </button>
+            ))}
+          </div>
+        </section>
 
-          <section className="grid gap-8 pt-6 lg:grid-cols-[280px_1fr]">
-            <Card className="border-black/10 bg-white/90">
+        <section className="px-1 text-sm text-[#6b6b6b]">
+          <span>{language === "ko" ? "홈" : "Página principal"}</span>
+          <span className="mx-2">/</span>
+          <span>{language === "ko" ? "카탈로그" : "Catálogo"}</span>
+        </section>
+
+        <section className="grid gap-4 md:grid-cols-[250px_1fr] lg:grid-cols-[280px_1fr] xl:grid-cols-[300px_1fr]">
+          <Card className="h-fit border-black/10 bg-white md:sticky md:top-4">
               <CardHeader>
                 <CardTitle className="text-[#111111]">{t.filtersTitle}</CardTitle>
                 <CardDescription className="text-[#444444]">{t.filtersDesc}</CardDescription>
@@ -503,33 +530,65 @@ export default function CatalogPage() {
                   </Button>
                 )}
               </CardContent>
-            </Card>
+          </Card>
 
-            <div className="space-y-6">
-              <div className="flex flex-col gap-2">
+          <div className="space-y-4">
+              <div className="flex flex-col gap-2 rounded-xl border border-black/10 bg-white px-4 py-3 md:flex-row md:items-center md:justify-between">
                 <p className="text-sm text-[#6b6b6b]">
-                  {filteredProducts.length} {t.resultsLabel} ·{" "}
+                  {displayedProducts.length} {t.resultsLabel} ·{" "}
                   <span className="font-medium text-[#111111]">
                     {selectedCategories.length > 0
                       ? selectedCategories.join(" · ")
                       : t.allCategories}
                   </span>
                 </p>
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-[#6b6b6b]">{language === "ko" ? "정렬" : "Ordenar por"}</span>
+                  <select
+                    value={sortBy}
+                    onChange={(e) =>
+                      setSortBy(e.target.value as "recommended" | "price_asc" | "price_desc")
+                    }
+                    className="rounded-md border border-black/15 bg-white px-2 py-1 text-[#111111]"
+                  >
+                    <option value="recommended">
+                      {language === "ko" ? "추천순" : "Recomendados"}
+                    </option>
+                    <option value="price_asc">{language === "ko" ? "가격 낮은순" : "Precio: menor"}</option>
+                    <option value="price_desc">{language === "ko" ? "가격 높은순" : "Precio: mayor"}</option>
+                  </select>
+                </div>
               </div>
-              <div className="grid gap-6 md:grid-cols-2">
-                {filteredProducts.map((product) => {
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+                <div className="relative overflow-hidden rounded-xl border border-black/10 bg-[#111111] p-5 text-white">
+                  <p className="text-xs uppercase tracking-[0.24em] text-white/70">
+                    {language === "ko" ? "트렌드" : "Trend"}
+                  </p>
+                  <p className="mt-2 text-xl font-semibold">
+                    {language === "ko" ? "이번 주 베스트 룩북" : "Lookbook destacado de la semana"}
+                  </p>
+                  <p className="mt-2 text-sm text-white/80">
+                    {language === "ko"
+                      ? "상위 회전 상품으로 큐레이션된 세트를 만나보세요."
+                      : "Descubrí los packs curados con mayor rotación en tiendas."}
+                  </p>
+                  <Button variant="muted" className="mt-4">
+                    {language === "ko" ? "지금 보기" : "Ver ahora"}
+                  </Button>
+                </div>
+                {displayedProducts.map((product) => {
                   const quantityInCart = cart[product.id] ?? 0;
                   return (
-                    <Card key={product.id} className="flex flex-col overflow-hidden">
-                      <div className="relative h-56 w-full">
+                    <article key={product.id} className="overflow-hidden rounded-xl border border-black/10 bg-white">
+                      <div className="relative h-60 w-full">
                         <Image
                           src={product.image}
                           alt={product.name}
                           fill
-                          sizes="(min-width: 768px) 40vw, 92vw"
+                          sizes="(min-width: 1536px) 22vw, (min-width: 1024px) 30vw, 90vw"
                           className="object-cover"
                         />
-                        <div className="absolute left-4 top-4 flex gap-2">
+                        <div className="absolute left-3 top-3 flex gap-2">
                           <Badge variant="outline" className="bg-white/90">
                             {product.category}
                           </Badge>
@@ -538,55 +597,45 @@ export default function CatalogPage() {
                           </Badge>
                         </div>
                       </div>
-                      <CardHeader className="space-y-2">
-                        <CardTitle className="text-[#111111]">{product.name}</CardTitle>
-                        <CardDescription className="text-[#444444]">
-                          {product.description}
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent className="flex flex-1 flex-col gap-4">
+                      <div className="space-y-3 px-3 pb-4 pt-3">
+                        <p className="line-clamp-2 text-[15px] font-medium text-[#111111]">{product.name}</p>
+                        <p className="line-clamp-2 text-sm text-[#4b4b4b]">{product.description}</p>
+                        <p className="text-[11px] uppercase tracking-[0.18em] text-[#8a8a8a]">{product.pack}</p>
+                        <p className="text-[30px] font-semibold leading-none text-[#111111]">
+                          {formatPrice(product.price)}
+                        </p>
                         <div className="flex flex-wrap gap-2">
                           {product.tags.map((tag) => (
                             <span
                               key={tag}
-                              className="rounded-full bg-[#f0f0f0] px-3 py-1 text-xs text-[#444444]"
+                              className="rounded-full bg-[#f1f1f1] px-2.5 py-1 text-[11px] text-[#444444]"
                             >
                               {tag}
                             </span>
                           ))}
                         </div>
-                        <div className="mt-auto flex items-center justify-between">
-                          <div>
-                            <p className="text-xs uppercase tracking-[0.2em] text-[#6b6b6b]">
-                              {product.pack}
-                            </p>
-                            <p className="text-2xl font-semibold text-[#111111]">
-                              {formatPrice(product.price)}
-                            </p>
-                          </div>
-                          <Button
-                            size="lg"
-                            variant="outline"
-                            className="border-black/20 text-[#111111] hover:border-black/30 hover:bg-[#f7f7f7]"
-                            onClick={() => handleAddToCart(product.id)}
-                          >
-                            {t.addButton}
-                            {quantityInCart > 0 && (
-                              <span className="ml-2 rounded-full bg-black/10 px-2 py-0.5 text-xs">
-                                {quantityInCart}
-                              </span>
-                            )}
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="w-full border-black/20 text-[#111111] hover:border-black/30 hover:bg-[#f7f7f7]"
+                          onClick={() => handleAddToCart(product.id)}
+                        >
+                          {t.addButton}
+                          {quantityInCart > 0 && (
+                            <span className="ml-2 rounded-full bg-black/10 px-2 py-0.5 text-xs">
+                              {quantityInCart}
+                            </span>
+                          )}
+                        </Button>
+                      </div>
+                    </article>
                   );
                 })}
               </div>
             </div>
-          </section>
+        </section>
 
-          <section id="cart" className="grid gap-6 lg:grid-cols-[1fr_360px]">
+        <section id="cart" className="grid gap-6 pb-6 md:grid-cols-[1fr_320px] lg:grid-cols-[1fr_360px]">
             <Card className="border-black/10 bg-white/90">
               <CardHeader>
                 <CardTitle className="text-[#111111]">{t.nextStepsTitle}</CardTitle>
@@ -598,7 +647,7 @@ export default function CatalogPage() {
               </CardContent>
             </Card>
 
-            <Card className="sticky top-10 h-fit border-black/10 bg-white/95 shadow-[0_22px_60px_rgba(0,0,0,0.12)]">
+            <Card className="h-fit border-black/10 bg-white/95 shadow-[0_22px_60px_rgba(0,0,0,0.12)] md:sticky md:top-6">
               <CardHeader className="space-y-1">
                 <CardTitle className="text-[#111111]">{t.cartTitle}</CardTitle>
                 <CardDescription className="text-[#444444]">
@@ -703,9 +752,8 @@ export default function CatalogPage() {
                 </div>
               </CardContent>
             </Card>
-          </section>
-        </main>
-      </div>
+        </section>
+      </main>
     </div>
   );
 }
