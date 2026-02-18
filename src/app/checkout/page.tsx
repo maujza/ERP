@@ -81,6 +81,7 @@ export default function CheckoutPage() {
         payNow: "지금 결제",
         wpp: "WhatsApp으로 주문",
         wppSend: "WhatsApp으로 보내기",
+        paymentTitle: "결제 방법 선택",
         emptyCartTitle: "장바구니가 비어 있습니다",
         emptyCartDesc: "결제를 시작하려면 상품을 추가하세요.",
         backHome: "홈으로",
@@ -140,6 +141,7 @@ export default function CheckoutPage() {
         payNow: "Pagar ahora",
         wpp: "Pedir por WhatsApp",
         wppSend: "Enviar pedido por WhatsApp",
+        paymentTitle: "¿Como queres pagar?",
         emptyCartTitle: "Tu carrito esta vacio",
         emptyCartDesc: "Agrega productos para iniciar checkout.",
         backHome: "Volver al home",
@@ -338,6 +340,47 @@ export default function CheckoutPage() {
   };
 
   const submitOrder = () => {
+    // WhatsApp path: only require email, then send with whatever info is available
+    if (paymentMethod === "wpp") {
+      const emailError = validateEmail(email);
+      if (emailError) {
+        setContactComplete(false);
+        return;
+      }
+      const lines = cartLines
+        .map((line) => `• ${getProductName(line.product, language)} x${line.quantity} - ${formatArs(line.lineTotal, language)}`)
+        .join("\n");
+      const shippingMethod = shippingMethods.find((m) => m.id === selectedShippingMethod);
+      const addressParts = [shipping.address, shipping.city, shipping.province, shipping.postalCode]
+        .filter(Boolean)
+        .join(", ");
+      const msg = [
+        language === "ko" ? "안녕하세요! WhatsApp으로 주문을 완료하고 싶습니다:" : "Hola! Quiero finalizar mi pedido:",
+        "",
+        lines,
+        "",
+        `${t.subtotal}: ${formatArs(subtotal, language)}`,
+        shippingMethod
+          ? `${t.shipping}: ${formatArs(shippingAmount, language)} (${shippingMethod.label})`
+          : null,
+        discountAmount > 0 ? `${t.discount}: -${formatArs(discountAmount, language)}` : null,
+        `${t.total}: ${formatArs(total, language)}`,
+        "",
+        shipping.firstName.trim()
+          ? `${t.firstName}: ${shipping.firstName} ${shipping.lastName}`
+          : null,
+        addressParts ? `${t.address}: ${addressParts}` : null,
+        `${t.email}: ${email}`,
+      ]
+        .filter(Boolean)
+        .join("\n");
+      // Replace this number with the store's WhatsApp number (country code + number, no spaces or +)
+      const WPP_NUMBER = "5491100000000";
+      window.open(`https://wa.me/${WPP_NUMBER}?text=${encodeURIComponent(msg)}`, "_blank");
+      return;
+    }
+
+    // Card / Mercado Pago path: full validation
     const emailError = validateEmail(email);
     if (emailError) {
       setContactComplete(false);
@@ -356,33 +399,6 @@ export default function CheckoutPage() {
 
     if (paymentMethod === "mp") {
       window.location.href = "https://www.mercadopago.com.ar/";
-      return;
-    }
-
-    if (paymentMethod === "wpp") {
-      const lines = cartLines
-        .map((line) => `• ${getProductName(line.product, language)} x${line.quantity} - ${formatArs(line.lineTotal, language)}`)
-        .join("\n");
-      const shippingMethod = shippingMethods.find((m) => m.id === selectedShippingMethod);
-      const msg = [
-        language === "ko" ? "안녕하세요! WhatsApp으로 주문을 완료하고 싶습니다:" : "Hola! Quiero finalizar mi pedido:",
-        "",
-        lines,
-        "",
-        `${t.subtotal}: ${formatArs(subtotal, language)}`,
-        `${t.shipping}: ${formatArs(shippingAmount, language)}${shippingMethod ? ` (${shippingMethod.label})` : ""}`,
-        discountAmount > 0 ? `${t.discount}: -${formatArs(discountAmount, language)}` : null,
-        `${t.total}: ${formatArs(total, language)}`,
-        "",
-        `${t.firstName}: ${shipping.firstName} ${shipping.lastName}`,
-        `${t.address}: ${shipping.address}, ${shipping.city}, ${shipping.province} (${shipping.postalCode})`,
-        `${t.email}: ${email}`,
-      ]
-        .filter(Boolean)
-        .join("\n");
-      // Replace this number with the store's WhatsApp number (country code + number, no spaces or +)
-      const WPP_NUMBER = "5491100000000";
-      window.open(`https://wa.me/${WPP_NUMBER}?text=${encodeURIComponent(msg)}`, "_blank");
       return;
     }
 
@@ -410,6 +426,44 @@ export default function CheckoutPage() {
     <div className="bg-[#f4f4f4] pb-28 md:pb-10">
       <main className="mx-auto grid w-full max-w-[1300px] gap-5 px-4 py-6 md:grid-cols-[1fr_360px] md:px-6 md:py-8">
         <section className="space-y-4">
+          {/* Payment method selector — at top so user chooses their path first */}
+          <Card className="space-y-3 p-5">
+            <p className="text-sm font-semibold text-[#111111]">{t.paymentTitle}</p>
+            <div className="grid gap-2">
+              <button
+                onClick={() => setPaymentMethod("card")}
+                className={`rounded-2xl border px-4 py-3 text-left text-sm font-medium ${
+                  paymentMethod === "card" ? "border-[#111111] bg-[#111111] text-white" : "border-black/15 bg-white"
+                }`}
+              >
+                {t.card}
+              </button>
+              <button
+                onClick={() => setPaymentMethod("mp")}
+                className={`rounded-2xl border px-4 py-3 text-left text-sm font-medium ${
+                  paymentMethod === "mp" ? "border-[#111111] bg-[#111111] text-white" : "border-black/15 bg-white"
+                }`}
+              >
+                {t.mp}
+              </button>
+              <button
+                onClick={() => setPaymentMethod("wpp")}
+                className={`rounded-2xl border px-4 py-3 text-left text-sm font-medium ${
+                  paymentMethod === "wpp" ? "border-[#25d366] bg-[#25d366] text-white" : "border-black/15 bg-white"
+                }`}
+              >
+                {t.wpp}
+              </button>
+            </div>
+            {paymentMethod === "wpp" && (
+              <p className="rounded-2xl bg-[#f0faf4] p-3 text-sm text-[#1a7a3a]">
+                {language === "ko"
+                  ? "주문 정보가 WhatsApp 메시지로 전송됩니다. 이메일만 입력하면 바로 보낼 수 있습니다."
+                  : "Completa solo tu email y te enviamos el resumen. Un asesor coordina el pago por WhatsApp."}
+              </p>
+            )}
+          </Card>
+
           <Card className="p-5">
             <p className="text-xs uppercase tracking-[0.2em] text-[#666666]">{t.step1}</p>
             <label className="mt-3 block text-sm font-medium text-[#111111]">{t.email}</label>
@@ -523,43 +577,9 @@ export default function CheckoutPage() {
             </div>
           </Card>
 
-          <Card className={`space-y-4 p-5 ${selectedShippingMethod ? "" : "opacity-60"}`}>
-            <p className="text-xs uppercase tracking-[0.2em] text-[#666666]">{t.step4}</p>
-            <div className="grid gap-2">
-              <button
-                onClick={() => setPaymentMethod("card")}
-                className={`rounded-2xl border px-4 py-3 text-left text-sm ${
-                  paymentMethod === "card" ? "border-[#111111] bg-[#111111] text-white" : "border-black/15"
-                }`}
-              >
-                {t.card}
-              </button>
-              <button
-                onClick={() => setPaymentMethod("mp")}
-                className={`rounded-2xl border px-4 py-3 text-left text-sm ${
-                  paymentMethod === "mp" ? "border-[#111111] bg-[#111111] text-white" : "border-black/15"
-                }`}
-              >
-                {t.mp}
-              </button>
-              <button
-                onClick={() => setPaymentMethod("wpp")}
-                className={`rounded-2xl border px-4 py-3 text-left text-sm ${
-                  paymentMethod === "wpp" ? "border-[#25d366] bg-[#25d366] text-white" : "border-black/15"
-                }`}
-              >
-                {t.wpp}
-              </button>
-            </div>
-            {paymentMethod === "wpp" && (
-              <p className="rounded-2xl bg-[#f0faf4] p-3 text-sm text-[#1a7a3a]">
-                {language === "ko"
-                  ? "주문 정보가 WhatsApp 메시지로 전송됩니다. '지금 결제' 버튼을 누르면 WhatsApp이 열립니다."
-                  : "Se abrira WhatsApp con los detalles de tu pedido. Un asesor te contactara para coordinar el pago."}
-              </p>
-            )}
-
-            {paymentMethod === "card" && (
+          {paymentMethod === "card" && (
+            <Card className="space-y-4 p-5">
+              <p className="text-xs uppercase tracking-[0.2em] text-[#666666]">{t.step4}</p>
               <div className="space-y-3">
                 <Field
                   label={t.cardHolder}
@@ -675,8 +695,8 @@ export default function CheckoutPage() {
                   </div>
                 )}
               </div>
-            )}
-          </Card>
+            </Card>
+          )}
         </section>
 
         <aside className="order-first space-y-4 md:order-last md:sticky md:top-24 md:h-fit">
