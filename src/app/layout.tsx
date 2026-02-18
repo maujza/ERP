@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 
+import { AppChrome } from "@/components/app-chrome";
+import { CartProvider } from "@/components/cart-provider";
 import { LanguageProvider } from "@/components/language-provider";
 import { LanguageToggle } from "@/components/language-toggle";
 
@@ -27,8 +29,12 @@ export default function RootLayout({
     <html lang="es" className="bg-slate-50">
       <body className={`${plusJakarta.variable} antialiased`}>
         <LanguageProvider>
-          <LanguageToggle />
-          {children}
+          <CartProvider>
+            <AppChrome>
+              <LanguageToggle />
+              {children}
+            </AppChrome>
+          </CartProvider>
         </LanguageProvider>
       </body>
     </html>

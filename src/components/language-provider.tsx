@@ -43,7 +43,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     return saved === "es" || saved === "ko" ? saved : "es";
   }, []);
 
-  const language = useSyncExternalStore(subscribe, getSnapshot, () => "es");
+  const language = useSyncExternalStore<Language>(subscribe, getSnapshot, () => "es");
 
   useEffect(() => {
     document.documentElement.lang = language;
@@ -74,8 +74,13 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
 export function useLanguage() {
   const context = useContext(LanguageContext);
-  if (!context) {
-    throw new Error("useLanguage must be used within LanguageProvider");
+  if (context) {
+    return context;
   }
-  return context;
+
+  return {
+    language: "es" as const,
+    setLanguage: () => {},
+    toggleLanguage: () => {},
+  };
 }
