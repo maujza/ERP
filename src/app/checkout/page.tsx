@@ -79,6 +79,8 @@ export default function CheckoutPage() {
         discount: "할인",
         total: "총합",
         payNow: "지금 결제",
+        wpp: "WhatsApp으로 주문",
+        wppSend: "WhatsApp으로 보내기",
         emptyCartTitle: "장바구니가 비어 있습니다",
         emptyCartDesc: "결제를 시작하려면 상품을 추가하세요.",
         backHome: "홈으로",
@@ -136,6 +138,8 @@ export default function CheckoutPage() {
         discount: "Descuento",
         total: "Total",
         payNow: "Pagar ahora",
+        wpp: "Pedir por WhatsApp",
+        wppSend: "Enviar pedido por WhatsApp",
         emptyCartTitle: "Tu carrito esta vacio",
         emptyCartDesc: "Agrega productos para iniciar checkout.",
         backHome: "Volver al home",
@@ -167,7 +171,7 @@ export default function CheckoutPage() {
   const [discountError, setDiscountError] = useState("");
   const [discountAmount, setDiscountAmount] = useState(0);
 
-  const [paymentMethod, setPaymentMethod] = useState<"card" | "mp">("card");
+  const [paymentMethod, setPaymentMethod] = useState<"card" | "mp" | "wpp">("card");
   const [payment, setPayment] = useState({
     cardName: "",
     cardNumber: "",
@@ -355,6 +359,33 @@ export default function CheckoutPage() {
       return;
     }
 
+    if (paymentMethod === "wpp") {
+      const lines = cartLines
+        .map((line) => `• ${getProductName(line.product, language)} x${line.quantity} - ${formatArs(line.lineTotal, language)}`)
+        .join("\n");
+      const shippingMethod = shippingMethods.find((m) => m.id === selectedShippingMethod);
+      const msg = [
+        language === "ko" ? "안녕하세요! WhatsApp으로 주문을 완료하고 싶습니다:" : "Hola! Quiero finalizar mi pedido:",
+        "",
+        lines,
+        "",
+        `${t.subtotal}: ${formatArs(subtotal, language)}`,
+        `${t.shipping}: ${formatArs(shippingAmount, language)}${shippingMethod ? ` (${shippingMethod.label})` : ""}`,
+        discountAmount > 0 ? `${t.discount}: -${formatArs(discountAmount, language)}` : null,
+        `${t.total}: ${formatArs(total, language)}`,
+        "",
+        `${t.firstName}: ${shipping.firstName} ${shipping.lastName}`,
+        `${t.address}: ${shipping.address}, ${shipping.city}, ${shipping.province} (${shipping.postalCode})`,
+        `${t.email}: ${email}`,
+      ]
+        .filter(Boolean)
+        .join("\n");
+      // Replace this number with the store's WhatsApp number (country code + number, no spaces or +)
+      const WPP_NUMBER = "5491100000000";
+      window.open(`https://wa.me/${WPP_NUMBER}?text=${encodeURIComponent(msg)}`, "_blank");
+      return;
+    }
+
     const paymentOk = validatePayment();
     if (!paymentOk) return;
 
@@ -511,7 +542,22 @@ export default function CheckoutPage() {
               >
                 {t.mp}
               </button>
+              <button
+                onClick={() => setPaymentMethod("wpp")}
+                className={`rounded-2xl border px-4 py-3 text-left text-sm ${
+                  paymentMethod === "wpp" ? "border-[#25d366] bg-[#25d366] text-white" : "border-black/15"
+                }`}
+              >
+                {t.wpp}
+              </button>
             </div>
+            {paymentMethod === "wpp" && (
+              <p className="rounded-2xl bg-[#f0faf4] p-3 text-sm text-[#1a7a3a]">
+                {language === "ko"
+                  ? "주문 정보가 WhatsApp 메시지로 전송됩니다. '지금 결제' 버튼을 누르면 WhatsApp이 열립니다."
+                  : "Se abrira WhatsApp con los detalles de tu pedido. Un asesor te contactara para coordinar el pago."}
+              </p>
+            )}
 
             {paymentMethod === "card" && (
               <div className="space-y-3">
@@ -633,7 +679,7 @@ export default function CheckoutPage() {
           </Card>
         </section>
 
-        <aside className="space-y-4 md:sticky md:top-24 md:h-fit">
+        <aside className="order-first space-y-4 md:order-last md:sticky md:top-24 md:h-fit">
           <button
             onClick={() => setSummaryOpenMobile((prev) => !prev)}
             className="flex w-full items-center justify-between rounded-2xl border border-black/10 bg-white px-4 py-3 text-left md:hidden"
@@ -700,14 +746,21 @@ export default function CheckoutPage() {
       </main>
 
       <div className="fixed inset-x-0 bottom-0 z-45 border-t border-black/10 bg-white p-3 md:hidden">
-        <Button className="w-full" onClick={submitOrder}>
-          {t.payNow}
+        <Button
+          className={`w-full ${paymentMethod === "wpp" ? "bg-[#25d366] hover:bg-[#1fb558]" : ""}`}
+          onClick={submitOrder}
+        >
+          {paymentMethod === "wpp" ? t.wppSend : t.payNow}
         </Button>
       </div>
 
       <div className="hidden md:fixed md:bottom-5 md:right-5 md:block">
-        <Button size="lg" onClick={submitOrder}>
-          {t.payNow}
+        <Button
+          size="lg"
+          className={paymentMethod === "wpp" ? "bg-[#25d366] hover:bg-[#1fb558]" : ""}
+          onClick={submitOrder}
+        >
+          {paymentMethod === "wpp" ? t.wppSend : t.payNow}
         </Button>
       </div>
     </div>

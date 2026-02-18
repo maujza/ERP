@@ -13,7 +13,7 @@ export function LanguageToggle() {
       variant="outline"
       size="sm"
       onClick={toggleLanguage}
-      className="fixed right-4 top-4 z-50 border-black/10 bg-white/95 shadow-sm backdrop-blur hover:bg-white"
+      className="fixed right-4 top-4 z-50 hidden border-black/10 bg-white/95 shadow-sm backdrop-blur hover:bg-white md:inline-flex"
     >
       <Languages className="mr-1 h-4 w-4" />
       {language === "es" ? "한국어" : "Español"}

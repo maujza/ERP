@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 
 import { useLanguage } from "@/components/language-provider";
@@ -39,6 +39,9 @@ export default function ProductDetailPage() {
         selectVariantBtn: "옵션 선택",
         addToCart: "카트에 추가",
         continueShopping: "쇼핑 계속하기",
+        qty: "수량",
+        decreaseQty: "수량 줄이기",
+        increaseQty: "수량 늘리기",
       }
     : {
         notFound: "Producto no encontrado",
@@ -55,10 +58,18 @@ export default function ProductDetailPage() {
         selectVariantBtn: "Selecciona variante",
         addToCart: "Agregar al carrito",
         continueShopping: "Seguir comprando",
+        qty: "Cantidad",
+        decreaseQty: "Reducir cantidad",
+        increaseQty: "Aumentar cantidad",
       };
 
   const product = useMemo(() => getProductById(params.id), [params.id]);
   const [selectedVariant, setSelectedVariant] = useState<string | undefined>(undefined);
+  const [qty, setQty] = useState(1);
+
+  useEffect(() => {
+    setQty(1);
+  }, [selectedVariant]);
 
   if (!product) {
     return (
@@ -78,6 +89,7 @@ export default function ProductDetailPage() {
   const selectedVariantData = product.variants?.find((variant) => variant.id === selectedVariant);
   const missingVariant = hasVariants && !selectedVariant;
   const canAdd = !outOfStock && !missingVariant;
+  const maxQty = selectedVariantData ? selectedVariantData.stock : product.stock;
 
   return (
     <main className="mx-auto w-full max-w-[1200px] px-4 py-6 md:px-6 md:py-8">
@@ -148,10 +160,33 @@ export default function ProductDetailPage() {
             {!outOfStock && !hasVariants && <p>{t.stockAvailable}: {product.stock} {t.units}.</p>}
           </div>
 
+          {canAdd && (
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-medium text-[#555555]">{t.qty}:</span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setQty((q) => Math.max(1, q - 1))}
+                  className="h-9 w-9 rounded-full border border-black/20 text-lg font-semibold leading-none"
+                  aria-label={t.decreaseQty}
+                >
+                  −
+                </button>
+                <span className="min-w-[2rem] text-center text-sm font-semibold">{qty}</span>
+                <button
+                  onClick={() => setQty((q) => Math.min(maxQty, q + 1))}
+                  className="h-9 w-9 rounded-full border border-black/20 text-lg font-semibold leading-none"
+                  aria-label={t.increaseQty}
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          )}
+
           <Button
             className="w-full"
             disabled={!canAdd}
-            onClick={() => addToCart(product.id, selectedVariant, { openDrawer: true })}
+            onClick={() => addToCart(product.id, selectedVariant, { quantity: qty })}
           >
             {outOfStock ? t.soldOut : missingVariant ? t.selectVariantBtn : t.addToCart}
           </Button>

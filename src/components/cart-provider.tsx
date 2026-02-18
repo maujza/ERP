@@ -36,7 +36,7 @@ type CartContextValue = {
   addToCart: (
     productId: string,
     variantId?: string,
-    options?: { openDrawer?: boolean },
+    options?: { openDrawer?: boolean; quantity?: number },
   ) => void;
   updateQuantity: (key: string, quantity: number) => void;
   removeFromCart: (key: string) => void;
@@ -55,6 +55,13 @@ function getLineKey(productId: string, variantId?: string) {
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartLine[]>([]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [lastAdded, setLastAdded] = useState<{ productId: string; variantId?: string } | null>(null);
+
+  useEffect(() => {
+    if (!lastAdded) return;
+    const timer = setTimeout(() => setLastAdded(null), 2500);
+    return () => clearTimeout(timer);
+  }, [lastAdded]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -74,19 +81,22 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [items]);
 
   const addToCart = useCallback(
-    (productId: string, variantId?: string, options?: { openDrawer?: boolean }) => {
+    (productId: string, variantId?: string, options?: { openDrawer?: boolean; quantity?: number }) => {
       const key = getLineKey(productId, variantId);
+      const qty = options?.quantity ?? 1;
       setItems((prev) => {
         const current = prev.find((line) => line.key === key);
         if (current) {
           return prev.map((line) =>
-            line.key === key ? { ...line, quantity: line.quantity + 1 } : line,
+            line.key === key ? { ...line, quantity: line.quantity + qty } : line,
           );
         }
-        return [...prev, { key, productId, variantId, quantity: 1 }];
+        return [...prev, { key, productId, variantId, quantity: qty }];
       });
       if (options?.openDrawer) {
         setIsDrawerOpen(true);
+      } else {
+        setLastAdded({ productId, variantId });
       }
     },
     [],
@@ -137,6 +147,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     <CartContext.Provider value={value}>
       {children}
       <MiniCartDrawer />
+      {lastAdded && (
+        <CartToast
+          productId={lastAdded.productId}
+          variantId={lastAdded.variantId}
+          onDismiss={() => setLastAdded(null)}
+        />
+      )}
     </CartContext.Provider>
   );
 }
@@ -147,6 +164,62 @@ export function useCart() {
     throw new Error("useCart must be used within CartProvider");
   }
   return context;
+}
+
+function CartToast({
+  productId,
+  variantId,
+  onDismiss,
+}: {
+  productId: string;
+  variantId?: string;
+  onDismiss: () => void;
+}) {
+  const { language } = useLanguage();
+  const product = getProductById(productId);
+  if (!product) return null;
+
+  const variant = product.variants?.find((v) => v.id === variantId);
+  const t =
+    language === "ko"
+      ? { added: "장바구니에 추가됨", variant: "옵션", dismiss: "닫기" }
+      : { added: "Agregado al carrito", variant: "Variante", dismiss: "Cerrar" };
+
+  return (
+    <div className="toast-enter fixed left-4 right-4 top-20 z-[90] rounded-2xl border border-black/10 bg-white p-3 shadow-xl md:left-auto md:right-5 md:w-72">
+      <div className="flex items-start gap-3">
+        <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl">
+          <Image
+            src={product.image}
+            alt={getProductName(product, language)}
+            fill
+            className="object-cover"
+          />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-semibold text-[#ff2d55]">{t.added}</p>
+          <p className="line-clamp-2 text-sm font-semibold text-[#111111]">
+            {getProductName(product, language)}
+          </p>
+          {variant && (
+            <p className="text-xs text-[#666666]">
+              {t.variant}: {translateLabel(variant.label, language)}
+            </p>
+          )}
+          <p className="text-sm font-medium text-[#111111]">
+            {formatArs(product.price, language)}
+          </p>
+        </div>
+        <button
+          onClick={onDismiss}
+          className="shrink-0 rounded-full p-1 text-[#666666] hover:bg-[#f3f3f3]"
+          aria-label={t.dismiss}
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  );
 }
 
 function MiniCartDrawer() {

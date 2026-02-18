@@ -204,7 +204,7 @@ export default function CatalogPage() {
           <p className="mt-2 text-sm text-[#555555]">{t.desc}</p>
         </section>
 
-        <div className="mb-4 overflow-x-auto">
+        <div className="no-scrollbar mb-4 overflow-x-auto">
           <div className="flex w-max min-w-full gap-2 pb-1">
             {subcategories.map((subcategory) => (
               <button
@@ -351,14 +351,20 @@ export default function CatalogPage() {
                       </div>
                     </Link>
                     <div className="px-3 pb-3">
-                      <Button
-                        variant="outline"
-                        className="w-full"
-                        disabled={outOfStock || hasVariants}
-                        onClick={() => addToCart(product.id, product.variants?.[0]?.id)}
-                      >
-                        {outOfStock ? t.soldOut : hasVariants ? t.viewVariants : t.add}
-                      </Button>
+                      {hasVariants ? (
+                        <Button asChild variant="outline" className="w-full">
+                          <Link href={`/product/${product.id}`}>{t.viewVariants}</Link>
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          className="w-full"
+                          disabled={outOfStock}
+                          onClick={() => addToCart(product.id, product.variants?.[0]?.id)}
+                        >
+                          {outOfStock ? t.soldOut : t.add}
+                        </Button>
+                      )}
                     </div>
                   </article>
                 );

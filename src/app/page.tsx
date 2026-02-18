@@ -202,12 +202,12 @@ export default function HomePage() {
               {t.ctaMore}
             </Link>
           </div>
-          <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2">
+          <div className="no-scrollbar -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2">
             {navCategories.slice(0, 6).map((category) => (
               <Link
                 key={category}
                 href={`/catalog?subcategory=${encodeURIComponent(category)}`}
-                className="min-w-0 snap-start basis-[78%] rounded-2xl border border-black/10 bg-white p-4 sm:basis-[45%] md:basis-[30%]"
+                className="shrink-0 snap-start basis-[78%] rounded-2xl border border-black/10 bg-white p-4 sm:basis-[45%] md:basis-[30%]"
               >
                 <p className="text-xs uppercase tracking-[0.2em] text-[#6b6b6b]">{t.collection}</p>
                 <p className="mt-2 text-lg font-semibold text-[#111111]">{translateLabel(category, language)}</p>
@@ -218,12 +218,12 @@ export default function HomePage() {
 
         <section className="space-y-3">
           <Badge variant="outline">{t.categories}</Badge>
-          <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2">
+          <div className="no-scrollbar -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2">
             {["Aros", "Collares", "Pulseras", "Sets", "Kits"].map((category) => (
               <Link
                 key={category}
                 href={`/catalog?category=${encodeURIComponent(category)}`}
-                className="snap-start basis-[78%] rounded-2xl border border-black/10 bg-white p-4 sm:basis-[45%] md:basis-[30%]"
+                className="shrink-0 snap-start basis-[78%] rounded-2xl border border-black/10 bg-white p-4 sm:basis-[45%] md:basis-[30%]"
               >
                 <p className="text-sm font-semibold">{translateLabel(category, language)}</p>
               </Link>
@@ -233,11 +233,11 @@ export default function HomePage() {
 
         <section className="space-y-3">
           <Badge variant="outline">{t.brands}</Badge>
-          <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2">
+          <div className="no-scrollbar -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2">
             {brands.map((brand) => (
               <div
                 key={brand}
-                className="snap-start basis-[78%] rounded-2xl border border-black/10 bg-white p-4 text-sm font-medium sm:basis-[45%] md:basis-[30%]"
+                className="shrink-0 snap-start basis-[78%] rounded-2xl border border-black/10 bg-white p-4 text-sm font-medium sm:basis-[45%] md:basis-[30%]"
               >
                 {translateLabel(brand, language)}
               </div>
@@ -296,14 +296,20 @@ export default function HomePage() {
                     </div>
                   </Link>
                   <div className="px-3 pb-3">
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => addToCart(product.id, product.variants?.[0]?.id)}
-                      disabled={outOfStock || hasVariants}
-                    >
-                      {outOfStock ? t.soldOut : hasVariants ? t.variants : t.addToCart}
-                    </Button>
+                    {hasVariants ? (
+                      <Button asChild variant="outline" className="w-full">
+                        <Link href={`/product/${product.id}`}>{t.variants}</Link>
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => addToCart(product.id, product.variants?.[0]?.id)}
+                        disabled={outOfStock}
+                      >
+                        {outOfStock ? t.soldOut : t.addToCart}
+                      </Button>
+                    )}
                   </div>
                 </article>
               );
