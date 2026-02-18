@@ -1,13 +1,9 @@
 services:
   web:
     build: .
-    command: sh -c "npm install && if [ -f /app/node_modules/lightningcss-linux-x64-gnu/lightningcss.linux-x64-gnu.node ]; then cp /app/node_modules/lightningcss-linux-x64-gnu/lightningcss.linux-x64-gnu.node /app/node_modules/lightningcss/; fi && if [ -f /app/node_modules/lightningcss-linux-x64-musl/lightningcss.linux-x64-musl.node ]; then cp /app/node_modules/lightningcss-linux-x64-musl/lightningcss.linux-x64-musl.node /app/node_modules/lightningcss/; fi && npm run dev -- --hostname 0.0.0.0 --port 3000 --webpack"
     ports:
       - "7358:3000"
     environment:
-      - NODE_ENV=development
+      - NODE_ENV=production
       - NEXT_TELEMETRY_DISABLED=1
-    volumes:
-      - .:/app
-      - /app/node_modules
-    working_dir: /app
+    restart: unless-stopped
