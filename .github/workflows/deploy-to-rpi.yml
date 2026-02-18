@@ -1,0 +1,20 @@
+name: Deploy to RPI on push to main
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: [self-hosted] 
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Pull latest changes on RPI
+        run: |
+          cd /home/akwiek/code/ERP
+          git reset --hard
+          git pull
+          docker compose up -d --build
+          echo "Repositorio actualizado en la RPI ✅"
