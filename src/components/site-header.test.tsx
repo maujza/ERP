@@ -1,0 +1,338 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, fireEvent, within } from "@testing-library/react";
+import { SiteHeader } from "./site-header";
+
+// ---------------------------------------------------------------------------
+// Next.js mocks
+// ---------------------------------------------------------------------------
+vi.mock("next/link", () => ({
+  default: ({
+    href,
+    children,
+    onClick,
+    className,
+  }: {
+    href: string;
+    children: React.ReactNode;
+    onClick?: () => void;
+    className?: string;
+  }) => (
+    <a href={href} onClick={onClick} className={className}>
+      {children}
+    </a>
+  ),
+}));
+
+const mockPush = vi.fn();
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/",
+  useRouter: () => ({ push: mockPush }),
+}));
+
+// ---------------------------------------------------------------------------
+// Provider / data mocks
+// ---------------------------------------------------------------------------
+const mockToggleLanguage = vi.fn();
+vi.mock("@/components/language-provider", () => ({
+  useLanguage: () => ({
+    language: "es" as const,
+    toggleLanguage: mockToggleLanguage,
+  }),
+}));
+
+const mockOpenDrawer = vi.fn();
+vi.mock("@/components/cart-provider", () => ({
+  useCart: () => ({
+    totalItems: 3,
+    openDrawer: mockOpenDrawer,
+  }),
+}));
+
+vi.mock("@/lib/shop-data", () => ({
+  navCategories: ["Novedades", "Best Sellers", "Aros", "Collares", "Pulseras"],
+  translateLabel: (label: string) => label,
+}));
+
+// ---------------------------------------------------------------------------
+// DOM helpers
+// ---------------------------------------------------------------------------
+function getAside() {
+  return document.querySelector("aside");
+}
+
+/** The backdrop is a direct-child <div> of the RTL container, sibling to <header>. */
+function getBackdrop() {
+  const header = screen.getByRole("banner");
+  return header.parentElement?.querySelector(":scope > div") ?? null;
+}
+
+// ---------------------------------------------------------------------------
+// Basic rendering
+// ---------------------------------------------------------------------------
+describe("SiteHeader – rendering", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("renders the AURELIA logo link inside the header", () => {
+    render(<SiteHeader />);
+    const header = screen.getByRole("banner");
+    expect(within(header).getByText("AURELIA")).toBeInTheDocument();
+  });
+
+  it("renders the hamburger button for mobile", () => {
+    render(<SiteHeader />);
+    expect(screen.getByLabelText("Abrir menu")).toBeInTheDocument();
+  });
+
+  it("renders the cart button", () => {
+    render(<SiteHeader />);
+    expect(screen.getByLabelText("Abrir carrito")).toBeInTheDocument();
+  });
+
+  it("shows the cart item count badge", () => {
+    render(<SiteHeader />);
+    expect(screen.getByText("3")).toBeInTheDocument();
+  });
+
+  it("calls openDrawer when cart button is clicked", () => {
+    render(<SiteHeader />);
+    fireEvent.click(screen.getByLabelText("Abrir carrito"));
+    expect(mockOpenDrawer).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders nav links inside the desktop nav", () => {
+    render(<SiteHeader />);
+    const nav = document.querySelector("nav")!;
+    expect(within(nav).getByText("Home")).toBeInTheDocument();
+    expect(within(nav).getByText("Coleccion")).toBeInTheDocument();
+    expect(within(nav).getByText("Checkout")).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Critical structural fix: backdrop and aside are OUTSIDE <header>
+// ---------------------------------------------------------------------------
+describe("SiteHeader – mobile menu DOM structure", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("the mobile menu aside is NOT a descendant of the <header>", () => {
+    render(<SiteHeader />);
+    const header = screen.getByRole("banner");
+    const aside = getAside();
+
+    expect(aside).not.toBeNull();
+    expect(header.contains(aside)).toBe(false);
+  });
+
+  it("the mobile menu aside is a direct sibling of the <header>", () => {
+    render(<SiteHeader />);
+    const header = screen.getByRole("banner");
+    const siblingAside = header.parentElement?.querySelector(":scope > aside");
+    expect(siblingAside).not.toBeNull();
+  });
+
+  it("the mobile backdrop div is NOT a descendant of the <header>", () => {
+    render(<SiteHeader />);
+    const header = screen.getByRole("banner");
+    const backdrop = getBackdrop();
+
+    expect(backdrop).not.toBeNull();
+    expect(header.contains(backdrop)).toBe(false);
+  });
+
+  it("the mobile backdrop div is a direct sibling of the <header>", () => {
+    render(<SiteHeader />);
+    const header = screen.getByRole("banner");
+    const siblingDiv = header.parentElement?.querySelector(":scope > div");
+    expect(siblingDiv).not.toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Mobile menu – open / close
+// ---------------------------------------------------------------------------
+describe("SiteHeader – mobile menu open/close", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("aside starts translated off-screen (-translate-x-full)", () => {
+    render(<SiteHeader />);
+    expect(getAside()).toHaveClass("-translate-x-full");
+  });
+
+  it("aside does not start with translate-x-0", () => {
+    render(<SiteHeader />);
+    expect(getAside()).not.toHaveClass("translate-x-0");
+  });
+
+  it("aside slides in (translate-x-0) when hamburger is clicked", () => {
+    render(<SiteHeader />);
+    fireEvent.click(screen.getByLabelText("Abrir menu"));
+    expect(getAside()).toHaveClass("translate-x-0");
+  });
+
+  it("aside slides back when X close button is clicked", () => {
+    render(<SiteHeader />);
+    fireEvent.click(screen.getByLabelText("Abrir menu"));
+    // First button inside aside is the X close button
+    const closeBtn = within(getAside()!).getAllByRole("button")[0];
+    fireEvent.click(closeBtn);
+    expect(getAside()).toHaveClass("-translate-x-full");
+  });
+
+  it("aside slides back when backdrop is clicked", () => {
+    render(<SiteHeader />);
+    fireEvent.click(screen.getByLabelText("Abrir menu"));
+    fireEvent.click(getBackdrop()!);
+    expect(getAside()).toHaveClass("-translate-x-full");
+  });
+
+  it("backdrop is pointer-events-none when menu is closed", () => {
+    render(<SiteHeader />);
+    expect(getBackdrop()).toHaveClass("pointer-events-none");
+  });
+
+  it("backdrop is pointer-events-auto when menu is open", () => {
+    render(<SiteHeader />);
+    fireEvent.click(screen.getByLabelText("Abrir menu"));
+    expect(getBackdrop()).toHaveClass("pointer-events-auto");
+  });
+
+  it("backdrop transitions from opacity-0 to opacity-100 on open", () => {
+    render(<SiteHeader />);
+    expect(getBackdrop()).toHaveClass("opacity-0");
+    fireEvent.click(screen.getByLabelText("Abrir menu"));
+    expect(getBackdrop()).toHaveClass("opacity-100");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Mobile menu – content
+// ---------------------------------------------------------------------------
+describe("SiteHeader – mobile menu content", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    render(<SiteHeader />);
+    fireEvent.click(screen.getByLabelText("Abrir menu"));
+  });
+
+  it("shows Home nav link inside the aside", () => {
+    expect(within(getAside()!).getByText("Home")).toBeInTheDocument();
+  });
+
+  it("shows Coleccion nav link inside the aside", () => {
+    expect(within(getAside()!).getByText("Coleccion")).toBeInTheDocument();
+  });
+
+  it("shows Checkout nav link inside the aside", () => {
+    expect(within(getAside()!).getByText("Checkout")).toBeInTheDocument();
+  });
+
+  it("shows at least one category link in the aside", () => {
+    expect(within(getAside()!).getByText("Novedades")).toBeInTheDocument();
+  });
+
+  it("shows the language toggle button (Korean label when language is es)", () => {
+    expect(within(getAside()!).getByText("한국어")).toBeInTheDocument();
+  });
+
+  it("calls toggleLanguage when the language button is clicked", () => {
+    fireEvent.click(within(getAside()!).getByText("한국어"));
+    expect(mockToggleLanguage).toHaveBeenCalledTimes(1);
+  });
+
+  it("closes the menu when a nav link is clicked", () => {
+    fireEvent.click(within(getAside()!).getByText("Home"));
+    expect(getAside()).toHaveClass("-translate-x-full");
+  });
+
+  it("closes the menu when a category link is clicked", () => {
+    fireEvent.click(within(getAside()!).getByText("Novedades"));
+    expect(getAside()).toHaveClass("-translate-x-full");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Mobile search
+// ---------------------------------------------------------------------------
+describe("SiteHeader – mobile search", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("mobile search input is not in the DOM before toggle", () => {
+    render(<SiteHeader />);
+    // Desktop hidden form has 1 input; mobile form is conditionally rendered
+    expect(screen.getAllByPlaceholderText("Buscar productos")).toHaveLength(1);
+  });
+
+  it("adds a second search input when mobile search is toggled on", () => {
+    render(<SiteHeader />);
+    // There are two buttons with aria-label "Buscar":
+    // [0] = desktop form submit, [1] = mobile toggle button
+    const [, mobileToggle] = screen.getAllByLabelText("Buscar");
+    fireEvent.click(mobileToggle);
+    expect(screen.getAllByPlaceholderText("Buscar productos")).toHaveLength(2);
+  });
+
+  it("hides mobile search input when toggle is clicked a second time", () => {
+    render(<SiteHeader />);
+    const [, mobileToggle] = screen.getAllByLabelText("Buscar");
+    fireEvent.click(mobileToggle);
+    fireEvent.click(mobileToggle);
+    expect(screen.getAllByPlaceholderText("Buscar productos")).toHaveLength(1);
+  });
+
+  it("navigates to search page when mobile form is submitted", () => {
+    render(<SiteHeader />);
+    const [, mobileToggle] = screen.getAllByLabelText("Buscar");
+    fireEvent.click(mobileToggle);
+
+    // Second placeholder input is the mobile one
+    const [, mobileInput] = screen.getAllByPlaceholderText("Buscar productos");
+    fireEvent.change(mobileInput, { target: { value: "collar" } });
+    fireEvent.submit(mobileInput.closest("form")!);
+
+    expect(mockPush).toHaveBeenCalledWith("/search?q=collar");
+  });
+
+  it("does not navigate when search query is empty", () => {
+    render(<SiteHeader />);
+    const [, mobileToggle] = screen.getAllByLabelText("Buscar");
+    fireEvent.click(mobileToggle);
+
+    const [, mobileInput] = screen.getAllByPlaceholderText("Buscar productos");
+    fireEvent.submit(mobileInput.closest("form")!);
+
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it("closes mobile search form after a successful submit", () => {
+    render(<SiteHeader />);
+    const [, mobileToggle] = screen.getAllByLabelText("Buscar");
+    fireEvent.click(mobileToggle);
+
+    const [, mobileInput] = screen.getAllByPlaceholderText("Buscar productos");
+    fireEvent.change(mobileInput, { target: { value: "aros" } });
+    fireEvent.submit(mobileInput.closest("form")!);
+
+    // Back to 1 input (desktop only)
+    expect(screen.getAllByPlaceholderText("Buscar productos")).toHaveLength(1);
+  });
+
+  it("URL-encodes the search query", () => {
+    render(<SiteHeader />);
+    const [, mobileToggle] = screen.getAllByLabelText("Buscar");
+    fireEvent.click(mobileToggle);
+
+    const [, mobileInput] = screen.getAllByPlaceholderText("Buscar productos");
+    fireEvent.change(mobileInput, { target: { value: "best sellers" } });
+    fireEvent.submit(mobileInput.closest("form")!);
+
+    expect(mockPush).toHaveBeenCalledWith("/search?q=best%20sellers");
+  });
+});
