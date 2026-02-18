@@ -1,5 +1,11 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
+
+import { AppChrome } from "@/components/app-chrome";
+import { CartProvider } from "@/components/cart-provider";
+import { LanguageProvider } from "@/components/language-provider";
+import { LanguageToggle } from "@/components/language-toggle";
+
 import "./globals.css";
 
 const plusJakarta = Plus_Jakarta_Sans({
@@ -21,7 +27,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" className="bg-slate-50">
-      <body className={`${plusJakarta.variable} antialiased`}>{children}</body>
+      <body className={`${plusJakarta.variable} antialiased`}>
+        <LanguageProvider>
+          <CartProvider>
+            <AppChrome>
+              <LanguageToggle />
+              {children}
+            </AppChrome>
+          </CartProvider>
+        </LanguageProvider>
+      </body>
     </html>
   );
 }
