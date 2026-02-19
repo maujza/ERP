@@ -2224,6 +2224,9 @@ export default function BackofficePage() {
     }
   };
 
+  const showDownloadReport = activeSection === "overview" || activeSection === "stock" || activeSection === "tracking";
+  const showConfirmOrders = activeSection === "overview" || activeSection === "tracking";
+
   return (
     <div className="flex min-h-screen bg-slate-100 text-slate-900">
       <aside className="hidden w-64 flex-shrink-0 flex-col bg-slate-900 text-slate-100 lg:flex">
@@ -2251,7 +2254,10 @@ export default function BackofficePage() {
         </nav>
         <div className="border-t border-white/10 px-4 py-4 text-xs text-slate-400">
           <p>{ui.needHelp}</p>
-          <Button variant="outline" className="mt-2 w-full border-white/40 text-white hover:bg-white/10">
+          <Button
+            variant="ghost"
+            className="mt-2 w-full border border-white/40 bg-transparent text-white hover:bg-white/10 hover:text-white"
+          >
             <Link href="mailto:hola@aurelia.com">{ui.contactSupport}</Link>
           </Button>
         </div>
@@ -2264,14 +2270,20 @@ export default function BackofficePage() {
             <p className="text-xl font-semibold text-slate-900 sm:text-2xl">{ui.panelTitle}</p>
             <p className="text-sm text-slate-500">{ui.panelDesc}</p>
           </div>
-          <div className="flex w-full flex-wrap gap-3 text-sm sm:w-auto">
-            <Button variant="outline" className="border-slate-300 text-slate-700">
-              {ui.downloadReport}
-            </Button>
-            <Button className="bg-slate-900 text-white">
-              <BadgeCheck className="mr-2 h-4 w-4" /> {ui.confirmOrders}
-            </Button>
-          </div>
+          {(showDownloadReport || showConfirmOrders) && (
+            <div className="flex w-full flex-wrap gap-3 text-sm sm:w-auto">
+              {showDownloadReport && (
+                <Button variant="outline" className="border-slate-300 text-slate-700">
+                  {ui.downloadReport}
+                </Button>
+              )}
+              {showConfirmOrders && (
+                <Button className="bg-slate-900 text-white">
+                  <BadgeCheck className="mr-2 h-4 w-4" /> {ui.confirmOrders}
+                </Button>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="flex gap-2 overflow-x-auto pb-1 lg:hidden">

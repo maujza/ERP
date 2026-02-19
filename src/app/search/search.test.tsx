@@ -261,14 +261,12 @@ describe("SearchPage – out of stock product", () => {
 // Button variant — primary (red) style
 // ---------------------------------------------------------------------------
 describe("SearchPage – button consistency", () => {
-  it("add-to-cart button does NOT use the outline variant (regression guard)", () => {
+  it("add-to-cart CTA does NOT use the outline variant (regression guard)", () => {
     mockQ = "aros";
     render(<SearchPage />);
-    const buttons = screen.getAllByRole("button");
-    // The add button for Aros Siena (in-stock, no variants) should be present
-    const addBtn = buttons.find((b) => b.textContent === "Agregar");
+    // In-stock state renders CTA as link (Button asChild)
+    const addBtn = screen.getByRole("link", { name: "Agregar" });
     // outline variant adds a specific border class; default (red) does not
-    expect(addBtn).toBeDefined();
     expect(addBtn).not.toHaveClass("border-black/20");
   });
 });

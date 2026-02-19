@@ -465,7 +465,7 @@ export default function CheckoutPage() {
           </Card>
 
           <Card className="p-5">
-            <p className="text-xs uppercase tracking-[0.2em] text-[#666666]">{t.step1}</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-[#3f3f3f]">{t.step1}</p>
             <label className="mt-3 block text-sm font-medium text-[#111111]">{t.email}</label>
             <input
               value={email}
@@ -482,7 +482,7 @@ export default function CheckoutPage() {
           </Card>
 
           <Card className={`p-5 ${contactComplete ? "" : "opacity-60"}`}>
-            <p className="text-xs uppercase tracking-[0.2em] text-[#666666]">{t.step2}</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-[#3f3f3f]">{t.step2}</p>
             <div className="mt-3 grid grid-cols-1 gap-3">
               <Field
                 label={t.firstName}
@@ -545,7 +545,7 @@ export default function CheckoutPage() {
           </Card>
 
           <Card className={`p-5 ${allShippingRequiredComplete ? "" : "opacity-60"}`}>
-            <p className="text-xs uppercase tracking-[0.2em] text-[#666666]">{t.step3}</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-[#3f3f3f]">{t.step3}</p>
             <div className="mt-3 space-y-2">
               {loadingShippingMethods && (
                 <div className="space-y-2">
@@ -579,7 +579,7 @@ export default function CheckoutPage() {
 
           {paymentMethod === "card" && (
             <Card className="space-y-4 p-5">
-              <p className="text-xs uppercase tracking-[0.2em] text-[#666666]">{t.step4}</p>
+              <p className="text-xs uppercase tracking-[0.2em] text-[#3f3f3f]">{t.step4}</p>
               <div className="space-y-3">
                 <Field
                   label={t.cardHolder}
@@ -712,7 +712,7 @@ export default function CheckoutPage() {
             <h2 className="text-lg font-semibold text-[#111111]">{t.summary}</h2>
             <div className="mt-4 space-y-3">
               {cartLines.map((line) => (
-                <div key={line.key} className="flex gap-2 rounded-2xl border border-black/10 p-2">
+                <div key={`${line.product.id}-${line.variant?.id ?? "default"}`} className="flex gap-2 rounded-2xl border border-black/10 p-2">
                   <div className="relative h-14 w-14 overflow-hidden rounded-lg">
                     <Image src={line.product.image} alt={getProductName(line.product, language)} fill className="object-cover" />
                   </div>

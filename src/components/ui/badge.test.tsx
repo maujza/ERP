@@ -16,7 +16,7 @@ describe("Badge", () => {
   // --- default variant ---
   it("applies default variant bg class", () => {
     const { container } = render(<Badge>Default</Badge>);
-    expect(container.firstChild).toHaveClass("bg-[#ff2d55]");
+    expect(container.firstChild).toHaveClass("bg-[#ff174f]");
   });
 
   it("applies default variant text-white class", () => {
@@ -37,7 +37,7 @@ describe("Badge", () => {
 
   it("outline variant does NOT have default bg class", () => {
     const { container } = render(<Badge variant="outline">Outline</Badge>);
-    expect(container.firstChild).not.toHaveClass("bg-[#ff2d55]");
+    expect(container.firstChild).not.toHaveClass("bg-[#ff174f]");
   });
 
   // --- glow variant ---

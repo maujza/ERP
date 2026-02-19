@@ -20,7 +20,7 @@ export function LanguageToggle({ className = "" }: { className?: string }) {
   }
 
   const baseClass =
-    "inline-flex h-10 items-center gap-1.5 rounded-full border border-black/15 bg-white px-3 text-sm font-medium text-[#111111] hover:bg-[#f7f7f7] transition-colors";
+    "inline-flex h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-black/15 bg-white px-3 text-sm font-medium text-[#111111] hover:bg-[#f7f7f7] transition-colors";
 
   if (SUPPORTED_LANGUAGES.length === 2) {
     const other = SUPPORTED_LANGUAGES.find((l) => l.code !== language);

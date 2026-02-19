@@ -95,9 +95,15 @@ function SearchContent() {
                   </div>
                 </Link>
                 <div className="px-3 pb-3">
-                  <Button asChild className="w-full" disabled={outOfStock}>
-                    <Link href={`/product/${product.id}`}>{outOfStock ? t.soldOut : t.add}</Link>
-                  </Button>
+                  {outOfStock ? (
+                    <Button className="w-full" disabled>
+                      {t.soldOut}
+                    </Button>
+                  ) : (
+                    <Button asChild className="w-full">
+                      <Link href={`/product/${product.id}`}>{t.add}</Link>
+                    </Button>
+                  )}
                 </div>
               </article>
             );

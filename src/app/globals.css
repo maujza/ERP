@@ -1,10 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f7f9fc;
-  --foreground: #0f172a;
+  --background: #f6f5f2;
+  --foreground: #111111;
   --surface: #ffffff;
-  --muted: #e2e8f0;
+  --muted: #deddd8;
+  --brand-red: #ff174f;
+  --brand-red-dark: #e3043c;
+  --brand-red-soft: #ff6b8f;
+  --brand-red-tint: #ffd9e3;
 }
 
 @theme inline {
@@ -12,17 +16,17 @@
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
   --color-card: var(--surface);
-  --color-primary: #0ea5e9;
-  --color-primary-foreground: #e0f2fe;
+  --color-primary: var(--brand-red);
+  --color-primary-foreground: #fff1f5;
   --font-sans: var(--font-plus-jakarta);
 }
 
 body {
   color: var(--foreground);
   background:
-    radial-gradient(circle at 10% 20%, rgba(14, 165, 233, 0.18), transparent 26%),
-    radial-gradient(circle at 80% 10%, rgba(234, 179, 8, 0.16), transparent 24%),
-    linear-gradient(180deg, #f8fafc 0%, #ffffff 45%, #f6f3ef 100%);
+    radial-gradient(circle at 12% 16%, rgba(255, 23, 79, 0.1), transparent 30%),
+    radial-gradient(circle at 84% 8%, rgba(17, 17, 17, 0.06), transparent 24%),
+    linear-gradient(180deg, #faf9f7 0%, #ffffff 45%, #f4f2ee 100%);
   font-family: var(--font-plus-jakarta), "Inter", system-ui, -apple-system,
     sans-serif;
   min-height: 100vh;
@@ -34,8 +38,8 @@ a {
 }
 
 ::selection {
-  background-color: rgba(14, 165, 233, 0.22);
-  color: #0f172a;
+  background-color: rgba(255, 23, 79, 0.22);
+  color: #111111;
 }
 
 .no-scrollbar {

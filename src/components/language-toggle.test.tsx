@@ -128,6 +128,13 @@ describe("LanguageToggle – 2 languages, current es", () => {
     expect(btn).toHaveClass("md:inline-flex");
   });
 
+  it("prevents width collapse and label wrapping in tight header layouts", () => {
+    render(<LanguageToggle />);
+    const btn = screen.getByRole("button");
+    expect(btn).toHaveClass("shrink-0");
+    expect(btn).toHaveClass("whitespace-nowrap");
+  });
+
   it("renders without className when prop is omitted", () => {
     expect(() => render(<LanguageToggle />)).not.toThrow();
   });

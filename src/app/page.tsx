@@ -132,7 +132,7 @@ export default function HomePage() {
   const featuredProducts = useMemo(() => products.slice(0, 6), []);
 
   return (
-    <div className="relative isolate overflow-hidden bg-[#f7f7f7]">
+    <div className="relative isolate overflow-hidden bg-[#f6f5f2]">
       <main className="mx-auto flex w-full max-w-[1400px] flex-col gap-8 px-4 py-6 md:gap-10 md:px-6 md:py-10">
         <section className="overflow-hidden rounded-3xl border border-black/10 bg-white">
           <div className="grid gap-0 md:grid-cols-2">
@@ -200,7 +200,7 @@ export default function HomePage() {
           </div>
           <div className="no-scrollbar -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2">
             {navCategories.slice(0, 6).map((category, idx) => {
-              const accents = ["#ff2d55", "#ff9500", "#af52de", "#5856d6", "#34aadc", "#4cd964"];
+              const accents = ["#ff174f", "#111111", "#2b2b2b", "#ff6b8f", "#8f8f89", "#d8d6d1"];
               const accent = accents[idx % accents.length];
               return (
                 <Link
@@ -223,7 +223,7 @@ export default function HomePage() {
           <Badge variant="outline">{t.categories}</Badge>
           <div className="no-scrollbar -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2">
             {(["Aros", "Collares", "Pulseras", "Sets", "Kits"] as const).map((category, idx) => {
-              const accents = ["#ff2d55", "#5856d6", "#34aadc", "#ff9500", "#4cd964"];
+              const accents = ["#ff174f", "#111111", "#2b2b2b", "#8f8f89", "#d8d6d1"];
               const accent = accents[idx % accents.length];
               return (
                 <Link

@@ -16,7 +16,7 @@ export function Badge({
       className={cn(
         "inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em]",
         variant === "default" &&
-          "bg-[#ff2d55] text-white shadow-[0_8px_30px_rgba(255,45,85,0.3)]",
+          "bg-[#ff174f] text-white shadow-[0_8px_30px_rgba(255,23,79,0.3)]",
         variant === "outline" &&
           "border border-black/15 bg-white text-[#1a1a1a]",
         variant === "glow" &&
