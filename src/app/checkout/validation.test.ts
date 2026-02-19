@@ -16,19 +16,20 @@ import { describe, it, expect } from "vitest";
 // Replication of helpers from checkout/page.tsx
 // ---------------------------------------------------------------------------
 
+// These strings match the accented Spanish translations in checkout/page.tsx exactly.
 const t = {
   requiredField: "Campo obligatorio",
-  invalidPostal: "Codigo postal invalido",
-  invalidEmail: "Email invalido",
+  invalidPostal: "Código postal inválido",
+  invalidEmail: "Email inválido",
   enterEmail: "Ingresa tu email",
-  invalidCard: "Numero de tarjeta invalido",
+  invalidCard: "Número de tarjeta inválido",
   expiryFormat: "Formato MM/AA",
-  invalidCvc: "Codigo invalido",
-  selectInstallments: "Selecciona cuotas",
-  requiredAddress: "Direccion requerida",
+  invalidCvc: "Código inválido",
+  selectInstallments: "Seleccioná las cuotas",
+  requiredAddress: "Dirección requerida",
   requiredCity: "Ciudad requerida",
-  enterCode: "Ingresa un codigo",
-  invalidCode: "Codigo invalido",
+  enterCode: "Ingresá un código",
+  invalidCode: "Código inválido",
 };
 
 function validateEmail(value: string): string {

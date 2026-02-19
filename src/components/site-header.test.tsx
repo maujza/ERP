@@ -38,6 +38,10 @@ vi.mock("@/components/language-provider", () => ({
     language: "es" as const,
     toggleLanguage: mockToggleLanguage,
   }),
+  SUPPORTED_LANGUAGES: [
+    { code: "es", label: "Español" },
+    { code: "ko", label: "한국어" },
+  ],
 }));
 
 const mockOpenDrawer = vi.fn();
@@ -51,6 +55,15 @@ vi.mock("@/components/cart-provider", () => ({
 vi.mock("@/lib/shop-data", () => ({
   navCategories: ["Novedades", "Best Sellers", "Aros", "Collares", "Pulseras"],
   translateLabel: (label: string) => label,
+}));
+
+// Stub the LanguageToggle now imported into SiteHeader for the desktop row.
+vi.mock("@/components/language-toggle", () => ({
+  LanguageToggle: ({ className }: { className?: string }) => (
+    <button className={className} data-testid="language-toggle-stub">
+      ES/KO
+    </button>
+  ),
 }));
 
 // ---------------------------------------------------------------------------
@@ -80,9 +93,9 @@ describe("SiteHeader – rendering", () => {
     expect(within(header).getByText("AURELIA")).toBeInTheDocument();
   });
 
-  it("renders the hamburger button for mobile", () => {
+  it("renders the hamburger button with accessible label (Spanish, with accent)", () => {
     render(<SiteHeader />);
-    expect(screen.getByLabelText("Abrir menu")).toBeInTheDocument();
+    expect(screen.getByLabelText("Abrir menú")).toBeInTheDocument();
   });
 
   it("renders the cart button", () => {
@@ -101,12 +114,39 @@ describe("SiteHeader – rendering", () => {
     expect(mockOpenDrawer).toHaveBeenCalledTimes(1);
   });
 
-  it("renders nav links inside the desktop nav", () => {
+  it("renders nav links inside the desktop nav (with Spanish accent on Colección)", () => {
     render(<SiteHeader />);
     const nav = document.querySelector("nav")!;
     expect(within(nav).getByText("Home")).toBeInTheDocument();
-    expect(within(nav).getByText("Coleccion")).toBeInTheDocument();
+    expect(within(nav).getByText("Colección")).toBeInTheDocument();
     expect(within(nav).getByText("Checkout")).toBeInTheDocument();
+  });
+
+  it("does NOT render a Coleccion link (without accent) — regression guard", () => {
+    render(<SiteHeader />);
+    expect(screen.queryByText("Coleccion")).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Desktop language toggle integration
+// ---------------------------------------------------------------------------
+describe("SiteHeader – desktop LanguageToggle", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("renders the LanguageToggle inside the header element", () => {
+    render(<SiteHeader />);
+    const header = screen.getByRole("banner");
+    expect(header).toContainElement(screen.getByTestId("language-toggle-stub"));
+  });
+
+  it("passes hidden md:inline-flex className to LanguageToggle", () => {
+    render(<SiteHeader />);
+    const stub = screen.getByTestId("language-toggle-stub");
+    expect(stub).toHaveClass("hidden");
+    expect(stub).toHaveClass("md:inline-flex");
   });
 });
 
@@ -171,13 +211,13 @@ describe("SiteHeader – mobile menu open/close", () => {
 
   it("aside slides in (translate-x-0) when hamburger is clicked", () => {
     render(<SiteHeader />);
-    fireEvent.click(screen.getByLabelText("Abrir menu"));
+    fireEvent.click(screen.getByLabelText("Abrir menú"));
     expect(getAside()).toHaveClass("translate-x-0");
   });
 
   it("aside slides back when X close button is clicked", () => {
     render(<SiteHeader />);
-    fireEvent.click(screen.getByLabelText("Abrir menu"));
+    fireEvent.click(screen.getByLabelText("Abrir menú"));
     // First button inside aside is the X close button
     const closeBtn = within(getAside()!).getAllByRole("button")[0];
     fireEvent.click(closeBtn);
@@ -186,7 +226,7 @@ describe("SiteHeader – mobile menu open/close", () => {
 
   it("aside slides back when backdrop is clicked", () => {
     render(<SiteHeader />);
-    fireEvent.click(screen.getByLabelText("Abrir menu"));
+    fireEvent.click(screen.getByLabelText("Abrir menú"));
     fireEvent.click(getBackdrop()!);
     expect(getAside()).toHaveClass("-translate-x-full");
   });
@@ -198,14 +238,14 @@ describe("SiteHeader – mobile menu open/close", () => {
 
   it("backdrop is pointer-events-auto when menu is open", () => {
     render(<SiteHeader />);
-    fireEvent.click(screen.getByLabelText("Abrir menu"));
+    fireEvent.click(screen.getByLabelText("Abrir menú"));
     expect(getBackdrop()).toHaveClass("pointer-events-auto");
   });
 
   it("backdrop transitions from opacity-0 to opacity-100 on open", () => {
     render(<SiteHeader />);
     expect(getBackdrop()).toHaveClass("opacity-0");
-    fireEvent.click(screen.getByLabelText("Abrir menu"));
+    fireEvent.click(screen.getByLabelText("Abrir menú"));
     expect(getBackdrop()).toHaveClass("opacity-100");
   });
 });
@@ -217,15 +257,15 @@ describe("SiteHeader – mobile menu content", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     render(<SiteHeader />);
-    fireEvent.click(screen.getByLabelText("Abrir menu"));
+    fireEvent.click(screen.getByLabelText("Abrir menú"));
   });
 
   it("shows Home nav link inside the aside", () => {
     expect(within(getAside()!).getByText("Home")).toBeInTheDocument();
   });
 
-  it("shows Coleccion nav link inside the aside", () => {
-    expect(within(getAside()!).getByText("Coleccion")).toBeInTheDocument();
+  it("shows Colección nav link inside the aside (with accent)", () => {
+    expect(within(getAside()!).getByText("Colección")).toBeInTheDocument();
   });
 
   it("shows Checkout nav link inside the aside", () => {
@@ -240,7 +280,7 @@ describe("SiteHeader – mobile menu content", () => {
     expect(within(getAside()!).getByText("한국어")).toBeInTheDocument();
   });
 
-  it("calls toggleLanguage when the language button is clicked", () => {
+  it("calls toggleLanguage when the mobile language button is clicked", () => {
     fireEvent.click(within(getAside()!).getByText("한국어"));
     expect(mockToggleLanguage).toHaveBeenCalledTimes(1);
   });

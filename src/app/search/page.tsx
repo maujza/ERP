@@ -2,19 +2,19 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 
 import { useLanguage } from "@/components/language-provider";
-import { useCart } from "@/components/cart-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { formatArs, getProductName, products } from "@/lib/shop-data";
 
-export default function SearchPage() {
+function SearchContent() {
   const { language } = useLanguage();
-  const { addToCart } = useCart();
-  const [rawQuery, setRawQuery] = useState("");
+  const searchParams = useSearchParams();
+  const rawQuery = searchParams.get("q") ?? "";
   const query = rawQuery.trim().toLowerCase();
 
   const t = language === "ko"
@@ -28,27 +28,20 @@ export default function SearchPage() {
         noResults: "검색 결과가 없습니다.",
         goCollection: "전체 컬렉션 보기",
         soldOut: "품절",
-        viewVariants: "옵션 보기",
         add: "추가",
       }
     : {
         home: "Home",
-        search: "Busqueda",
+        search: "Búsqueda",
         results: "Resultados",
-        searchFor: "Busqueda",
-        typeToSearch: "Escribe algo para buscar",
+        searchFor: "Búsqueda",
+        typeToSearch: "Escribí algo para buscar",
         productsFound: "productos encontrados.",
         noResults: "No encontramos resultados.",
-        goCollection: "Ir a coleccion completa",
+        goCollection: "Ir a la colección completa",
         soldOut: "AGOTADO",
-        viewVariants: "Ver variantes",
         add: "Agregar",
       };
-
-  useEffect(() => {
-    const qs = new URLSearchParams(window.location.search);
-    setRawQuery(qs.get("q") ?? "");
-  }, []);
 
   const results = useMemo(() => {
     if (!query) return [];
@@ -102,17 +95,8 @@ export default function SearchPage() {
                   </div>
                 </Link>
                 <div className="px-3 pb-3">
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => addToCart(product.id, product.variants?.[0]?.id)}
-                    disabled={outOfStock || Boolean(product.variants && product.variants.length > 1)}
-                  >
-                    {outOfStock
-                      ? t.soldOut
-                      : product.variants && product.variants.length > 1
-                        ? t.viewVariants
-                        : t.add}
+                  <Button asChild className="w-full" disabled={outOfStock}>
+                    <Link href={`/product/${product.id}`}>{outOfStock ? t.soldOut : t.add}</Link>
                   </Button>
                 </div>
               </article>
@@ -121,5 +105,13 @@ export default function SearchPage() {
         </div>
       )}
     </main>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense>
+      <SearchContent />
+    </Suspense>
   );
 }

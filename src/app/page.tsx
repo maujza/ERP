@@ -6,7 +6,6 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowRight } from "lucide-react";
 
 import { useLanguage } from "@/components/language-provider";
-import { useCart } from "@/components/cart-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -40,7 +39,6 @@ const lookDots = [
 export default function HomePage() {
   const { language } = useLanguage();
   const [slideIndex, setSlideIndex] = useState(0);
-  const { addToCart } = useCart();
 
   const t = language === "ko"
     ? {
@@ -79,7 +77,6 @@ export default function HomePage() {
         brands: "브랜드",
         featured: "추천 상품",
         soldOut: "품절",
-        variants: "옵션 보기",
         addToCart: "카트 추가",
         shopLook: "룩으로 쇼핑",
         tapDots: "점 버튼을 눌러 상품 보기",
@@ -120,7 +117,6 @@ export default function HomePage() {
         brands: "Marcas",
         featured: "Productos destacados",
         soldOut: "AGOTADO",
-        variants: "Ver variantes",
         addToCart: "Agregar al carrito",
         shopLook: "Shop the look",
         tapDots: "Tap sobre cada punto",
@@ -203,31 +199,45 @@ export default function HomePage() {
             </Link>
           </div>
           <div className="no-scrollbar -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2">
-            {navCategories.slice(0, 6).map((category) => (
-              <Link
-                key={category}
-                href={`/catalog?subcategory=${encodeURIComponent(category)}`}
-                className="shrink-0 snap-start basis-[78%] rounded-2xl border border-black/10 bg-white p-4 sm:basis-[45%] md:basis-[30%]"
-              >
-                <p className="text-xs uppercase tracking-[0.2em] text-[#6b6b6b]">{t.collection}</p>
-                <p className="mt-2 text-lg font-semibold text-[#111111]">{translateLabel(category, language)}</p>
-              </Link>
-            ))}
+            {navCategories.slice(0, 6).map((category, idx) => {
+              const accents = ["#ff2d55", "#ff9500", "#af52de", "#5856d6", "#34aadc", "#4cd964"];
+              const accent = accents[idx % accents.length];
+              return (
+                <Link
+                  key={category}
+                  href={`/catalog?subcategory=${encodeURIComponent(category)}`}
+                  className="shrink-0 snap-start basis-[78%] overflow-hidden rounded-2xl border border-black/10 bg-white sm:basis-[45%] md:basis-[30%]"
+                >
+                  <div className="h-20 w-full" style={{ backgroundColor: accent }} />
+                  <div className="p-4">
+                    <p className="text-xs uppercase tracking-[0.2em] text-[#6b6b6b]">{t.collection}</p>
+                    <p className="mt-1 text-lg font-semibold text-[#111111]">{translateLabel(category, language)}</p>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </section>
 
         <section className="space-y-3">
           <Badge variant="outline">{t.categories}</Badge>
           <div className="no-scrollbar -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2">
-            {["Aros", "Collares", "Pulseras", "Sets", "Kits"].map((category) => (
-              <Link
-                key={category}
-                href={`/catalog?category=${encodeURIComponent(category)}`}
-                className="shrink-0 snap-start basis-[78%] rounded-2xl border border-black/10 bg-white p-4 sm:basis-[45%] md:basis-[30%]"
-              >
-                <p className="text-sm font-semibold">{translateLabel(category, language)}</p>
-              </Link>
-            ))}
+            {(["Aros", "Collares", "Pulseras", "Sets", "Kits"] as const).map((category, idx) => {
+              const accents = ["#ff2d55", "#5856d6", "#34aadc", "#ff9500", "#4cd964"];
+              const accent = accents[idx % accents.length];
+              return (
+                <Link
+                  key={category}
+                  href={`/catalog?category=${encodeURIComponent(category)}`}
+                  className="shrink-0 snap-start basis-[78%] overflow-hidden rounded-2xl border border-black/10 bg-white sm:basis-[45%] md:basis-[30%]"
+                >
+                  <div className="h-14 w-full" style={{ backgroundColor: accent }} />
+                  <div className="p-4">
+                    <p className="text-sm font-semibold">{translateLabel(category, language)}</p>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </section>
 
@@ -256,7 +266,6 @@ export default function HomePage() {
             {featuredProducts.map((product) => {
               const isDiscounted = Boolean(product.originalPrice && product.originalPrice > product.price);
               const outOfStock = product.stock <= 0;
-              const hasVariants = Boolean(product.variants && product.variants.length > 1);
 
               return (
                 <article key={product.id} className="overflow-hidden rounded-2xl border border-black/10 bg-white">
@@ -290,26 +299,12 @@ export default function HomePage() {
                         )}
                       </div>
                       {outOfStock && <Badge variant="outline">{t.soldOut}</Badge>}
-                      {hasVariants && !outOfStock && (
-                        <p className="text-xs font-medium text-[#666666]">{t.variants}</p>
-                      )}
                     </div>
                   </Link>
                   <div className="px-3 pb-3">
-                    {hasVariants ? (
-                      <Button asChild variant="outline" className="w-full">
-                        <Link href={`/product/${product.id}`}>{t.variants}</Link>
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        className="w-full"
-                        onClick={() => addToCart(product.id, product.variants?.[0]?.id)}
-                        disabled={outOfStock}
-                      >
-                        {outOfStock ? t.soldOut : t.addToCart}
-                      </Button>
-                    )}
+                    <Button asChild className="w-full" disabled={outOfStock}>
+                      <Link href={`/product/${product.id}`}>{outOfStock ? t.soldOut : t.addToCart}</Link>
+                    </Button>
                   </div>
                 </article>
               );

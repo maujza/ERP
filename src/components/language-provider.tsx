@@ -11,6 +11,11 @@ import {
 
 export type Language = "es" | "ko";
 
+export const SUPPORTED_LANGUAGES: { code: Language; label: string }[] = [
+  { code: "es", label: "Español" },
+  { code: "ko", label: "한국어" },
+];
+
 type LanguageContextValue = {
   language: Language;
   setLanguage: (language: Language) => void;
@@ -37,10 +42,11 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   const getSnapshot = useCallback((): Language => {
     if (typeof window === "undefined") {
-      return "es";
+      return SUPPORTED_LANGUAGES[0]?.code ?? "es";
     }
     const saved = localStorage.getItem(LANGUAGE_STORAGE_KEY);
-    return saved === "es" || saved === "ko" ? saved : "es";
+    const match = SUPPORTED_LANGUAGES.find((l) => l.code === saved);
+    return match ? match.code : (SUPPORTED_LANGUAGES[0]?.code ?? "es");
   }, []);
 
   const language = useSyncExternalStore<Language>(subscribe, getSnapshot, () => "es");

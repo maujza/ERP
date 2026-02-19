@@ -4,7 +4,6 @@ import { Plus_Jakarta_Sans } from "next/font/google";
 import { AppChrome } from "@/components/app-chrome";
 import { CartProvider } from "@/components/cart-provider";
 import { LanguageProvider } from "@/components/language-provider";
-import { LanguageToggle } from "@/components/language-toggle";
 
 import "./globals.css";
 
@@ -31,7 +30,6 @@ export default function RootLayout({
         <LanguageProvider>
           <CartProvider>
             <AppChrome>
-              <LanguageToggle />
               {children}
             </AppChrome>
           </CartProvider>

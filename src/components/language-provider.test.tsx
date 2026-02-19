@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, act, renderHook } from "@testing-library/react";
-import { LanguageProvider, useLanguage } from "./language-provider";
+import { LanguageProvider, useLanguage, SUPPORTED_LANGUAGES } from "./language-provider";
 
 const STORAGE_KEY = "aurelia-language";
 
@@ -270,5 +270,89 @@ describe("LanguageProvider – storage event subscription", () => {
       expect.any(Function)
     );
     addEventSpy.mockRestore();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// SUPPORTED_LANGUAGES export
+// ---------------------------------------------------------------------------
+describe("SUPPORTED_LANGUAGES", () => {
+  it("is exported as an array", () => {
+    expect(Array.isArray(SUPPORTED_LANGUAGES)).toBe(true);
+  });
+
+  it("contains at least 2 entries", () => {
+    expect(SUPPORTED_LANGUAGES.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("every entry has a string 'code' property", () => {
+    for (const lang of SUPPORTED_LANGUAGES) {
+      expect(typeof lang.code).toBe("string");
+      expect(lang.code.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("every entry has a non-empty string 'label' property", () => {
+    for (const lang of SUPPORTED_LANGUAGES) {
+      expect(typeof lang.label).toBe("string");
+      expect(lang.label.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("first entry has code 'es' (Spanish is the default language)", () => {
+    expect(SUPPORTED_LANGUAGES[0].code).toBe("es");
+  });
+
+  it("second entry has code 'ko' (Korean is the second language)", () => {
+    expect(SUPPORTED_LANGUAGES[1].code).toBe("ko");
+  });
+
+  it("'es' entry has the label 'Español'", () => {
+    const es = SUPPORTED_LANGUAGES.find((l) => l.code === "es");
+    expect(es?.label).toBe("Español");
+  });
+
+  it("'ko' entry has the label '한국어'", () => {
+    const ko = SUPPORTED_LANGUAGES.find((l) => l.code === "ko");
+    expect(ko?.label).toBe("한국어");
+  });
+
+  it("all codes are unique", () => {
+    const codes = SUPPORTED_LANGUAGES.map((l) => l.code);
+    const uniqueCodes = new Set(codes);
+    expect(uniqueCodes.size).toBe(codes.length);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// getSnapshot — validates against SUPPORTED_LANGUAGES (updated behaviour)
+// ---------------------------------------------------------------------------
+describe("LanguageProvider – getSnapshot validates against SUPPORTED_LANGUAGES", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("falls back to first SUPPORTED_LANGUAGES entry for an invalid locale", () => {
+    localStorage.setItem("aurelia-language", "fr");
+    render(
+      <LanguageProvider>
+        <TestConsumer />
+      </LanguageProvider>
+    );
+    // 'fr' is not in SUPPORTED_LANGUAGES → falls back to SUPPORTED_LANGUAGES[0].code = 'es'
+    expect(screen.getByTestId("lang")).toHaveTextContent(SUPPORTED_LANGUAGES[0].code);
+  });
+
+  it("accepts all codes listed in SUPPORTED_LANGUAGES", () => {
+    for (const lang of SUPPORTED_LANGUAGES) {
+      localStorage.setItem("aurelia-language", lang.code);
+      const { unmount } = render(
+        <LanguageProvider>
+          <TestConsumer />
+        </LanguageProvider>
+      );
+      expect(screen.getByTestId("lang")).toHaveTextContent(lang.code);
+      unmount();
+    }
   });
 });

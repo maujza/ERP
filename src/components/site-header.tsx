@@ -6,6 +6,7 @@ import { FormEvent, useMemo, useState } from "react";
 import { Languages, Menu, Search, ShoppingBag, X } from "lucide-react";
 
 import { useLanguage } from "@/components/language-provider";
+import { LanguageToggle } from "@/components/language-toggle";
 import { Badge } from "@/components/ui/badge";
 import { navCategories, translateLabel } from "@/lib/shop-data";
 import { useCart } from "@/components/cart-provider";
@@ -37,13 +38,13 @@ export function SiteHeader() {
     : {
         navLinks: [
           { href: "/", label: "Home" },
-          { href: "/catalog", label: "Coleccion" },
+          { href: "/catalog", label: "Colección" },
           { href: "/checkout", label: "Checkout" },
         ],
         searchPlaceholder: "Buscar productos",
-        openMenu: "Abrir menu",
+        openMenu: "Abrir menú",
         openCart: "Abrir carrito",
-        categories: "Categorias",
+        categories: "Categorías",
       };
 
   if (isBackoffice) {
@@ -114,6 +115,8 @@ export function SiteHeader() {
               {totalItems}
             </span>
           </button>
+
+          <LanguageToggle className="hidden md:inline-flex" />
         </div>
 
         {mobileSearchOpen && (

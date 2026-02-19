@@ -9,7 +9,6 @@ import { useLanguage } from "@/components/language-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useCart } from "@/components/cart-provider";
 import {
   formatArs,
   getProductName,
@@ -38,7 +37,6 @@ function byPrice(product: Product, filter: PriceFilter) {
 
 export default function CatalogPage() {
   const { language } = useLanguage();
-  const { addToCart } = useCart();
 
   const t = language === "ko"
     ? {
@@ -52,7 +50,6 @@ export default function CatalogPage() {
         sortBy: "정렬",
         searchPrefix: "검색",
         price: "가격",
-        viewVariants: "옵션 보기",
         soldOut: "품절",
         add: "추가",
         noResults: "해당 필터의 상품이 없습니다",
@@ -77,7 +74,6 @@ export default function CatalogPage() {
         sortBy: "Ordenar por",
         searchPrefix: "Buscar",
         price: "Precio",
-        viewVariants: "Ver variantes",
         soldOut: "AGOTADO",
         add: "Agregar",
         noResults: "No hay productos con esos filtros",
@@ -311,7 +307,6 @@ export default function CatalogPage() {
               {paginated.map((product) => {
                 const isDiscounted = Boolean(product.originalPrice && product.originalPrice > product.price);
                 const outOfStock = product.stock <= 0;
-                const hasVariants = Boolean(product.variants && product.variants.length > 1);
                 return (
                   <article key={product.id} className="overflow-hidden rounded-2xl border border-black/10 bg-white">
                     <Link href={`/product/${product.id}`} className="block">
@@ -345,26 +340,12 @@ export default function CatalogPage() {
                             </>
                           )}
                         </div>
-                        {hasVariants && !outOfStock && (
-                          <p className="text-xs font-medium text-[#666666]">{t.viewVariants}</p>
-                        )}
                       </div>
                     </Link>
                     <div className="px-3 pb-3">
-                      {hasVariants ? (
-                        <Button asChild variant="outline" className="w-full">
-                          <Link href={`/product/${product.id}`}>{t.viewVariants}</Link>
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="outline"
-                          className="w-full"
-                          disabled={outOfStock}
-                          onClick={() => addToCart(product.id, product.variants?.[0]?.id)}
-                        >
-                          {outOfStock ? t.soldOut : t.add}
-                        </Button>
-                      )}
+                      <Button asChild className="w-full" disabled={outOfStock}>
+                        <Link href={`/product/${product.id}`}>{outOfStock ? t.soldOut : t.add}</Link>
+                      </Button>
                     </div>
                   </article>
                 );

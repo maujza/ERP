@@ -8,12 +8,12 @@ export function WhatsAppFloat() {
   const pathname = usePathname();
   const { language } = useLanguage();
 
-  const hiddenRoutes = ["/backoffice", "/catalog", "/search", "/product"];
+  const hiddenRoutes = ["/backoffice", "/catalog", "/search", "/product", "/checkout"];
   if (hiddenRoutes.some((route) => pathname.startsWith(route))) {
     return null;
   }
 
-  const bottomClass = pathname === "/checkout" ? "bottom-24" : "bottom-5";
+  const bottomClass = "bottom-5";
 
   return (
     <Link
