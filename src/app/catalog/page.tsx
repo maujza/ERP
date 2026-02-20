@@ -12,12 +12,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   formatArs,
   getProductName,
-  products,
+  mapMedusaProduct,
   subcategories,
   translateLabel,
   type Product,
   type SortOption,
 } from "@/lib/shop-data";
+import { sdk } from "@/lib/medusa";
 
 const priceFilters = [
   { id: "all", label: "Todos" },
@@ -94,6 +95,7 @@ export default function CatalogPage() {
     { id: "price_desc" as SortOption, label: language === "ko" ? "높은 가격" : "Precio: mayor" },
   ];
 
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [activeSubcategory, setActiveSubcategory] = useState("Todos");
   const [search, setSearch] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -105,13 +107,23 @@ export default function CatalogPage() {
 
   const gridRef = useRef<HTMLDivElement | null>(null);
 
+  useEffect(() => {
+    sdk.store.product.list({
+      limit: 100,
+      fields: "+variants.calculated_price,+variants.inventory_quantity",
+      region_id: process.env.NEXT_PUBLIC_MEDUSA_REGION_ID,
+    }).then(({ products }) => {
+      setAllProducts(products.map(mapMedusaProduct));
+    }).catch(() => {});
+  }, []);
+
   const categories = useMemo(
-    () => Array.from(new Set(products.map((product) => product.category))),
-    [],
+    () => Array.from(new Set(allProducts.map((product) => product.category))).filter(Boolean),
+    [allProducts],
   );
   const brands = useMemo(
-    () => Array.from(new Set(products.map((product) => product.brand))),
-    [],
+    () => Array.from(new Set(allProducts.map((product) => product.brand))).filter(Boolean),
+    [allProducts],
   );
 
   useEffect(() => {
@@ -129,7 +141,7 @@ export default function CatalogPage() {
   const filteredProducts = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
 
-    const list = products.filter((product) => {
+    const list = allProducts.filter((product) => {
       const subcategoryMatch =
         activeSubcategory === "Todos" || product.subcategory === activeSubcategory;
       const categoryMatch =
@@ -151,7 +163,7 @@ export default function CatalogPage() {
       return [...list].sort((a, b) => b.price - a.price);
     }
     return list;
-  }, [activeSubcategory, language, priceFilter, search, selectedBrands, selectedCategories, sortBy]);
+  }, [allProducts, activeSubcategory, language, priceFilter, search, selectedBrands, selectedCategories, sortBy]);
 
   const pageSize = 8;
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / pageSize));

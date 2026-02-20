@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, act, renderHook } from "@testing-library/react";
+import { render, screen, act, renderHook, waitFor } from "@testing-library/react";
 import { CartProvider, useCart } from "./cart-provider";
 
 // ---- Next.js mocks --------------------------------------------------------
@@ -33,12 +33,75 @@ vi.mock("@/components/language-provider", () => ({
   }),
 }));
 
-// ---- helpers --------------------------------------------------------------
-const CART_KEY = "aurelia-cart";
+// ---- Medusa SDK mock -------------------------------------------------------
+const mockCreate = vi.fn();
+const mockRetrieve = vi.fn();
+const mockCreateLineItem = vi.fn();
+const mockUpdateLineItem = vi.fn();
+const mockDeleteLineItem = vi.fn();
 
+vi.mock("@/lib/medusa", () => ({
+  sdk: {
+    store: {
+      cart: {
+        create: (...args: unknown[]) => mockCreate(...args),
+        retrieve: (...args: unknown[]) => mockRetrieve(...args),
+        createLineItem: (...args: unknown[]) => mockCreateLineItem(...args),
+        updateLineItem: (...args: unknown[]) => mockUpdateLineItem(...args),
+        deleteLineItem: (...args: unknown[]) => mockDeleteLineItem(...args),
+      },
+    },
+  },
+}));
+
+// ---- Cart response helpers -------------------------------------------------
+type RawLineItem = {
+  id: string;
+  variant_id: string;
+  title: string;
+  variant: { title: string };
+  thumbnail: string | null;
+  quantity: number;
+  unit_price: number;
+};
+
+function makeLineItem(overrides: Partial<RawLineItem> = {}): RawLineItem {
+  return {
+    id: "li_1",
+    variant_id: "var_1",
+    title: "Test Product",
+    variant: { title: "Default" },
+    thumbnail: null,
+    quantity: 1,
+    unit_price: 5000,
+    ...overrides,
+  };
+}
+
+function makeCartResponse(items: RawLineItem[] = []) {
+  return { cart: { id: "test-cart", items } };
+}
+
+function makeDeleteResponse(items: RawLineItem[] = []) {
+  return { deleted: true, id: "li_1", object: "line-item", parent: { id: "test-cart", items } };
+}
+
+// ---- Test wrapper ----------------------------------------------------------
 function wrapper({ children }: { children: React.ReactNode }) {
   return <CartProvider>{children}</CartProvider>;
 }
+
+// ---- Setup: clear mocks and localStorage between tests --------------------
+beforeEach(() => {
+  localStorage.clear();
+  vi.clearAllMocks();
+  // Default: no stored cart, retrieve rejects (no existing cart)
+  mockRetrieve.mockRejectedValue(new Error("Not found"));
+  mockCreate.mockResolvedValue(makeCartResponse());
+  mockCreateLineItem.mockResolvedValue(makeCartResponse());
+  mockUpdateLineItem.mockResolvedValue(makeCartResponse());
+  mockDeleteLineItem.mockResolvedValue(makeDeleteResponse());
+});
 
 // ---------------------------------------------------------------------------
 // Initial state
@@ -69,101 +132,78 @@ describe("CartProvider – initial state", () => {
 // addToCart
 // ---------------------------------------------------------------------------
 describe("CartProvider – addToCart", () => {
-  it("adds a new item to the cart", () => {
+  it("creates a cart and adds an item on first addToCart", async () => {
+    const item = makeLineItem({ id: "li_1", variant_id: "var_1", quantity: 1, unit_price: 5000 });
+    mockCreate.mockResolvedValue(makeCartResponse());
+    mockCreateLineItem.mockResolvedValue(makeCartResponse([item]));
+
     const { result } = renderHook(() => useCart(), { wrapper });
-    act(() => {
-      result.current.addToCart("siena-pack");
+    await act(async () => {
+      await result.current.addToCart("var_1");
     });
+
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    expect(mockCreateLineItem).toHaveBeenCalledWith("test-cart", { variant_id: "var_1", quantity: 1 });
     expect(result.current.items).toHaveLength(1);
-    expect(result.current.items[0].productId).toBe("siena-pack");
+    expect(result.current.items[0].variantId).toBe("var_1");
     expect(result.current.items[0].quantity).toBe(1);
   });
 
-  it("generates a line key in format productId::default for no variant", () => {
+  it("reuses existing cart on second addToCart", async () => {
+    const item = makeLineItem({ id: "li_1", variant_id: "var_1", quantity: 1 });
+    mockCreate.mockResolvedValue(makeCartResponse());
+    mockCreateLineItem.mockResolvedValue(makeCartResponse([item]));
+
     const { result } = renderHook(() => useCart(), { wrapper });
-    act(() => {
-      result.current.addToCart("siena-pack");
+    await act(async () => {
+      await result.current.addToCart("var_1");
+      await result.current.addToCart("var_2");
     });
-    expect(result.current.items[0].key).toBe("siena-pack::default");
+
+    // create only called once (first addToCart), not a second time
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    expect(mockCreateLineItem).toHaveBeenCalledTimes(2);
   });
 
-  it("generates a line key with variantId when provided", () => {
-    const { result } = renderHook(() => useCart(), { wrapper });
-    act(() => {
-      result.current.addToCart("siena-pack", "dorado");
-    });
-    expect(result.current.items[0].key).toBe("siena-pack::dorado");
-  });
+  it("opens drawer when openDrawer option is true", async () => {
+    mockCreate.mockResolvedValue(makeCartResponse());
+    mockCreateLineItem.mockResolvedValue(makeCartResponse([makeLineItem()]));
 
-  it("stores the variantId on the cart line", () => {
     const { result } = renderHook(() => useCart(), { wrapper });
-    act(() => {
-      result.current.addToCart("siena-pack", "dorado");
+    await act(async () => {
+      await result.current.addToCart("var_1", 1, { openDrawer: true });
     });
-    expect(result.current.items[0].variantId).toBe("dorado");
-  });
 
-  it("increments quantity when the same product+variant is added again", () => {
-    const { result } = renderHook(() => useCart(), { wrapper });
-    act(() => {
-      result.current.addToCart("siena-pack");
-      result.current.addToCart("siena-pack");
-      result.current.addToCart("siena-pack");
-    });
-    expect(result.current.items).toHaveLength(1);
-    expect(result.current.items[0].quantity).toBe(3);
-  });
-
-  it("treats same product with different variants as separate lines", () => {
-    const { result } = renderHook(() => useCart(), { wrapper });
-    act(() => {
-      result.current.addToCart("siena-pack", "dorado");
-      result.current.addToCart("siena-pack", "plateado");
-    });
-    expect(result.current.items).toHaveLength(2);
-  });
-
-  it("treats same product with/without variant as separate lines", () => {
-    const { result } = renderHook(() => useCart(), { wrapper });
-    act(() => {
-      result.current.addToCart("siena-pack");
-      result.current.addToCart("siena-pack", "dorado");
-    });
-    expect(result.current.items).toHaveLength(2);
-  });
-
-  it("adds multiple different products as separate lines", () => {
-    const { result } = renderHook(() => useCart(), { wrapper });
-    act(() => {
-      result.current.addToCart("siena-pack");
-      result.current.addToCart("choker-luna");
-      result.current.addToCart("acero-siena");
-    });
-    expect(result.current.items).toHaveLength(3);
-  });
-
-  it("opens drawer when openDrawer option is true", () => {
-    const { result } = renderHook(() => useCart(), { wrapper });
-    act(() => {
-      result.current.addToCart("siena-pack", undefined, { openDrawer: true });
-    });
     expect(result.current.isDrawerOpen).toBe(true);
   });
 
-  it("does NOT open drawer by default (openDrawer omitted)", () => {
+  it("does NOT open drawer by default", async () => {
+    mockCreate.mockResolvedValue(makeCartResponse());
+    mockCreateLineItem.mockResolvedValue(makeCartResponse([makeLineItem()]));
+
     const { result } = renderHook(() => useCart(), { wrapper });
-    act(() => {
-      result.current.addToCart("siena-pack");
+    await act(async () => {
+      await result.current.addToCart("var_1");
     });
+
     expect(result.current.isDrawerOpen).toBe(false);
   });
 
-  it("does NOT open drawer when openDrawer is false", () => {
+  it("updates items state from cart response", async () => {
+    const items = [
+      makeLineItem({ id: "li_1", variant_id: "var_1", title: "Ring", quantity: 2, unit_price: 8000 }),
+    ];
+    mockCreate.mockResolvedValue(makeCartResponse());
+    mockCreateLineItem.mockResolvedValue(makeCartResponse(items));
+
     const { result } = renderHook(() => useCart(), { wrapper });
-    act(() => {
-      result.current.addToCart("siena-pack", undefined, { openDrawer: false });
+    await act(async () => {
+      await result.current.addToCart("var_1", 2);
     });
-    expect(result.current.isDrawerOpen).toBe(false);
+
+    expect(result.current.items[0].title).toBe("Ring");
+    expect(result.current.items[0].quantity).toBe(2);
+    expect(result.current.items[0].unitPrice).toBe(8000);
   });
 });
 
@@ -171,71 +211,52 @@ describe("CartProvider – addToCart", () => {
 // updateQuantity
 // ---------------------------------------------------------------------------
 describe("CartProvider – updateQuantity", () => {
-  it("updates the quantity of an existing line", () => {
+  it("calls updateLineItem with the new quantity", async () => {
+    const item = makeLineItem({ id: "li_1", variant_id: "var_1", quantity: 1 });
+    mockCreate.mockResolvedValue(makeCartResponse());
+    mockCreateLineItem.mockResolvedValue(makeCartResponse([item]));
+    mockUpdateLineItem.mockResolvedValue(makeCartResponse([{ ...item, quantity: 3 }]));
+
     const { result } = renderHook(() => useCart(), { wrapper });
-    act(() => {
-      result.current.addToCart("siena-pack");
-    });
-    const key = result.current.items[0].key;
-    act(() => {
-      result.current.updateQuantity(key, 7);
-    });
-    expect(result.current.items[0].quantity).toBe(7);
+    await act(async () => { await result.current.addToCart("var_1"); });
+    await act(async () => { await result.current.updateQuantity("li_1", 3); });
+
+    expect(mockUpdateLineItem).toHaveBeenCalledWith("test-cart", "li_1", { quantity: 3 });
+    expect(result.current.items[0].quantity).toBe(3);
   });
 
-  it("removes the line when quantity is set to 0", () => {
+  it("calls deleteLineItem when quantity is set to 0", async () => {
+    const item = makeLineItem({ id: "li_1", variant_id: "var_1", quantity: 1 });
+    mockCreate.mockResolvedValue(makeCartResponse());
+    mockCreateLineItem.mockResolvedValue(makeCartResponse([item]));
+    mockDeleteLineItem.mockResolvedValue(makeDeleteResponse([]));
+
     const { result } = renderHook(() => useCart(), { wrapper });
-    act(() => {
-      result.current.addToCart("siena-pack");
-    });
-    const key = result.current.items[0].key;
-    act(() => {
-      result.current.updateQuantity(key, 0);
-    });
+    await act(async () => { await result.current.addToCart("var_1"); });
+    await act(async () => { await result.current.updateQuantity("li_1", 0); });
+
+    expect(mockDeleteLineItem).toHaveBeenCalledWith("test-cart", "li_1");
     expect(result.current.items).toHaveLength(0);
   });
 
-  it("removes the line when quantity is negative", () => {
+  it("calls deleteLineItem when quantity is negative", async () => {
+    const item = makeLineItem({ id: "li_1", variant_id: "var_1", quantity: 1 });
+    mockCreate.mockResolvedValue(makeCartResponse());
+    mockCreateLineItem.mockResolvedValue(makeCartResponse([item]));
+    mockDeleteLineItem.mockResolvedValue(makeDeleteResponse([]));
+
     const { result } = renderHook(() => useCart(), { wrapper });
-    act(() => {
-      result.current.addToCart("siena-pack");
-    });
-    const key = result.current.items[0].key;
-    act(() => {
-      result.current.updateQuantity(key, -5);
-    });
+    await act(async () => { await result.current.addToCart("var_1"); });
+    await act(async () => { await result.current.updateQuantity("li_1", -1); });
+
+    expect(mockDeleteLineItem).toHaveBeenCalled();
     expect(result.current.items).toHaveLength(0);
   });
 
-  it("does not affect other lines when updating one", () => {
+  it("does nothing when cartId is not set", async () => {
     const { result } = renderHook(() => useCart(), { wrapper });
-    act(() => {
-      result.current.addToCart("siena-pack");
-      result.current.addToCart("choker-luna");
-    });
-    const key = result.current.items[0].key;
-    act(() => {
-      result.current.updateQuantity(key, 10);
-    });
-    expect(result.current.items).toHaveLength(2);
-    const siena = result.current.items.find((l) => l.productId === "siena-pack");
-    const choker = result.current.items.find(
-      (l) => l.productId === "choker-luna"
-    );
-    expect(siena?.quantity).toBe(10);
-    expect(choker?.quantity).toBe(1);
-  });
-
-  it("does nothing for an unknown key", () => {
-    const { result } = renderHook(() => useCart(), { wrapper });
-    act(() => {
-      result.current.addToCart("siena-pack");
-    });
-    act(() => {
-      result.current.updateQuantity("nonexistent::key", 5);
-    });
-    // original item unaffected
-    expect(result.current.items[0].quantity).toBe(1);
+    await act(async () => { await result.current.updateQuantity("li_1", 3); });
+    expect(mockUpdateLineItem).not.toHaveBeenCalled();
   });
 });
 
@@ -243,41 +264,41 @@ describe("CartProvider – updateQuantity", () => {
 // removeFromCart
 // ---------------------------------------------------------------------------
 describe("CartProvider – removeFromCart", () => {
-  it("removes the specified line", () => {
+  it("calls deleteLineItem and updates items", async () => {
+    const item = makeLineItem({ id: "li_1", variant_id: "var_1", quantity: 1 });
+    mockCreate.mockResolvedValue(makeCartResponse());
+    mockCreateLineItem.mockResolvedValue(makeCartResponse([item]));
+    mockDeleteLineItem.mockResolvedValue(makeDeleteResponse([]));
+
     const { result } = renderHook(() => useCart(), { wrapper });
-    act(() => {
-      result.current.addToCart("siena-pack");
-    });
-    const key = result.current.items[0].key;
-    act(() => {
-      result.current.removeFromCart(key);
-    });
+    await act(async () => { await result.current.addToCart("var_1"); });
+    await act(async () => { await result.current.removeFromCart("li_1"); });
+
+    expect(mockDeleteLineItem).toHaveBeenCalledWith("test-cart", "li_1");
     expect(result.current.items).toHaveLength(0);
   });
 
-  it("leaves other lines intact", () => {
+  it("leaves other items intact", async () => {
+    const items = [
+      makeLineItem({ id: "li_1", variant_id: "var_1", title: "Ring", quantity: 1 }),
+      makeLineItem({ id: "li_2", variant_id: "var_2", title: "Necklace", quantity: 1 }),
+    ];
+    mockCreate.mockResolvedValue(makeCartResponse());
+    mockCreateLineItem.mockResolvedValue(makeCartResponse(items));
+    mockDeleteLineItem.mockResolvedValue(makeDeleteResponse([items[1]]));
+
     const { result } = renderHook(() => useCart(), { wrapper });
-    act(() => {
-      result.current.addToCart("siena-pack");
-      result.current.addToCart("choker-luna");
-    });
-    const keyToRemove = result.current.items[0].key;
-    act(() => {
-      result.current.removeFromCart(keyToRemove);
-    });
+    await act(async () => { await result.current.addToCart("var_1"); });
+    await act(async () => { await result.current.removeFromCart("li_1"); });
+
     expect(result.current.items).toHaveLength(1);
-    expect(result.current.items[0].productId).toBe("choker-luna");
+    expect(result.current.items[0].id).toBe("li_2");
   });
 
-  it("does nothing for an unknown key", () => {
+  it("does nothing when cartId is not set", async () => {
     const { result } = renderHook(() => useCart(), { wrapper });
-    act(() => {
-      result.current.addToCart("siena-pack");
-    });
-    act(() => {
-      result.current.removeFromCart("nonexistent::key");
-    });
-    expect(result.current.items).toHaveLength(1);
+    await act(async () => { await result.current.removeFromCart("li_1"); });
+    expect(mockDeleteLineItem).not.toHaveBeenCalled();
   });
 });
 
@@ -285,79 +306,66 @@ describe("CartProvider – removeFromCart", () => {
 // Derived values: totalItems + subtotal
 // ---------------------------------------------------------------------------
 describe("CartProvider – totalItems", () => {
-  it("reflects a single item with quantity 1", () => {
+  it("reflects a single item with quantity 1", async () => {
+    const item = makeLineItem({ quantity: 1 });
+    mockCreate.mockResolvedValue(makeCartResponse());
+    mockCreateLineItem.mockResolvedValue(makeCartResponse([item]));
+
     const { result } = renderHook(() => useCart(), { wrapper });
-    act(() => {
-      result.current.addToCart("siena-pack");
-    });
+    await act(async () => { await result.current.addToCart("var_1"); });
+
     expect(result.current.totalItems).toBe(1);
   });
 
-  it("sums quantities across multiple lines", () => {
+  it("sums quantities across multiple lines", async () => {
+    const items = [
+      makeLineItem({ id: "li_1", variant_id: "var_1", quantity: 2 }),
+      makeLineItem({ id: "li_2", variant_id: "var_2", quantity: 3 }),
+    ];
+    mockCreate.mockResolvedValue(makeCartResponse());
+    mockCreateLineItem.mockResolvedValue(makeCartResponse(items));
+
     const { result } = renderHook(() => useCart(), { wrapper });
-    act(() => {
-      result.current.addToCart("siena-pack");
-      result.current.addToCart("siena-pack");
-      result.current.addToCart("choker-luna");
-    });
-    expect(result.current.totalItems).toBe(3);
+    await act(async () => { await result.current.addToCart("var_1"); });
+
+    expect(result.current.totalItems).toBe(5);
   });
 
-  it("decreases when a line is removed", () => {
+  it("returns 0 when cart is empty", () => {
     const { result } = renderHook(() => useCart(), { wrapper });
-    act(() => {
-      result.current.addToCart("siena-pack");
-      result.current.addToCart("choker-luna");
-    });
-    const key = result.current.items[0].key;
-    act(() => {
-      result.current.removeFromCart(key);
-    });
-    expect(result.current.totalItems).toBe(1);
+    expect(result.current.totalItems).toBe(0);
   });
 });
 
 describe("CartProvider – subtotal", () => {
-  it("equals product price for a single item (siena-pack = 18900)", () => {
+  it("equals unitPrice × quantity for a single item", async () => {
+    const item = makeLineItem({ quantity: 2, unit_price: 5000 });
+    mockCreate.mockResolvedValue(makeCartResponse());
+    mockCreateLineItem.mockResolvedValue(makeCartResponse([item]));
+
     const { result } = renderHook(() => useCart(), { wrapper });
-    act(() => {
-      result.current.addToCart("siena-pack");
-    });
-    expect(result.current.subtotal).toBe(18900);
+    await act(async () => { await result.current.addToCart("var_1", 2); });
+
+    expect(result.current.subtotal).toBe(10000);
   });
 
-  it("doubles when quantity is 2 (siena-pack = 18900 × 2 = 37800)", () => {
-    const { result } = renderHook(() => useCart(), { wrapper });
-    act(() => {
-      result.current.addToCart("siena-pack");
-      result.current.addToCart("siena-pack");
-    });
-    expect(result.current.subtotal).toBe(37800);
-  });
+  it("sums prices across multiple different items", async () => {
+    const items = [
+      makeLineItem({ id: "li_1", variant_id: "var_1", quantity: 1, unit_price: 5000 }),
+      makeLineItem({ id: "li_2", variant_id: "var_2", quantity: 2, unit_price: 3000 }),
+    ];
+    mockCreate.mockResolvedValue(makeCartResponse());
+    mockCreateLineItem.mockResolvedValue(makeCartResponse(items));
 
-  it("sums prices across multiple different products", () => {
     const { result } = renderHook(() => useCart(), { wrapper });
-    // siena-pack = 18900, acero-siena = 13200
-    act(() => {
-      result.current.addToCart("siena-pack");
-      result.current.addToCart("acero-siena");
-    });
-    expect(result.current.subtotal).toBe(18900 + 13200);
+    await act(async () => { await result.current.addToCart("var_1"); });
+
+    expect(result.current.subtotal).toBe(11000);
   });
 
   it("returns 0 when cart is empty", () => {
     const { result } = renderHook(() => useCart(), { wrapper });
     expect(result.current.subtotal).toBe(0);
-  });
-
-  it("ignores unknown product IDs in subtotal calculation", () => {
-    const { result } = renderHook(() => useCart(), { wrapper });
-    act(() => {
-      result.current.addToCart("siena-pack");
-    });
-    // Manually add a bad line via updateQuantity on a fake key (won't match any product)
-    // subtotal should only count siena-pack
-    expect(result.current.subtotal).toBe(18900);
   });
 });
 
@@ -367,97 +375,59 @@ describe("CartProvider – subtotal", () => {
 describe("CartProvider – drawer controls", () => {
   it("openDrawer sets isDrawerOpen to true", () => {
     const { result } = renderHook(() => useCart(), { wrapper });
-    act(() => {
-      result.current.openDrawer();
-    });
+    act(() => { result.current.openDrawer(); });
     expect(result.current.isDrawerOpen).toBe(true);
   });
 
   it("closeDrawer sets isDrawerOpen to false", () => {
     const { result } = renderHook(() => useCart(), { wrapper });
-    act(() => {
-      result.current.openDrawer();
-    });
-    act(() => {
-      result.current.closeDrawer();
-    });
+    act(() => { result.current.openDrawer(); });
+    act(() => { result.current.closeDrawer(); });
     expect(result.current.isDrawerOpen).toBe(false);
   });
 
   it("closeDrawer has no effect if drawer is already closed", () => {
     const { result } = renderHook(() => useCart(), { wrapper });
-    act(() => {
-      result.current.closeDrawer();
-    });
+    act(() => { result.current.closeDrawer(); });
     expect(result.current.isDrawerOpen).toBe(false);
   });
 });
 
 // ---------------------------------------------------------------------------
-// localStorage persistence
+// localStorage persistence (cart_id only)
 // ---------------------------------------------------------------------------
 describe("CartProvider – localStorage persistence", () => {
-  it("persists items to localStorage after addToCart", () => {
+  it("persists cart ID to localStorage after first addToCart", async () => {
+    mockCreate.mockResolvedValue(makeCartResponse());
+    mockCreateLineItem.mockResolvedValue(makeCartResponse([makeLineItem()]));
+
     const { result } = renderHook(() => useCart(), { wrapper });
-    act(() => {
-      result.current.addToCart("siena-pack");
-    });
-    const stored = JSON.parse(localStorage.getItem(CART_KEY) ?? "[]") as {
-      productId: string;
-    }[];
-    expect(stored).toHaveLength(1);
-    expect(stored[0].productId).toBe("siena-pack");
+    await act(async () => { await result.current.addToCart("var_1"); });
+
+    expect(localStorage.getItem("aurelia-cart-id")).toBe("test-cart");
   });
 
-  it("persists updated quantity to localStorage", () => {
-    const { result } = renderHook(() => useCart(), { wrapper });
-    act(() => {
-      result.current.addToCart("siena-pack");
-    });
-    const key = result.current.items[0].key;
-    act(() => {
-      result.current.updateQuantity(key, 4);
-    });
-    const stored = JSON.parse(localStorage.getItem(CART_KEY) ?? "[]") as {
-      quantity: number;
-    }[];
-    expect(stored[0].quantity).toBe(4);
-  });
+  it("hydrates cart from localStorage on mount when cart exists", async () => {
+    localStorage.setItem("aurelia-cart-id", "existing-cart");
+    const item = makeLineItem({ quantity: 3 });
+    mockRetrieve.mockResolvedValue({ cart: { id: "existing-cart", items: [item] } });
 
-  it("removes item from localStorage after removeFromCart", () => {
     const { result } = renderHook(() => useCart(), { wrapper });
-    act(() => {
-      result.current.addToCart("siena-pack");
+    await waitFor(() => {
+      expect(result.current.items).toHaveLength(1);
     });
-    const key = result.current.items[0].key;
-    act(() => {
-      result.current.removeFromCart(key);
-    });
-    const stored = JSON.parse(localStorage.getItem(CART_KEY) ?? "[]");
-    expect(stored).toHaveLength(0);
-  });
-
-  it("hydrates items from localStorage on mount", async () => {
-    localStorage.setItem(
-      CART_KEY,
-      JSON.stringify([
-        {
-          key: "siena-pack::default",
-          productId: "siena-pack",
-          quantity: 3,
-        },
-      ])
-    );
-    const { result } = renderHook(() => useCart(), { wrapper });
-    await act(async () => {});
-    expect(result.current.items).toHaveLength(1);
     expect(result.current.items[0].quantity).toBe(3);
+    expect(mockRetrieve).toHaveBeenCalledWith("existing-cart");
   });
 
-  it("handles corrupted localStorage gracefully (empty cart)", async () => {
-    localStorage.setItem(CART_KEY, "not-valid-json{{{");
+  it("clears localStorage when cart retrieve fails on mount", async () => {
+    localStorage.setItem("aurelia-cart-id", "bad-cart-id");
+    mockRetrieve.mockRejectedValue(new Error("Not found"));
+
     const { result } = renderHook(() => useCart(), { wrapper });
-    await act(async () => {});
+    await waitFor(() => {
+      expect(localStorage.getItem("aurelia-cart-id")).toBeNull();
+    });
     expect(result.current.items).toHaveLength(0);
   });
 });
@@ -505,27 +475,5 @@ describe("CartProvider – MiniCartDrawer renders", () => {
     );
     await act(async () => {});
     expect(screen.getByText("Tu carrito esta vacio.")).toBeInTheDocument();
-  });
-
-  it("shows product name when item is added", async () => {
-    // Pre-seed localStorage so the CartProvider hydrates with the item on mount
-    localStorage.setItem(
-      CART_KEY,
-      JSON.stringify([
-        {
-          key: "siena-pack::default",
-          productId: "siena-pack",
-          quantity: 1,
-        },
-      ])
-    );
-    render(
-      <CartProvider>
-        <span />
-      </CartProvider>
-    );
-    await act(async () => {});
-    // At least one element should display the product name
-    expect(screen.getAllByText("Pack Argollas Siena").length).toBeGreaterThan(0);
   });
 });

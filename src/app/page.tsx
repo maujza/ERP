@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowRight } from "lucide-react";
 
 import { useLanguage } from "@/components/language-provider";
@@ -11,34 +11,34 @@ import { Button } from "@/components/ui/button";
 import {
   brands,
   formatArs,
-  getProductDescription,
   getProductName,
+  mapMedusaProduct,
   navCategories,
-  products,
+  Product,
   translateLabel,
 } from "@/lib/shop-data";
+import { sdk } from "@/lib/medusa";
 
-const lookDots = [
-  {
-    productId: "siena-pack",
-    mobileClass: "left-[32%] top-[34%]",
-    desktopClass: "md:left-[26%] md:top-[30%]",
-  },
-  {
-    productId: "layering-aura",
-    mobileClass: "left-[60%] top-[47%]",
-    desktopClass: "md:left-[58%] md:top-[40%]",
-  },
-  {
-    productId: "capri-pulseras",
-    mobileClass: "left-[43%] top-[66%]",
-    desktopClass: "md:left-[46%] md:top-[64%]",
-  },
+const lookDotPositions = [
+  { mobileClass: "left-[32%] top-[34%]", desktopClass: "md:left-[26%] md:top-[30%]" },
+  { mobileClass: "left-[60%] top-[47%]", desktopClass: "md:left-[58%] md:top-[40%]" },
+  { mobileClass: "left-[43%] top-[66%]", desktopClass: "md:left-[46%] md:top-[64%]" },
 ];
 
 export default function HomePage() {
   const { language } = useLanguage();
   const [slideIndex, setSlideIndex] = useState(0);
+  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+
+  useEffect(() => {
+    sdk.store.product.list({
+      limit: 6,
+      fields: "+variants.calculated_price,+variants.inventory_quantity",
+      region_id: process.env.NEXT_PUBLIC_MEDUSA_REGION_ID,
+    }).then(({ products }) => {
+      setFeaturedProducts(products.map(mapMedusaProduct));
+    }).catch(() => {});
+  }, []);
 
   const t = language === "ko"
     ? {
@@ -129,7 +129,6 @@ export default function HomePage() {
     return () => window.clearInterval(timer);
   }, [t.heroSlides.length]);
 
-  const featuredProducts = useMemo(() => products.slice(0, 6), []);
 
   return (
     <div className="relative isolate overflow-hidden bg-[#f6f5f2]">
@@ -324,16 +323,20 @@ export default function HomePage() {
               fill
               className="object-cover"
             />
-            {lookDots.map((dot) => (
-              <Link
-                key={dot.productId}
-                href={`/product/${dot.productId}`}
-                className={`absolute z-10 h-7 w-7 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-[#111111] ${dot.mobileClass} ${dot.desktopClass}`}
-                aria-label={`${t.ctaMore} ${dot.productId}`}
-              >
-                <span className="absolute left-1/2 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white" />
-              </Link>
-            ))}
+            {lookDotPositions.map((pos, i) => {
+              const product = featuredProducts[i];
+              if (!product) return null;
+              return (
+                <Link
+                  key={product.id}
+                  href={`/product/${product.id}`}
+                  className={`absolute z-10 h-7 w-7 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-[#111111] ${pos.mobileClass} ${pos.desktopClass}`}
+                  aria-label={`${t.ctaMore} ${product.name}`}
+                >
+                  <span className="absolute left-1/2 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white" />
+                </Link>
+              );
+            })}
           </div>
         </section>
       </main>

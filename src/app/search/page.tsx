@@ -2,14 +2,15 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Suspense, useMemo } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 import { useLanguage } from "@/components/language-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { formatArs, getProductName, products } from "@/lib/shop-data";
+import { formatArs, getProductName, mapMedusaProduct, type Product } from "@/lib/shop-data";
+import { sdk } from "@/lib/medusa";
 
 function SearchContent() {
   const { language } = useLanguage();
@@ -43,15 +44,22 @@ function SearchContent() {
         add: "Agregar",
       };
 
-  const results = useMemo(() => {
-    if (!query) return [];
-    return products.filter(
-      (product) =>
-        getProductName(product, language).toLowerCase().includes(query) ||
-        product.description.toLowerCase().includes(query) ||
-        product.category.toLowerCase().includes(query),
-    );
-  }, [language, query]);
+  const [results, setResults] = useState<Product[]>([]);
+
+  useEffect(() => {
+    if (!query) {
+      setResults([]);
+      return;
+    }
+    sdk.store.product.list({
+      q: rawQuery,
+      limit: 50,
+      fields: "+variants.calculated_price,+variants.inventory_quantity",
+      region_id: process.env.NEXT_PUBLIC_MEDUSA_REGION_ID,
+    }).then(({ products }) => {
+      setResults(products.map(mapMedusaProduct));
+    }).catch(() => {});
+  }, [query, rawQuery]);
 
   return (
     <main className="mx-auto w-full max-w-[1300px] px-4 py-6 md:px-6 md:py-8">

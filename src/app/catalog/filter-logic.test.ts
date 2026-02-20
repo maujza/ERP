@@ -7,7 +7,129 @@
  * implementation is caught immediately.
  */
 import { describe, it, expect } from "vitest";
-import { products, type Product } from "@/lib/shop-data";
+import { type Product } from "@/lib/shop-data";
+
+// ---------------------------------------------------------------------------
+// Local mock product catalog (mirrors the original hardcoded shop data)
+// ---------------------------------------------------------------------------
+// Products must satisfy: 5 price≤20000, 4 price 20001-30000, 1 price>30000
+// Subcategories: Best Sellers×3, Novedades×3, Fiesta×1, Kits×1, Esenciales×2
+const products: Product[] = [
+  {
+    id: "siena-pack",
+    name: "Pack Argollas Siena",
+    description: "Micro circonias, baño oro 18K y tres diámetros combinables.",
+    category: "Aros",
+    subcategory: "Best Sellers",
+    brand: "Aurelia Core",
+    image: "/mock/siena.jpg",
+    price: 18900,
+    stock: 12,
+    variants: [
+      { id: "dorado", label: "Dorado", stock: 8 },
+      { id: "plateado", label: "Plateado", stock: 4 },
+    ],
+  },
+  {
+    id: "layering-aura",
+    name: "Layering Aura",
+    description: "Capas de delicadeza para el cuello.",
+    category: "Collares",
+    subcategory: "Novedades",
+    brand: "Aurelia Studio",
+    image: "/mock/aura.jpg",
+    price: 24500,
+    stock: 8,
+  },
+  {
+    id: "capri-pulseras",
+    name: "Pulseras Capri Mix",
+    description: "Mix de pulseras en colores vibrantes.",
+    category: "Pulseras",
+    subcategory: "Best Sellers",
+    brand: "Aurelia Core",
+    image: "/mock/capri.jpg",
+    price: 19900,
+    stock: 10,
+  },
+  {
+    id: "statement-eclair",
+    name: "Aros Statement Eclair",
+    description: "Diseño audaz para ocasiones especiales.",
+    category: "Aros",
+    subcategory: "Fiesta",
+    brand: "Lumiere",
+    image: "/mock/eclair.jpg",
+    price: 28500,
+    stock: 4,
+  },
+  {
+    id: "materia-collar",
+    name: "Collar Materia",
+    description: "Cadena minimalista de plata 925.",
+    category: "Collares",
+    subcategory: "Novedades",
+    brand: "Aurelia Studio",
+    image: "/mock/materia.jpg",
+    price: 22000,
+    stock: 15,
+  },
+  {
+    id: "kit-vitrina",
+    name: "Kit Vitrina Premium",
+    description: "Kit completo para exhibición profesional.",
+    category: "Sets",
+    subcategory: "Kits",
+    brand: "Aurelia Pro",
+    image: "/mock/kit.jpg",
+    price: 98500,
+    stock: 3,
+  },
+  {
+    id: "set-perlas",
+    name: "Set Perlas Boreal",
+    description: "Colección de perlas naturales boreal.",
+    category: "Sets",
+    subcategory: "Esenciales",
+    brand: "Boreal",
+    image: "/mock/perlas.jpg",
+    price: 27500,
+    stock: 0,
+  },
+  {
+    id: "acero-siena",
+    name: "Argollas Acero Siena",
+    description: "Argollas de acero quirúrgico, acabado pulido.",
+    category: "Aros",
+    subcategory: "Esenciales",
+    brand: "Aurelia Core",
+    image: "/mock/acero.jpg",
+    price: 13200,
+    stock: 20,
+  },
+  {
+    id: "choker-luna",
+    name: "Choker Luna",
+    description: "Choker delicado con perla central.",
+    category: "Collares",
+    subcategory: "Novedades",
+    brand: "Lumiere",
+    image: "/mock/luna.jpg",
+    price: 19500,
+    stock: 7,
+  },
+  {
+    id: "anillo-wave",
+    name: "Anillo Wave",
+    description: "Diseño ondulado en plata 925.",
+    category: "Anillos",
+    subcategory: "Best Sellers",
+    brand: "Boreal",
+    image: "/mock/wave.jpg",
+    price: 16500,
+    stock: 5,
+  },
+];
 
 // ---------------------------------------------------------------------------
 // Replicate helpers from catalog/page.tsx (keep in sync)

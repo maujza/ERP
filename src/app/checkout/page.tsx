@@ -10,7 +10,8 @@ import { useLanguage } from "@/components/language-provider";
 import { useCart } from "@/components/cart-provider";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { formatArs, getProductById, getProductName, translateLabel } from "@/lib/shop-data";
+import { formatArs } from "@/lib/shop-data";
+import { sdk } from "@/lib/medusa";
 
 type CheckoutErrors = Record<string, string>;
 
@@ -26,7 +27,7 @@ const requiredShippingFields = ["firstName", "lastName", "address", "postalCode"
 export default function CheckoutPage() {
   const { language } = useLanguage();
   const router = useRouter();
-  const { items, subtotal } = useCart();
+  const { cartId, items, subtotal } = useCart();
 
   const t = language === "ko"
     ? {
@@ -189,20 +190,10 @@ export default function CheckoutPage() {
   const [installments, setInstallments] = useState<string[]>([]);
 
   const cartLines = useMemo(
-    () =>
-      items
-        .map((line) => {
-          const product = getProductById(line.productId);
-          if (!product) return null;
-          const variant = product.variants?.find((item) => item.id === line.variantId);
-          return {
-            ...line,
-            product,
-            variant,
-            lineTotal: product.price * line.quantity,
-          };
-        })
-        .filter((line): line is NonNullable<typeof line> => line !== null),
+    () => items.map((line) => ({
+      ...line,
+      lineTotal: line.unitPrice * line.quantity,
+    })),
     [items],
   );
 
@@ -241,24 +232,44 @@ export default function CheckoutPage() {
     setShippingErrors((prev) => ({ ...prev, ...errors }));
     if (Object.keys(errors).length > 0) return;
 
+    if (!cartId) return;
     setLoadingShippingMethods(true);
     setShippingMethods([]);
 
-    window.setTimeout(() => {
-      const province = shipping.province.toLowerCase();
-      const methods: ShippingMethod[] = province.includes("buenos")
-        ? [
-            { id: "normal", label: language === "ko" ? "일반 배송" : "Envio estandar", amount: 3900, eta: "48/72h" },
-            { id: "express", label: language === "ko" ? "익스프레스 배송" : "Envio express", amount: 7200, eta: "24h" },
-          ]
-        : [
-            { id: "normal", label: language === "ko" ? "전국 택배" : "Correo nacional", amount: 5600, eta: language === "ko" ? "3-5일" : "3 a 5 dias" },
-            { id: "pickup", label: language === "ko" ? "운영사 픽업" : "Retiro por operador", amount: 2900, eta: language === "ko" ? "2-4일" : "2 a 4 dias" },
-          ];
+    // Update shipping address on the cart first
+    sdk.store.cart.update(cartId, {
+      shipping_address: {
+        first_name: shipping.firstName,
+        last_name: shipping.lastName,
+        address_1: shipping.address,
+        postal_code: shipping.postalCode,
+        city: shipping.city,
+        country_code: "ar",
+      },
+      email,
+    }).then(() =>
+      sdk.store.fulfillment.listCartOptions({ cart_id: cartId })
+    ).then(({ shipping_options }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const methods: ShippingMethod[] = (shipping_options ?? []).map((opt: any) => ({
+        id: opt.id as string,
+        label: (opt.name ?? "") as string,
+        amount: (opt.amount ?? 0) as number,
+        eta: "",
+      }));
       setShippingMethods(methods);
       setSelectedShippingMethod(methods[0]?.id ?? "");
+    }).catch(() => {
+      // Fallback to hardcoded methods if Medusa shipping not configured
+      const methods: ShippingMethod[] = [
+        { id: "standard", label: language === "ko" ? "일반 배송" : "Envio estandar", amount: 3900, eta: "48/72h" },
+        { id: "express", label: language === "ko" ? "익스프레스 배송" : "Envio express", amount: 7200, eta: "24h" },
+      ];
+      setShippingMethods(methods);
+      setSelectedShippingMethod(methods[0]?.id ?? "");
+    }).finally(() => {
       setLoadingShippingMethods(false);
-    }, 1200);
+    });
   };
 
   const onEmailBlur = () => {
@@ -339,7 +350,7 @@ export default function CheckoutPage() {
     return Object.keys(nextErrors).length === 0;
   };
 
-  const submitOrder = () => {
+  const submitOrder = async () => {
     // WhatsApp path: only require email, then send with whatever info is available
     if (paymentMethod === "wpp") {
       const emailError = validateEmail(email);
@@ -348,7 +359,7 @@ export default function CheckoutPage() {
         return;
       }
       const lines = cartLines
-        .map((line) => `• ${getProductName(line.product, language)} x${line.quantity} - ${formatArs(line.lineTotal, language)}`)
+        .map((line) => `• ${line.title} x${line.quantity} - ${formatArs(line.lineTotal, language)}`)
         .join("\n");
       const shippingMethod = shippingMethods.find((m) => m.id === selectedShippingMethod);
       const addressParts = [shipping.address, shipping.city, shipping.province, shipping.postalCode]
@@ -405,7 +416,22 @@ export default function CheckoutPage() {
     const paymentOk = validatePayment();
     if (!paymentOk) return;
 
-    router.push("/order-confirmation");
+    if (!cartId) return;
+
+    // Add shipping method to cart
+    if (selectedShippingMethod) {
+      await sdk.store.cart.addShippingMethod(cartId, { option_id: selectedShippingMethod }).catch(() => {});
+    }
+
+    // Initiate payment session and complete cart
+    const { cart: cartObj } = await sdk.store.cart.retrieve(cartId);
+    await sdk.store.payment.initiatePaymentSession(cartObj, { provider_id: "pp_system_default" }).catch(() => {});
+    const { type } = await sdk.store.cart.complete(cartId).catch(() => ({ type: "error" }));
+
+    if (type === "order") {
+      localStorage.removeItem("aurelia-cart-id");
+      router.push("/order-confirmation");
+    }
   };
 
   if (cartLines.length === 0) {
@@ -712,14 +738,16 @@ export default function CheckoutPage() {
             <h2 className="text-lg font-semibold text-[#111111]">{t.summary}</h2>
             <div className="mt-4 space-y-3">
               {cartLines.map((line) => (
-                <div key={`${line.product.id}-${line.variant?.id ?? "default"}`} className="flex gap-2 rounded-2xl border border-black/10 p-2">
-                  <div className="relative h-14 w-14 overflow-hidden rounded-lg">
-                    <Image src={line.product.image} alt={getProductName(line.product, language)} fill className="object-cover" />
+                <div key={line.id} className="flex gap-2 rounded-2xl border border-black/10 p-2">
+                  <div className="relative h-14 w-14 overflow-hidden rounded-lg bg-[#f3f3f3]">
+                    {line.thumbnail && (
+                      <Image src={line.thumbnail} alt={line.title} fill className="object-cover" />
+                    )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="line-clamp-2 text-sm font-medium text-[#111111]">{getProductName(line.product, language)}</p>
+                    <p className="line-clamp-2 text-sm font-medium text-[#111111]">{line.title}</p>
                     <p className="text-xs text-[#666666]">
-                      {line.variant ? translateLabel(line.variant.label, language) : t.noStockVariant} · x{line.quantity}
+                      {line.variantTitle || t.noStockVariant} · x{line.quantity}
                     </p>
                     <p className="text-sm font-semibold text-[#111111]">{formatArs(line.lineTotal, language)}</p>
                   </div>

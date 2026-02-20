@@ -5,13 +5,25 @@ import {
   getProductName,
   getProductDescription,
   formatArs,
-  getProductById,
-  products,
   navCategories,
   subcategories,
   brands,
   sortOptions,
+  type Product,
 } from "./shop-data";
+
+// Shared mock product for tests that need a Product object
+const mockProduct: Product = {
+  id: "test-product",
+  name: "Test Product Name",
+  description: "Test product description.",
+  category: "Aros",
+  subcategory: "Esenciales",
+  brand: "Aurelia Core",
+  image: "https://example.com/image.jpg",
+  price: 18900,
+  stock: 5,
+};
 
 // ---------------------------------------------------------------------------
 // translateLabel
@@ -80,37 +92,17 @@ describe("translateLabel", () => {
 // getProductName
 // ---------------------------------------------------------------------------
 describe("getProductName", () => {
-  it("returns Spanish name for 'es'", () => {
-    const p = products.find((x) => x.id === "siena-pack")!;
-    expect(getProductName(p, "es")).toBe("Pack Argollas Siena");
+  it("returns the product name for 'es'", () => {
+    expect(getProductName(mockProduct, "es")).toBe("Test Product Name");
   });
 
-  it("returns Korean name for 'ko'", () => {
-    const p = products.find((x) => x.id === "siena-pack")!;
-    expect(getProductName(p, "ko")).toBe("시에나 후프 팩");
+  it("returns the product name for 'ko'", () => {
+    expect(getProductName(mockProduct, "ko")).toBe("Test Product Name");
   });
 
-  it("returns Korean names for every product", () => {
-    const koNames: Record<string, string> = {
-      "siena-pack": "시에나 후프 팩",
-      "layering-aura": "아우라 레이어링",
-      "capri-pulseras": "카프리 브레이슬릿 믹스",
-      "statement-eclair": "스테이트먼트 에클레어",
-      "materia-collar": "마테리아 체인",
-      "kit-vitrina": "프리미엄 쇼케이스 키트",
-      "set-perlas": "보레알 펄 세트",
-      "acero-siena": "시에나 스틸 후프",
-      "choker-luna": "루나 초커",
-      "anillo-wave": "웨이브 링",
-    };
-    for (const product of products) {
-      expect(getProductName(product, "ko")).toBe(koNames[product.id]);
-    }
-  });
-
-  it("falls back to Spanish name for unknown product ID in ko", () => {
-    const fake = { ...products[0], id: "does-not-exist" };
-    expect(getProductName(fake, "ko")).toBe(fake.name);
+  it("returns a string for any product", () => {
+    const result = getProductName(mockProduct, "es");
+    expect(typeof result).toBe("string");
   });
 });
 
@@ -118,33 +110,17 @@ describe("getProductName", () => {
 // getProductDescription
 // ---------------------------------------------------------------------------
 describe("getProductDescription", () => {
-  it("returns Spanish description for 'es'", () => {
-    const p = products.find((x) => x.id === "siena-pack")!;
-    expect(getProductDescription(p, "es")).toBe(
-      "Micro circonias, baño oro 18K y tres diámetros combinables."
-    );
+  it("returns the product description for 'es'", () => {
+    expect(getProductDescription(mockProduct, "es")).toBe("Test product description.");
   });
 
-  it("returns Korean description for 'ko'", () => {
-    const p = products.find((x) => x.id === "siena-pack")!;
-    expect(getProductDescription(p, "ko")).toBe(
-      "마이크로 지르코니아, 18K 골드 도금, 3가지 지름 구성."
-    );
+  it("returns the product description for 'ko'", () => {
+    expect(getProductDescription(mockProduct, "ko")).toBe("Test product description.");
   });
 
-  it("returns Korean descriptions for every product", () => {
-    const koCodes = products.map((p) => p.id);
-    for (const id of koCodes) {
-      const p = products.find((x) => x.id === id)!;
-      const desc = getProductDescription(p, "ko");
-      expect(typeof desc).toBe("string");
-      expect(desc.length).toBeGreaterThan(0);
-    }
-  });
-
-  it("falls back to Spanish description for unknown product ID in ko", () => {
-    const fake = { ...products[0], id: "does-not-exist" };
-    expect(getProductDescription(fake, "ko")).toBe(fake.description);
+  it("returns a string for any product", () => {
+    const result = getProductDescription(mockProduct, "ko");
+    expect(typeof result).toBe("string");
   });
 });
 
@@ -164,8 +140,6 @@ describe("formatArs", () => {
   });
 
   it("formats without fractional digits", () => {
-    // maximumFractionDigits: 0 → no decimal portion (e.g. ",00").
-    // es-AR uses '.' as thousands separator so 18900 → "$ 18.900" (no trailing ",00").
     const result = formatArs(18900, "es");
     expect(result).not.toMatch(/,\d{2}$/);
   });
@@ -192,131 +166,6 @@ describe("formatArs", () => {
     const result = formatArs(98500, "es");
     expect(result).toContain("98");
     expect(result).toContain("500");
-  });
-});
-
-// ---------------------------------------------------------------------------
-// getProductById
-// ---------------------------------------------------------------------------
-describe("getProductById", () => {
-  it("returns the correct product for each known ID", () => {
-    for (const product of products) {
-      const found = getProductById(product.id);
-      expect(found).toBeDefined();
-      expect(found?.id).toBe(product.id);
-    }
-  });
-
-  it("returns the expected product name for siena-pack", () => {
-    const p = getProductById("siena-pack");
-    expect(p?.name).toBe("Pack Argollas Siena");
-  });
-
-  it("returns the expected price for kit-vitrina", () => {
-    const p = getProductById("kit-vitrina");
-    expect(p?.price).toBe(98500);
-  });
-
-  it("returns undefined for an unknown ID", () => {
-    expect(getProductById("nonexistent-id")).toBeUndefined();
-  });
-
-  it("returns undefined for an empty string", () => {
-    expect(getProductById("")).toBeUndefined();
-  });
-
-  it("is case-sensitive", () => {
-    expect(getProductById("SIENA-PACK")).toBeUndefined();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// products data shape
-// ---------------------------------------------------------------------------
-describe("products array", () => {
-  it("contains exactly 10 products", () => {
-    expect(products).toHaveLength(10);
-  });
-
-  it("every product has all required string fields", () => {
-    for (const p of products) {
-      expect(typeof p.id).toBe("string");
-      expect(p.id).toBeTruthy();
-      expect(typeof p.name).toBe("string");
-      expect(p.name).toBeTruthy();
-      expect(typeof p.description).toBe("string");
-      expect(p.description).toBeTruthy();
-      expect(typeof p.category).toBe("string");
-      expect(p.category).toBeTruthy();
-      expect(typeof p.subcategory).toBe("string");
-      expect(p.subcategory).toBeTruthy();
-      expect(typeof p.brand).toBe("string");
-      expect(p.brand).toBeTruthy();
-      expect(typeof p.image).toBe("string");
-      expect(p.image).toBeTruthy();
-    }
-  });
-
-  it("every product has a positive price", () => {
-    for (const p of products) {
-      expect(typeof p.price).toBe("number");
-      expect(p.price).toBeGreaterThan(0);
-    }
-  });
-
-  it("every product has a non-negative stock", () => {
-    for (const p of products) {
-      expect(typeof p.stock).toBe("number");
-      expect(p.stock).toBeGreaterThanOrEqual(0);
-    }
-  });
-
-  it("discounted products have originalPrice > price", () => {
-    const discounted = products.filter((p) => p.originalPrice !== undefined);
-    expect(discounted.length).toBeGreaterThan(0);
-    for (const p of discounted) {
-      expect(p.originalPrice).toBeGreaterThan(p.price);
-    }
-  });
-
-  it("at least one product is out of stock (stock === 0)", () => {
-    const outOfStock = products.find((p) => p.stock === 0);
-    expect(outOfStock).toBeDefined();
-    expect(outOfStock?.id).toBe("set-perlas");
-  });
-
-  it("at least one product has variants", () => {
-    const withVariants = products.filter(
-      (p) => p.variants && p.variants.length > 0
-    );
-    expect(withVariants.length).toBeGreaterThan(0);
-  });
-
-  it("variants each have id, label, and non-negative stock", () => {
-    for (const p of products) {
-      if (!p.variants) continue;
-      for (const v of p.variants) {
-        expect(typeof v.id).toBe("string");
-        expect(v.id).toBeTruthy();
-        expect(typeof v.label).toBe("string");
-        expect(v.label).toBeTruthy();
-        expect(typeof v.stock).toBe("number");
-        expect(v.stock).toBeGreaterThanOrEqual(0);
-      }
-    }
-  });
-
-  it("products have unique IDs", () => {
-    const ids = products.map((p) => p.id);
-    const unique = new Set(ids);
-    expect(unique.size).toBe(ids.length);
-  });
-
-  it("siena-pack has dorado and plateado variants", () => {
-    const p = getProductById("siena-pack")!;
-    const variantIds = p.variants?.map((v) => v.id) ?? [];
-    expect(variantIds).toContain("dorado");
-    expect(variantIds).toContain("plateado");
   });
 });
 

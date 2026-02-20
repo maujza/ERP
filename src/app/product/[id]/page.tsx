@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 
 import { useLanguage } from "@/components/language-provider";
@@ -12,11 +12,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
   formatArs,
-  getProductById,
   getProductDescription,
   getProductName,
+  mapMedusaProduct,
   translateLabel,
+  type Product,
 } from "@/lib/shop-data";
+import { sdk } from "@/lib/medusa";
 
 export default function ProductDetailPage() {
   const { language } = useLanguage();
@@ -63,20 +65,45 @@ export default function ProductDetailPage() {
         increaseQty: "Aumentar cantidad",
       };
 
-  const product = useMemo(() => getProductById(params.id), [params.id]);
+  const [product, setProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(true);
   const [selectedVariant, setSelectedVariant] = useState<string | undefined>(undefined);
   const [qty, setQty] = useState(1);
+
+  useEffect(() => {
+    setLoading(true);
+    sdk.store.product.retrieve(params.id, {
+      fields: "+variants.calculated_price,+variants.inventory_quantity",
+      region_id: process.env.NEXT_PUBLIC_MEDUSA_REGION_ID,
+    } as Parameters<typeof sdk.store.product.retrieve>[1]).then(({ product: p }) => {
+      setProduct(mapMedusaProduct(p));
+    }).catch(() => {
+      setProduct(null);
+    }).finally(() => {
+      setLoading(false);
+    });
+  }, [params.id]);
 
   useEffect(() => {
     setQty(1);
   }, [selectedVariant]);
 
-  if (!product) {
+  if (loading) {
     return (
       <main className="mx-auto w-full max-w-[1000px] px-4 py-8">
         <Card className="p-6">
-          <p className="text-lg font-semibold">{t.notFound}</p>
-          <Button asChild className="mt-4">
+          <p className="text-lg font-semibold text-[#666666]">...</p>
+        </Card>
+      </main>
+    );
+  }
+
+  if (!product) {
+    return (
+      <main className="mx-auto w-full max-w-[1000px] px-4 py-8">
+        <Card className="p-6 space-y-4">
+          <p className="text-lg font-semibold text-[#111111]">{t.notFound}</p>
+          <Button asChild variant="outline">
             <Link href="/catalog">{t.backCollection}</Link>
           </Button>
         </Card>
@@ -86,6 +113,7 @@ export default function ProductDetailPage() {
 
   const outOfStock = product.stock <= 0;
   const hasVariants = Boolean(product.variants && product.variants.length > 1);
+  const defaultVariantId = product.variants?.[0]?.id;
   const selectedVariantData = product.variants?.find((variant) => variant.id === selectedVariant);
   const missingVariant = hasVariants && !selectedVariant;
   const canAdd = !outOfStock && !missingVariant;
@@ -186,7 +214,10 @@ export default function ProductDetailPage() {
           <Button
             className="w-full"
             disabled={!canAdd}
-            onClick={() => addToCart(product.id, selectedVariant, { quantity: qty })}
+            onClick={() => {
+              const variantId = selectedVariant ?? defaultVariantId ?? "";
+              if (variantId) addToCart(variantId, qty);
+            }}
           >
             {outOfStock ? t.soldOut : missingVariant ? t.selectVariantBtn : t.addToCart}
           </Button>
