@@ -1,10 +1,10 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Filter, X } from "lucide-react";
 
+import { SafeImage } from "@/components/safe-image";
 import { useLanguage } from "@/components/language-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,13 +12,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   formatArs,
   getProductName,
+  hasPurchasablePrice,
+  isJewelryProduct,
   mapMedusaProduct,
   subcategories,
   translateLabel,
   type Product,
   type SortOption,
 } from "@/lib/shop-data";
-import { sdk } from "@/lib/medusa";
+import { sdk, withStorePricingContext } from "@/lib/medusa";
 
 const priceFilters = [
   { id: "all", label: "Todos" },
@@ -108,12 +110,11 @@ export default function CatalogPage() {
   const gridRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    sdk.store.product.list({
+    sdk.store.product.list(withStorePricingContext({
       limit: 100,
-      fields: "+variants.calculated_price,+variants.inventory_quantity",
-      region_id: process.env.NEXT_PUBLIC_MEDUSA_REGION_ID,
-    }).then(({ products }) => {
-      setAllProducts(products.map(mapMedusaProduct));
+      fields: "+variants.calculated_price,+variants.inventory_quantity,+metadata,+categories",
+    })).then(({ products }) => {
+      setAllProducts(products.map(mapMedusaProduct).filter(hasPurchasablePrice).filter(isJewelryProduct));
     }).catch(() => {});
   }, []);
 
@@ -323,7 +324,7 @@ export default function CatalogPage() {
                   <article key={product.id} className="overflow-hidden rounded-2xl border border-black/10 bg-white">
                     <Link href={`/product/${product.id}`} className="block">
                       <div className="relative h-44 w-full">
-                        <Image src={product.image} alt={getProductName(product, language)} fill className="object-cover" />
+                        <SafeImage src={product.image} alt={getProductName(product, language)} fill className="object-cover" />
                         <div className="absolute left-2 top-2 flex flex-wrap gap-1">
                           <Badge variant="outline" className="bg-white/90">
                             {translateLabel(product.category, language)}

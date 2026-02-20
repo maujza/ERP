@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -8,6 +7,7 @@ import { ChevronDown, Loader2 } from "lucide-react";
 
 import { useLanguage } from "@/components/language-provider";
 import { useCart } from "@/components/cart-provider";
+import { SafeImage } from "@/components/safe-image";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { formatArs } from "@/lib/shop-data";
@@ -23,11 +23,12 @@ type ShippingMethod = {
 };
 
 const requiredShippingFields = ["firstName", "lastName", "address", "postalCode", "city", "province"] as const;
+const fallbackShippingMethodIds = new Set(["standard", "express"]);
 
 export default function CheckoutPage() {
   const { language } = useLanguage();
   const router = useRouter();
-  const { cartId, items, subtotal } = useCart();
+  const { cartId, items, subtotal, clearCart } = useCart();
 
   const t = language === "ko"
     ? {
@@ -144,9 +145,9 @@ export default function CheckoutPage() {
         wppSend: "Enviar pedido por WhatsApp",
         paymentTitle: "¿Cómo querés pagar?",
         emptyCartTitle: "Tu carrito está vacío",
-        emptyCartDesc: "Agregá productos para iniciar el checkout.",
+        emptyCartDesc: "Agregá productos para iniciar la finalización de compra.",
         backHome: "Volver al inicio",
-        checkout: "Ir al checkout",
+        checkout: "Finalizar compra",
         continueUnits: "unidades",
         noStockVariant: "Variante única",
       };
@@ -188,6 +189,7 @@ export default function CheckoutPage() {
   const [paymentErrors, setPaymentErrors] = useState<CheckoutErrors>({});
   const [loadingInstallments, setLoadingInstallments] = useState(false);
   const [installments, setInstallments] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const cartLines = useMemo(
     () => items.map((line) => ({
@@ -203,6 +205,22 @@ export default function CheckoutPage() {
   }, [selectedShippingMethod, shippingMethods]);
 
   const total = subtotal + shippingAmount - discountAmount;
+
+  const resolveRealShippingOptionId = async () => {
+    if (!cartId) return "";
+    if (selectedShippingMethod && !fallbackShippingMethodIds.has(selectedShippingMethod)) {
+      return selectedShippingMethod;
+    }
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { shipping_options } = await sdk.store.fulfillment.listCartOptions({ cart_id: cartId } as any);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return ((shipping_options ?? []) as any[]).find((opt) => opt?.id)?.id ?? "";
+    } catch {
+      return "";
+    }
+  };
 
   const validateEmail = (value: string) => {
     if (!value.trim()) return t.enterEmail;
@@ -313,21 +331,53 @@ export default function CheckoutPage() {
     }
   };
 
-  const applyDiscount = () => {
+  const applyDiscount = async () => {
     const code = discountCode.trim().toUpperCase();
     if (!code) {
       setDiscountAmount(0);
       setDiscountError(t.enterCode);
       return;
     }
-    if (code === "AURELIA10") {
-      const value = Math.round(subtotal * 0.1);
-      setDiscountAmount(value);
-      setDiscountError("");
+    if (!cartId) {
+      setDiscountError(t.invalidCode);
       return;
     }
-    setDiscountAmount(0);
-    setDiscountError(t.invalidCode);
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { cart: updatedCart } = await sdk.store.cart.update(cartId, { promo_codes: [code] } as any);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if ((updatedCart as any)?.completed_at) {
+        clearCart();
+        setDiscountAmount(0);
+        setDiscountError(language === "ko" ? "이미 완료된 주문입니다. 새 카트를 시작하세요." : "Ese carrito ya fue finalizado. Inicia un carrito nuevo.");
+        return;
+      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const discount = (updatedCart as any).discount_total ?? 0;
+      // Some configured promotions may not change discount_total immediately (e.g. shipping-related rules).
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const promoApplied = ((updatedCart as any).promotions ?? []).some(
+        (promo: { code?: string }) => promo.code?.toUpperCase() === code,
+      );
+      if (discount > 0 || promoApplied) {
+        setDiscountAmount(discount);
+        setDiscountError("");
+      } else {
+        // Code accepted but produced no discount — remove it and show error
+        await sdk.store.cart.update(cartId, { promo_codes: [] } as any).catch(() => {});
+        setDiscountAmount(0);
+        setDiscountError(t.invalidCode);
+      }
+    } catch (error) {
+      setDiscountAmount(0);
+      const msg = error instanceof Error ? error.message.toLowerCase() : "";
+      if (msg.includes("already completed")) {
+        clearCart();
+        setDiscountError(language === "ko" ? "이미 완료된 주문입니다. 새 카트를 시작하세요." : "Ese carrito ya fue finalizado. Inicia un carrito nuevo.");
+      } else {
+        setDiscountError(t.invalidCode);
+      }
+    }
   };
 
   const validatePayment = () => {
@@ -350,87 +400,149 @@ export default function CheckoutPage() {
     return Object.keys(nextErrors).length === 0;
   };
 
+  const completeCartAsOrder = async () => {
+    if (!cartId) return "";
+
+    await sdk.store.cart.update(cartId, {
+      email,
+      ...(shipping.address
+        ? {
+            shipping_address: {
+              first_name: shipping.firstName || "Cliente",
+              last_name: shipping.lastName || "Store",
+              address_1: shipping.address,
+              postal_code: shipping.postalCode || "1000",
+              city: shipping.city || "Buenos Aires",
+              country_code: "ar",
+            },
+          }
+        : {}),
+    });
+
+    const realOptionId = await resolveRealShippingOptionId();
+    if (realOptionId) {
+      await sdk.store.cart.addShippingMethod(cartId, { option_id: realOptionId }).catch(() => {});
+    }
+
+    const { cart: cartObj } = await sdk.store.cart.retrieve(cartId);
+    await sdk.store.payment.initiatePaymentSession(cartObj, { provider_id: "pp_system_default" }).catch(() => {});
+    const result = await sdk.store.cart.complete(cartId).catch(() => ({ type: "error" as const }));
+    if ((result as { type: string }).type === "order") {
+      const orderId = (result as { order?: { id: string } }).order?.id ?? "";
+      clearCart();
+      return orderId;
+    }
+    return "";
+  };
+
   const submitOrder = async () => {
-    // WhatsApp path: only require email, then send with whatever info is available
-    if (paymentMethod === "wpp") {
+    if (isSubmitting) return;
+
+    try {
+      // WhatsApp path: create a Medusa order then open WhatsApp
+      if (paymentMethod === "wpp") {
+        const emailError = validateEmail(email);
+        if (emailError) {
+          setContactComplete(false);
+          return;
+        }
+
+        let orderId = "";
+        if (cartId) {
+          setIsSubmitting(true);
+          try {
+            orderId = await completeCartAsOrder();
+          } catch {
+            // Keep WhatsApp fallback even when order creation fails.
+          } finally {
+            setIsSubmitting(false);
+          }
+        }
+
+        const lines = cartLines
+          .map((line) => `• ${line.title} x${line.quantity} - ${formatArs(line.lineTotal, language)}`)
+          .join("\n");
+        const shippingMethod = shippingMethods.find((m) => m.id === selectedShippingMethod);
+        const addressParts = [shipping.address, shipping.city, shipping.province, shipping.postalCode]
+          .filter(Boolean)
+          .join(", ");
+        const msg = [
+          language === "ko" ? "안녕하세요! WhatsApp으로 주문을 완료하고 싶습니다:" : "Hola! Quiero finalizar mi pedido:",
+          "",
+          lines,
+          "",
+          `${t.subtotal}: ${formatArs(subtotal, language)}`,
+          shippingMethod
+            ? `${t.shipping}: ${formatArs(shippingAmount, language)} (${shippingMethod.label})`
+            : null,
+          discountAmount > 0 ? `${t.discount}: -${formatArs(discountAmount, language)}` : null,
+          `${t.total}: ${formatArs(total, language)}`,
+          "",
+          shipping.firstName.trim()
+            ? `${t.firstName}: ${shipping.firstName} ${shipping.lastName}`
+            : null,
+          addressParts ? `${t.address}: ${addressParts}` : null,
+          `${t.email}: ${email}`,
+          orderId ? `N° pedido: ${orderId}` : null,
+        ]
+          .filter(Boolean)
+          .join("\n");
+        // Replace this number with the store's WhatsApp number (country code + number, no spaces or +)
+        const WPP_NUMBER = "5491100000000";
+        window.open(`https://wa.me/${WPP_NUMBER}?text=${encodeURIComponent(msg)}`, "_blank");
+        return;
+      }
+
+      // Card / Mercado Pago path: full validation
       const emailError = validateEmail(email);
       if (emailError) {
         setContactComplete(false);
         return;
       }
-      const lines = cartLines
-        .map((line) => `• ${line.title} x${line.quantity} - ${formatArs(line.lineTotal, language)}`)
-        .join("\n");
-      const shippingMethod = shippingMethods.find((m) => m.id === selectedShippingMethod);
-      const addressParts = [shipping.address, shipping.city, shipping.province, shipping.postalCode]
-        .filter(Boolean)
-        .join(", ");
-      const msg = [
-        language === "ko" ? "안녕하세요! WhatsApp으로 주문을 완료하고 싶습니다:" : "Hola! Quiero finalizar mi pedido:",
-        "",
-        lines,
-        "",
-        `${t.subtotal}: ${formatArs(subtotal, language)}`,
-        shippingMethod
-          ? `${t.shipping}: ${formatArs(shippingAmount, language)} (${shippingMethod.label})`
-          : null,
-        discountAmount > 0 ? `${t.discount}: -${formatArs(discountAmount, language)}` : null,
-        `${t.total}: ${formatArs(total, language)}`,
-        "",
-        shipping.firstName.trim()
-          ? `${t.firstName}: ${shipping.firstName} ${shipping.lastName}`
-          : null,
-        addressParts ? `${t.address}: ${addressParts}` : null,
-        `${t.email}: ${email}`,
-      ]
-        .filter(Boolean)
-        .join("\n");
-      // Replace this number with the store's WhatsApp number (country code + number, no spaces or +)
-      const WPP_NUMBER = "5491100000000";
-      window.open(`https://wa.me/${WPP_NUMBER}?text=${encodeURIComponent(msg)}`, "_blank");
-      return;
-    }
 
-    // Card / Mercado Pago path: full validation
-    const emailError = validateEmail(email);
-    if (emailError) {
-      setContactComplete(false);
-      return;
-    }
+      const shippingValidation: CheckoutErrors = {};
+      requiredShippingFields.forEach((field) => {
+        const error = validateShippingField(field, shipping[field]);
+        if (error) shippingValidation[field] = error;
+      });
+      setShippingErrors(shippingValidation);
+      if (Object.keys(shippingValidation).length > 0) return;
 
-    const shippingValidation: CheckoutErrors = {};
-    requiredShippingFields.forEach((field) => {
-      const error = validateShippingField(field, shipping[field]);
-      if (error) shippingValidation[field] = error;
-    });
-    setShippingErrors(shippingValidation);
-    if (Object.keys(shippingValidation).length > 0) return;
+      if (paymentMethod === "mp") {
+        if (!cartId) return;
+        setIsSubmitting(true);
+        try {
+          const orderId = await completeCartAsOrder();
+          if (orderId) {
+            router.push(`/order-confirmation?order_id=${encodeURIComponent(orderId)}`);
+            return;
+          }
+        } catch {
+          // Fallback until MP checkout integration is configured.
+        } finally {
+          setIsSubmitting(false);
+        }
+        window.location.href = "https://www.mercadopago.com.ar/";
+        return;
+      }
 
-    if (!selectedShippingMethod) return;
+      const paymentOk = validatePayment();
+      if (!paymentOk) return;
 
-    if (paymentMethod === "mp") {
-      window.location.href = "https://www.mercadopago.com.ar/";
-      return;
-    }
-
-    const paymentOk = validatePayment();
-    if (!paymentOk) return;
-
-    if (!cartId) return;
-
-    // Add shipping method to cart
-    if (selectedShippingMethod) {
-      await sdk.store.cart.addShippingMethod(cartId, { option_id: selectedShippingMethod }).catch(() => {});
-    }
-
-    // Initiate payment session and complete cart
-    const { cart: cartObj } = await sdk.store.cart.retrieve(cartId);
-    await sdk.store.payment.initiatePaymentSession(cartObj, { provider_id: "pp_system_default" }).catch(() => {});
-    const { type } = await sdk.store.cart.complete(cartId).catch(() => ({ type: "error" }));
-
-    if (type === "order") {
-      localStorage.removeItem("aurelia-cart-id");
-      router.push("/order-confirmation");
+      if (!cartId) return;
+      setIsSubmitting(true);
+      try {
+        const orderId = await completeCartAsOrder();
+        if (orderId) {
+          router.push(`/order-confirmation?order_id=${encodeURIComponent(orderId)}`);
+        }
+      } finally {
+        setIsSubmitting(false);
+      }
+    } catch (error) {
+      console.error("Checkout submission failed", error);
+      setDiscountError(language === "ko" ? "처리 중 오류가 발생했습니다" : "Ocurrió un error al procesar el pedido");
+      setIsSubmitting(false);
     }
   };
 
@@ -741,7 +853,7 @@ export default function CheckoutPage() {
                 <div key={line.id} className="flex gap-2 rounded-2xl border border-black/10 p-2">
                   <div className="relative h-14 w-14 overflow-hidden rounded-lg bg-[#f3f3f3]">
                     {line.thumbnail && (
-                      <Image src={line.thumbnail} alt={line.title} fill className="object-cover" />
+                      <SafeImage src={line.thumbnail} alt={line.title} fill className="object-cover" />
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
@@ -795,6 +907,7 @@ export default function CheckoutPage() {
 
       <div className="fixed inset-x-0 bottom-0 z-45 border-t border-black/10 bg-white p-3 md:hidden">
         <Button
+          disabled={isSubmitting}
           className={`w-full ${paymentMethod === "wpp" ? "bg-[#25d366] hover:bg-[#1fb558]" : ""}`}
           onClick={submitOrder}
         >
@@ -805,6 +918,7 @@ export default function CheckoutPage() {
       <div className="hidden md:fixed md:bottom-5 md:right-5 md:block">
         <Button
           size="lg"
+          disabled={isSubmitting}
           className={paymentMethod === "wpp" ? "bg-[#25d366] hover:bg-[#1fb558]" : ""}
           onClick={submitOrder}
         >

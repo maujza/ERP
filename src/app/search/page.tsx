@@ -1,16 +1,16 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
+import { SafeImage } from "@/components/safe-image";
 import { useLanguage } from "@/components/language-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { formatArs, getProductName, mapMedusaProduct, type Product } from "@/lib/shop-data";
-import { sdk } from "@/lib/medusa";
+import { formatArs, getProductName, hasPurchasablePrice, isJewelryProduct, mapMedusaProduct, type Product } from "@/lib/shop-data";
+import { sdk, withStorePricingContext } from "@/lib/medusa";
 
 function SearchContent() {
   const { language } = useLanguage();
@@ -51,13 +51,12 @@ function SearchContent() {
       setResults([]);
       return;
     }
-    sdk.store.product.list({
+    sdk.store.product.list(withStorePricingContext({
       q: rawQuery,
       limit: 50,
-      fields: "+variants.calculated_price,+variants.inventory_quantity",
-      region_id: process.env.NEXT_PUBLIC_MEDUSA_REGION_ID,
-    }).then(({ products }) => {
-      setResults(products.map(mapMedusaProduct));
+      fields: "+variants.calculated_price,+variants.inventory_quantity,+metadata,+categories",
+    })).then(({ products }) => {
+      setResults(products.map(mapMedusaProduct).filter(hasPurchasablePrice).filter(isJewelryProduct));
     }).catch(() => {});
   }, [query, rawQuery]);
 
@@ -94,7 +93,7 @@ function SearchContent() {
               <article key={product.id} className="overflow-hidden rounded-2xl border border-black/10 bg-white">
                 <Link href={`/product/${product.id}`} className="block">
                   <div className="relative h-40 w-full">
-                    <Image src={product.image} alt={getProductName(product, language)} fill className="object-cover" />
+                    <SafeImage src={product.image} alt={getProductName(product, language)} fill className="object-cover" />
                   </div>
                   <div className="space-y-2 p-3">
                     <p className="line-clamp-2 text-sm font-semibold">{getProductName(product, language)}</p>

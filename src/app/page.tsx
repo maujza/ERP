@@ -1,10 +1,10 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowRight } from "lucide-react";
 
+import { SafeImage } from "@/components/safe-image";
 import { useLanguage } from "@/components/language-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,12 +12,14 @@ import {
   brands,
   formatArs,
   getProductName,
+  hasPurchasablePrice,
+  isJewelryProduct,
   mapMedusaProduct,
   navCategories,
   Product,
   translateLabel,
 } from "@/lib/shop-data";
-import { sdk } from "@/lib/medusa";
+import { sdk, withStorePricingContext } from "@/lib/medusa";
 
 const lookDotPositions = [
   { mobileClass: "left-[32%] top-[34%]", desktopClass: "md:left-[26%] md:top-[30%]" },
@@ -31,12 +33,17 @@ export default function HomePage() {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
 
   useEffect(() => {
-    sdk.store.product.list({
-      limit: 6,
-      fields: "+variants.calculated_price,+variants.inventory_quantity",
-      region_id: process.env.NEXT_PUBLIC_MEDUSA_REGION_ID,
-    }).then(({ products }) => {
-      setFeaturedProducts(products.map(mapMedusaProduct));
+    sdk.store.product.list(withStorePricingContext({
+      limit: 100,
+      fields: "+variants.calculated_price,+variants.inventory_quantity,+metadata,+categories",
+    })).then(({ products }) => {
+      setFeaturedProducts(
+        products
+          .map(mapMedusaProduct)
+          .filter(hasPurchasablePrice)
+          .filter(isJewelryProduct)
+          .slice(0, 6),
+      );
     }).catch(() => {});
   }, []);
 
@@ -98,7 +105,7 @@ export default function HomePage() {
           },
           {
             title: "Operacion comercial en modo simple.",
-            description: "Catalogo, carrito, checkout y seguimiento en un solo flujo para tu equipo.",
+            description: "Catalogo, carrito, finalizar compra y seguimiento en un solo flujo para tu equipo.",
             image:
               "https://images.unsplash.com/photo-1704957205218-d436eac4c607?auto=format&fit=crop&w=1400&q=80",
           },
@@ -109,7 +116,7 @@ export default function HomePage() {
           { title: "Novedades", href: "/catalog?subcategory=Novedades" },
           { title: "Best sellers", href: "/catalog?subcategory=Best%20Sellers" },
           { title: "Armar pedido", href: "/catalog" },
-          { title: "Ir a checkout", href: "/checkout" },
+          { title: "Finalizar compra", href: "/checkout" },
         ],
         collections: "Colecciones",
         collection: "Coleccion",
@@ -166,7 +173,7 @@ export default function HomePage() {
               </div>
             </div>
             <div className="order-2 relative h-64 w-full md:h-full md:min-h-[420px]">
-              <Image
+              <SafeImage
                 src={t.heroSlides[slideIndex].image}
                 alt={t.heroSlides[slideIndex].title}
                 fill
@@ -270,7 +277,7 @@ export default function HomePage() {
                 <article key={product.id} className="overflow-hidden rounded-2xl border border-black/10 bg-white">
                   <Link href={`/product/${product.id}`} className="block">
                     <div className="relative h-40 w-full">
-                      <Image src={product.image} alt={getProductName(product, language)} fill className="object-cover" />
+                      <SafeImage src={product.image} alt={getProductName(product, language)} fill className="object-cover" />
                     </div>
                     <div className="space-y-2 p-3">
                       <p className="line-clamp-2 text-sm font-semibold text-[#111111]">
@@ -317,7 +324,7 @@ export default function HomePage() {
             <p className="text-xs uppercase tracking-[0.2em] text-[#666666]">{t.tapDots}</p>
           </div>
           <div className="relative mx-auto h-[360px] max-w-[780px] overflow-hidden rounded-2xl md:h-[520px]">
-            <Image
+            <SafeImage
               src="https://images.unsplash.com/photo-1704957205218-d436eac4c607?auto=format&fit=crop&w=1400&q=80"
               alt={t.shopLook}
               fill

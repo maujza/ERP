@@ -39,7 +39,7 @@ export function SiteHeader() {
         navLinks: [
           { href: "/", label: "Home" },
           { href: "/catalog", label: "Colección" },
-          { href: "/checkout", label: "Checkout" },
+          { href: "/checkout", label: "Finalizar compra" },
         ],
         searchPlaceholder: "Buscar productos",
         openMenu: "Abrir menú",

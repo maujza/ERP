@@ -31,11 +31,25 @@ export const sortOptions = [
   { id: "price_desc" as SortOption, label: "Precio: mayor" },
 ];
 
-export const navCategories = ["Novedades", "Best Sellers", "Aros", "Collares", "Pulseras", "Sets", "Kits"];
+export const jewelryCategories = ["Aros", "Collares", "Pulseras", "Sets", "Kits", "Anillos", "Perlas"];
+export const navCategories = ["Novedades", "Best Sellers", ...jewelryCategories];
 
 export const subcategories = ["Todos", "Novedades", "Best Sellers", "Esenciales", "Fiesta", "Kits"];
 
 export const brands = ["Aurelia Core", "Aurelia Studio", "Lumiere", "Boreal", "Aurelia Pro"];
+
+const clothingKeywords = [
+  "shirt",
+  "sweat",
+  "hoodie",
+  "short",
+  "pant",
+  "sock",
+  "cap",
+  "merch",
+  "jean",
+  "jacket",
+];
 
 const labelKo: Record<string, string> = {
   "Novedades": "신상품",
@@ -88,7 +102,12 @@ export function formatArs(value: number, language: UiLanguage = "es") {
 
 export function mapMedusaProduct(p: MedusaProduct): Product {
   const firstVariant = p.variants?.[0]
-  const price = firstVariant?.calculated_price?.calculated_amount ?? 0
+  const rawImage = (p.thumbnail ?? p.images?.[0]?.url ?? "") as string
+  const image = resolveProductImage(rawImage)
+  const price =
+    firstVariant?.calculated_price?.calculated_amount ??
+    firstVariant?.prices?.[0]?.amount ??
+    0
   const originalAmount = firstVariant?.calculated_price?.original_amount
   const originalPrice = originalAmount && originalAmount !== price ? originalAmount : undefined
 
@@ -97,14 +116,18 @@ export function mapMedusaProduct(p: MedusaProduct): Product {
     0
   ) ?? 0
 
+  const category = (p.metadata?.category as string) ?? p.categories?.[0]?.name ?? inferCategoryFromText(p.title ?? "", p.description ?? "")
+  const subcategory = (p.metadata?.subcategory as string) ?? ""
+  const brand = (p.metadata?.brand as string) ?? ""
+
   return {
     id: p.id,
     name: p.title,
     description: p.description ?? "",
-    category: (p.metadata?.category as string) ?? p.categories?.[0]?.name ?? "",
-    subcategory: (p.metadata?.subcategory as string) ?? "",
-    brand: (p.metadata?.brand as string) ?? "",
-    image: p.thumbnail ?? p.images?.[0]?.url ?? "",
+    category,
+    subcategory,
+    brand,
+    image,
     price,
     originalPrice,
     stock: totalStock,
@@ -114,4 +137,50 @@ export function mapMedusaProduct(p: MedusaProduct): Product {
       stock: (v.inventory_quantity ?? 0) as number,
     })),
   }
+}
+
+function resolveProductImage(rawImage: string) {
+  const trimmed = rawImage.trim()
+  if (!trimmed) return "/file.svg"
+  if (trimmed.startsWith("/")) return trimmed
+  if (trimmed.startsWith("//")) return `https:${trimmed}`
+
+  try {
+    const parsed = new URL(trimmed)
+    if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+      return trimmed
+    }
+    return "/file.svg"
+  } catch {
+    return "/file.svg"
+  }
+}
+
+export function hasPurchasablePrice(product: Product) {
+  return product.price > 0
+}
+
+function inferCategoryFromText(name: string, description: string) {
+  const normalized = `${name} ${description}`.toLowerCase()
+  if (normalized.includes("aro")) return "Aros"
+  if (normalized.includes("collar")) return "Collares"
+  if (normalized.includes("pulsera")) return "Pulseras"
+  if (normalized.includes("kit")) return "Kits"
+  if (normalized.includes("set")) return "Sets"
+  if (normalized.includes("anillo")) return "Anillos"
+  if (normalized.includes("perla")) return "Perlas"
+  return ""
+}
+
+export function isJewelryProduct(product: Product) {
+  if (jewelryCategories.includes(product.category)) {
+    return true
+  }
+
+  const normalized = `${product.name} ${product.description} ${product.category}`.toLowerCase()
+  if (clothingKeywords.some((keyword) => normalized.includes(keyword))) {
+    return false
+  }
+
+  return Boolean(inferCategoryFromText(product.name, product.description))
 }

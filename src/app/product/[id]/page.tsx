@@ -1,12 +1,12 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 
 import { useLanguage } from "@/components/language-provider";
 import { useCart } from "@/components/cart-provider";
+import { SafeImage } from "@/components/safe-image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -14,11 +14,13 @@ import {
   formatArs,
   getProductDescription,
   getProductName,
+  hasPurchasablePrice,
+  isJewelryProduct,
   mapMedusaProduct,
   translateLabel,
   type Product,
 } from "@/lib/shop-data";
-import { sdk } from "@/lib/medusa";
+import { sdk, withStorePricingContext } from "@/lib/medusa";
 
 export default function ProductDetailPage() {
   const { language } = useLanguage();
@@ -72,11 +74,11 @@ export default function ProductDetailPage() {
 
   useEffect(() => {
     setLoading(true);
-    sdk.store.product.retrieve(params.id, {
-      fields: "+variants.calculated_price,+variants.inventory_quantity",
-      region_id: process.env.NEXT_PUBLIC_MEDUSA_REGION_ID,
-    } as Parameters<typeof sdk.store.product.retrieve>[1]).then(({ product: p }) => {
-      setProduct(mapMedusaProduct(p));
+    sdk.store.product.retrieve(params.id, withStorePricingContext({
+      fields: "+variants.calculated_price,+variants.inventory_quantity,+metadata,+categories",
+    }) as Parameters<typeof sdk.store.product.retrieve>[1]).then(({ product: p }) => {
+      const mappedProduct = mapMedusaProduct(p);
+      setProduct(isJewelryProduct(mappedProduct) ? mappedProduct : null);
     }).catch(() => {
       setProduct(null);
     }).finally(() => {
@@ -112,11 +114,12 @@ export default function ProductDetailPage() {
   }
 
   const outOfStock = product.stock <= 0;
+  const hasValidPrice = hasPurchasablePrice(product);
   const hasVariants = Boolean(product.variants && product.variants.length > 1);
   const defaultVariantId = product.variants?.[0]?.id;
   const selectedVariantData = product.variants?.find((variant) => variant.id === selectedVariant);
   const missingVariant = hasVariants && !selectedVariant;
-  const canAdd = !outOfStock && !missingVariant;
+  const canAdd = !outOfStock && hasValidPrice && !missingVariant;
   const maxQty = selectedVariantData ? selectedVariantData.stock : product.stock;
 
   return (
@@ -135,7 +138,7 @@ export default function ProductDetailPage() {
 
       <section className="grid gap-5 md:grid-cols-2">
         <div className="relative h-[420px] overflow-hidden rounded-3xl border border-black/10 bg-white md:h-[560px]">
-          <Image src={product.image} alt={getProductName(product, language)} fill className="object-cover" priority />
+          <SafeImage src={product.image} alt={getProductName(product, language)} fill className="object-cover" priority />
           <div className="absolute left-3 top-3 flex gap-2">
             <Badge variant="outline" className="bg-white/90">
               {translateLabel(product.category, language)}
@@ -183,6 +186,7 @@ export default function ProductDetailPage() {
 
           <div className="rounded-2xl bg-[#f5f5f5] p-3 text-sm text-[#555555]">
             {outOfStock && <p>{t.noStock}</p>}
+            {!outOfStock && !hasValidPrice && <p>{language === "ko" ? "가격이 설정되지 않았습니다." : "Este producto no tiene precio configurado."}</p>}
             {!outOfStock && hasVariants && !selectedVariantData && <p>{t.selectVariant}</p>}
             {!outOfStock && selectedVariantData && <p>{t.variantStock}: {selectedVariantData.stock} {t.units}.</p>}
             {!outOfStock && !hasVariants && <p>{t.stockAvailable}: {product.stock} {t.units}.</p>}

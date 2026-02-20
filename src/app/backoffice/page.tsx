@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { sdk } from "@/lib/medusa";
+import { sdk, withStorePricingContext } from "@/lib/medusa";
 import {
   BadgeCheck,
   Boxes,
@@ -369,7 +369,8 @@ export default function BackofficePage() {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         setCatalogData(products.map((p: any) => {
           const firstVariant = p.variants?.[0];
-          const price = firstVariant?.prices?.[0]?.amount ?? 0;
+          const retailPrice = firstVariant?.calculated_price?.calculated_amount ?? firstVariant?.prices?.[0]?.amount ?? 0;
+          const wholesalePrice = firstVariant?.calculated_price?.original_amount ?? retailPrice;
           const stock = p.variants?.reduce(
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (sum: number, v: any) => sum + (v.inventory_quantity ?? 0), 0
@@ -378,8 +379,8 @@ export default function BackofficePage() {
             id: p.id,
             name: p.title ?? "",
             category: p.categories?.[0]?.name ?? p.metadata?.category ?? "",
-            wholesalePrice: price,
-            retailPrice: Math.round(price * 1.5),
+            wholesalePrice,
+            retailPrice,
             quantity: stock,
             status: p.status === "published",
             images: p.images?.map((img: any) => img.url) ?? (p.thumbnail ? [p.thumbnail] : []),
@@ -387,6 +388,34 @@ export default function BackofficePage() {
         }));
       }
     }).catch(() => { /* admin not authenticated — keep mock data */ });
+
+    // Keep product pricing aligned with active price lists even without admin auth.
+    sdk.store.product.list(withStorePricingContext({
+      limit: 50,
+      fields: "+variants.calculated_price,+variants.inventory_quantity,+metadata,+categories",
+    })).then(({ products }: any) => {
+      if (!products?.length) return;
+      setCatalogData(products.map((p: any) => {
+        const firstVariant = p.variants?.[0];
+        const retailPrice = firstVariant?.calculated_price?.calculated_amount ?? firstVariant?.prices?.[0]?.amount ?? 0;
+        const wholesalePrice = firstVariant?.calculated_price?.original_amount ?? retailPrice;
+        const quantity = p.variants?.reduce(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (sum: number, v: any) => sum + (v.inventory_quantity ?? 0),
+          0,
+        ) ?? 0;
+        return {
+          id: p.id,
+          name: p.title ?? "",
+          category: p.categories?.[0]?.name ?? p.metadata?.category ?? "",
+          wholesalePrice,
+          retailPrice,
+          quantity,
+          status: p.status === "published",
+          images: p.images?.map((img: any) => img.url) ?? (p.thumbnail ? [p.thumbnail] : []),
+        };
+      }));
+    }).catch(() => { /* keep admin or mock data */ });
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     sdk.admin.order.list({ limit: 1 }).then(({ count }: any) => {

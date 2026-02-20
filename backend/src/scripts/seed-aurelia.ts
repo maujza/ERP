@@ -17,6 +17,7 @@
 import { CreateInventoryLevelInput, ExecArgs } from "@medusajs/framework/types";
 import { ContainerRegistrationKeys, Modules, ProductStatus } from "@medusajs/framework/utils";
 import {
+  createCustomersWorkflow,
   createInventoryLevelsWorkflow,
   createProductCategoriesWorkflow,
   createProductsWorkflow,
@@ -34,6 +35,8 @@ export default async function seedAureliaData({ container }: ExecArgs) {
   const link = container.resolve(ContainerRegistrationKeys.LINK);
   const query = container.resolve(ContainerRegistrationKeys.QUERY);
   const fulfillmentModuleService = container.resolve(Modules.FULFILLMENT);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const orderModuleService: any = container.resolve(Modules.ORDER);
   const salesChannelModuleService = container.resolve(Modules.SALES_CHANNEL);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const promotionService: any = container.resolve(Modules.PROMOTION);
@@ -331,7 +334,7 @@ export default async function seedAureliaData({ container }: ExecArgs) {
       categoryName: "Aros",
       price: 28000,
       images: [
-        "https://images.unsplash.com/photo-1601821765780-754fa98637be?auto=format&fit=crop&w=600&q=80",
+        "https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?auto=format&fit=crop&w=600&q=80",
       ],
       variants: [{ title: "Única", sku: "ARS-PER-01-U" }],
     },
@@ -357,7 +360,7 @@ export default async function seedAureliaData({ container }: ExecArgs) {
       categoryName: "Collares",
       price: 32000,
       images: [
-        "https://images.unsplash.com/photo-1573408301185-9519f94815d6?auto=format&fit=crop&w=600&q=80",
+        "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?auto=format&fit=crop&w=600&q=80",
       ],
       variants: [{ title: "Única", sku: "COL-CAP-01-U" }],
     },
@@ -383,7 +386,7 @@ export default async function seedAureliaData({ container }: ExecArgs) {
       categoryName: "Pulseras",
       price: 19500,
       images: [
-        "https://images.unsplash.com/photo-1574552875619-64b98f26edce?auto=format&fit=crop&w=600&q=80",
+        "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?auto=format&fit=crop&w=600&q=80",
       ],
       variants: [{ title: "Única", sku: "PUL-ESL-01-U" }],
     },
@@ -412,7 +415,7 @@ export default async function seedAureliaData({ container }: ExecArgs) {
       categoryName: "Sets",
       price: 67000,
       images: [
-        "https://images.unsplash.com/photo-1561661882-a8e58a9cc5a7?auto=format&fit=crop&w=600&q=80",
+        "https://images.unsplash.com/photo-1506630448388-4e683c67ddb0?auto=format&fit=crop&w=600&q=80",
       ],
       variants: [{ title: "Única", sku: "SET-PER-01-U" }],
     },
@@ -441,6 +444,7 @@ export default async function seedAureliaData({ container }: ExecArgs) {
       input: {
         products: productsToCreate.map((p) => {
           const isMultiVariant = p.variants.length > 1;
+          const optionKey = isMultiVariant ? "Variante" : "Modelo";
           return {
             title: p.title,
             handle: p.handle,
@@ -455,7 +459,7 @@ export default async function seedAureliaData({ container }: ExecArgs) {
             variants: p.variants.map((v) => ({
               title: v.title,
               sku: v.sku,
-              options: isMultiVariant ? { Variante: v.title } : { Modelo: "Única" },
+              options: { [optionKey]: isMultiVariant ? v.title : "Única" } as Record<string, string>,
               prices: [
                 { amount: p.price, currency_code: "ars" },
               ],
@@ -468,6 +472,100 @@ export default async function seedAureliaData({ container }: ExecArgs) {
     logger.info(`Created ${productsToCreate.length} Aurelia jewelry products.`);
   } else {
     logger.info("Aurelia jewelry products already exist.");
+  }
+
+  // ── 6b. Bulk Dummy Products (storefront depth) ─────────────────────────────
+  const BULK_PRODUCT_TARGET = 120;
+  const bulkHandlePrefix = "aurelia-dummy-";
+  logger.info("Ensuring bulk dummy catalog for storefront exploration...");
+
+  const { data: productsAfterSeed } = await query.graph({
+    entity: "product",
+    fields: ["id", "handle"],
+  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const productHandlesAfterSeed = new Set(productsAfterSeed.map((p: any) => p.handle));
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const existingBulkCount = productsAfterSeed.filter((p: any) => String(p.handle || "").startsWith(bulkHandlePrefix)).length;
+  const missingBulkCount = Math.max(BULK_PRODUCT_TARGET - existingBulkCount, 0);
+
+  if (missingBulkCount > 0) {
+    const categoryCycle = ["Aros", "Collares", "Pulseras", "Sets", "Kits"];
+    const subcategoryCycle = ["Novedades", "Best Sellers", "Esenciales", "Fiesta"];
+    const brandCycle = ["Aurelia Core", "Aurelia Studio", "Lumiere", "Boreal", "Aurelia Pro"];
+
+    const productsToGenerate: AureliaProduct[] = [];
+    for (let i = 0; i < missingBulkCount; i += 1) {
+      const index = existingBulkCount + i + 1;
+      const categoryName = categoryCycle[index % categoryCycle.length];
+      const basePrice = 11500 + ((index * 1700) % 89000);
+      const handle = `${bulkHandlePrefix}${String(index).padStart(3, "0")}`;
+
+      if (productHandlesAfterSeed.has(handle)) {
+        continue;
+      }
+
+      productsToGenerate.push({
+        title: `Aurelia ${categoryName} Demo ${String(index).padStart(3, "0")}`,
+        handle,
+        description:
+          "Producto demo generado para pruebas visuales de dashboard/storefront, navegación por catálogo y simulación de compra.",
+        metadata: {
+          category: categoryName,
+          subcategory: subcategoryCycle[index % subcategoryCycle.length],
+          brand: brandCycle[index % brandCycle.length],
+        },
+        categoryName,
+        price: basePrice,
+        images: [
+          "https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?auto=format&fit=crop&w=600&q=80",
+        ],
+        variants: index % 3 === 0
+          ? [
+              { title: "S", sku: `DUM-${String(index).padStart(3, "0")}-S` },
+              { title: "M", sku: `DUM-${String(index).padStart(3, "0")}-M` },
+              { title: "L", sku: `DUM-${String(index).padStart(3, "0")}-L` },
+            ]
+          : [{ title: "Única", sku: `DUM-${String(index).padStart(3, "0")}-U` }],
+      });
+    }
+
+    const chunkSize = 25;
+    for (let i = 0; i < productsToGenerate.length; i += chunkSize) {
+      const chunk = productsToGenerate.slice(i, i + chunkSize);
+      await createProductsWorkflow(container).run({
+        input: {
+          products: chunk.map((p) => {
+            const isMultiVariant = p.variants.length > 1;
+            const optionKey = isMultiVariant ? "Talle" : "Modelo";
+            return {
+              title: p.title,
+              handle: p.handle,
+              description: p.description,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              metadata: p.metadata as any,
+              status: ProductStatus.PUBLISHED,
+              shipping_profile_id: shippingProfile?.id,
+              category_ids: categoryMap[p.categoryName] ? [categoryMap[p.categoryName]] : [],
+              images: p.images.map((url) => ({ url })),
+              options: isMultiVariant
+                ? [{ title: "Talle", values: p.variants.map((v) => v.title) }]
+                : [{ title: "Modelo", values: ["Única"] }],
+              variants: p.variants.map((v) => ({
+                title: v.title,
+                sku: v.sku,
+                options: { [optionKey]: isMultiVariant ? v.title : "Única" } as Record<string, string>,
+                prices: [{ amount: p.price, currency_code: "ars" }],
+              })),
+              sales_channels: [{ id: defaultSalesChannel.id }],
+            };
+          }),
+        },
+      });
+      logger.info(`Created ${chunk.length} bulk dummy products (${i + chunk.length}/${productsToGenerate.length}).`);
+    }
+  } else {
+    logger.info(`Bulk dummy products already satisfy target (${existingBulkCount}/${BULK_PRODUCT_TARGET}).`);
   }
 
   // ── 7. Inventory Levels ────────────────────────────────────────────────────────
@@ -505,30 +603,204 @@ export default async function seedAureliaData({ container }: ExecArgs) {
     logger.info("Inventory levels already set.");
   }
 
-  // ── 8. AURELIA10 Promotion (10 % off entire order) ────────────────────────────
-  logger.info("Seeding AURELIA10 promotion...");
-  const existingPromos = await promotionService
-    .listPromotions({ code: ["AURELIA10"] })
-    .catch(() => []);
+  // ── 8. Promotions ──────────────────────────────────────────────────────────────
+  logger.info("Seeding promotions...");
+  const promos = [
+    { code: "AURELIA10", value: 10 },
+    { code: "SUMMER15", value: 15 },
+  ] as const
 
-  if (!existingPromos.length) {
-    await promotionService.createPromotions([
-      {
-        code: "AURELIA10",
-        type: "standard",
-        is_automatic: false,
-        application_method: {
-          type: "percentage",
-          target_type: "order",
-          value: 10,
-          allocation: "across",
-          apply_to_quantity: 1,
+  for (const promo of promos) {
+    const existingPromos = await promotionService
+      .listPromotions({ code: [promo.code] })
+      .catch(() => []);
+
+    if (!existingPromos.length) {
+      await promotionService.createPromotions([
+        {
+          code: promo.code,
+          type: "standard",
+          status: "active",
+          is_automatic: false,
+          application_method: {
+            type: "percentage",
+            target_type: "order",
+            value: promo.value,
+            allocation: "across",
+            apply_to_quantity: 1,
+          },
         },
-      },
-    ]);
-    logger.info("Created AURELIA10 promotion — 10 % descuento en toda la orden.");
+      ]);
+      logger.info(`Created ${promo.code} promotion — ${promo.value} % descuento en toda la orden.`);
+    } else {
+      const existingPromo = existingPromos[0]
+      if (existingPromo?.status !== "active") {
+        await promotionService.updatePromotions({
+          id: existingPromo.id,
+          status: "active",
+        })
+        logger.info(`${promo.code} promotion activated.`);
+      } else {
+        logger.info(`${promo.code} promotion already exists.`);
+      }
+    }
+  }
+
+  // ── 9. Dummy Customers ───────────────────────────────────────────────────────
+  const CUSTOMER_TARGET = 180;
+  const customerDomain = "aurelia-demo.local";
+  logger.info("Ensuring dummy customers...");
+
+  const { data: existingCustomers } = await query.graph({
+    entity: "customer",
+    fields: ["id", "email"],
+  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const existingDemoCustomers = existingCustomers.filter((c: any) =>
+    String(c.email || "").endsWith(`@${customerDomain}`)
+  );
+  const customersMissing = Math.max(CUSTOMER_TARGET - existingDemoCustomers.length, 0);
+
+  if (customersMissing > 0) {
+    const firstNames = ["Sofía", "Martina", "Valentina", "Camila", "Lucía", "Juana", "Pilar", "Lola", "Emma", "Alma"];
+    const lastNames = ["García", "Rodríguez", "Fernández", "López", "Gómez", "Pérez", "Díaz", "Romero", "Torres", "Ruiz"];
+
+    const customersData: Array<{
+      email: string;
+      first_name: string;
+      last_name: string;
+    }> = [];
+    for (let i = 0; i < customersMissing; i += 1) {
+      const idx = existingDemoCustomers.length + i + 1;
+      const first = firstNames[idx % firstNames.length];
+      const last = lastNames[idx % lastNames.length];
+
+      customersData.push({
+        email: `cliente+${String(idx).padStart(4, "0")}@${customerDomain}`,
+        first_name: first,
+        last_name: last,
+      });
+    }
+
+    const chunkSize = 50;
+    for (let i = 0; i < customersData.length; i += chunkSize) {
+      const chunk = customersData.slice(i, i + chunkSize);
+      await createCustomersWorkflow(container).run({
+        input: {
+          customersData: chunk,
+        },
+      });
+      logger.info(`Created ${chunk.length} demo customers (${i + chunk.length}/${customersData.length}).`);
+    }
   } else {
-    logger.info("AURELIA10 promotion already exists.");
+    logger.info(`Demo customers already satisfy target (${existingDemoCustomers.length}/${CUSTOMER_TARGET}).`);
+  }
+
+  // ── 10. Dummy Orders (dashboard depth) ──────────────────────────────────────
+  const ORDER_TARGET = 240;
+  const orderSeedSource = "aurelia_dummy_v1";
+  logger.info("Ensuring dummy orders for dashboard analytics...");
+
+  const { data: existingOrders } = await query.graph({
+    entity: "order",
+    fields: ["id", "email", "metadata"],
+  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const existingSeededOrders = existingOrders.filter((o: any) =>
+    o?.metadata?.seed_source === orderSeedSource
+  );
+  const ordersMissing = Math.max(ORDER_TARGET - existingSeededOrders.length, 0);
+
+  if (ordersMissing > 0) {
+    const productPool = [
+      ...aureliaProducts.map((p) => ({ title: p.title, price: p.price })),
+      { title: "Aurelia Demo Earrings", price: 16500 },
+      { title: "Aurelia Demo Necklace", price: 24500 },
+      { title: "Aurelia Demo Bracelet", price: 20500 },
+      { title: "Aurelia Demo Set", price: 53000 },
+    ];
+
+    const getRandomInt = (min: number, max: number) =>
+      Math.floor(Math.random() * (max - min + 1)) + min;
+
+    for (let i = 0; i < ordersMissing; i += 1) {
+      const orderIndex = existingSeededOrders.length + i + 1;
+      const email = `cliente+${String((orderIndex % CUSTOMER_TARGET) + 1).padStart(4, "0")}@${customerDomain}`;
+      const itemCount = getRandomInt(1, 4);
+
+      const items = Array.from({ length: itemCount }).map((_, itemIdx) => {
+        const product = productPool[(orderIndex + itemIdx) % productPool.length];
+        const quantity = getRandomInt(1, 3);
+        const priceJitter = getRandomInt(-1200, 2400);
+        const unitPrice = Math.max(7900, product.price + priceJitter);
+
+        return {
+          title: product.title,
+          quantity,
+          unit_price: unitPrice,
+        };
+      });
+
+      const itemsTotal = items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0);
+      const shippingAmount = [0, 3900, 7200][orderIndex % 3];
+      const orderTotal = itemsTotal + shippingAmount;
+      const isPaid = orderIndex % 5 !== 0;
+      const isCompleted = orderIndex % 4 === 0;
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await orderModuleService.createOrders({
+        region_id: argentinaRegion.id,
+        sales_channel_id: defaultSalesChannel.id,
+        status: isCompleted ? "completed" : "pending",
+        email,
+        currency_code: "ars",
+        shipping_address: {
+          first_name: "Aurelia",
+          last_name: "Demo",
+          address_1: "Av. Santa Fe 1234",
+          city: "Buenos Aires",
+          country_code: "ar",
+          province: "caba",
+          postal_code: "C1000",
+        },
+        billing_address: {
+          first_name: "Aurelia",
+          last_name: "Demo",
+          address_1: "Av. Santa Fe 1234",
+          city: "Buenos Aires",
+          country_code: "ar",
+          province: "caba",
+          postal_code: "C1000",
+        },
+        items,
+        shipping_methods: [
+          {
+            name: shippingAmount === 0 ? "Retiro showroom" : shippingAmount === 3900 ? "Correo Argentino" : "OCA Express",
+            amount: shippingAmount,
+          },
+        ],
+        transactions: isPaid
+          ? [
+              {
+                amount: orderTotal,
+                currency_code: "ars",
+                reference: "payment",
+                reference_id: `seed-pay-${orderIndex}`,
+              },
+            ]
+          : [],
+        metadata: {
+          seed_source: orderSeedSource,
+          seed_index: orderIndex,
+        },
+      } as any);
+
+      if ((i + 1) % 25 === 0 || i === ordersMissing - 1) {
+        logger.info(`Created ${i + 1}/${ordersMissing} dummy orders.`);
+      }
+    }
+  } else {
+    logger.info(`Dummy orders already satisfy target (${existingSeededOrders.length}/${ORDER_TARGET}).`);
   }
 
   // ── Done ──────────────────────────────────────────────────────────────────────
