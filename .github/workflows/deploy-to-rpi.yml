@@ -3,11 +3,11 @@ name: Deploy to RPI on push to main
 on:
   push:
     branches:
-      - master
+      - main
 
 jobs:
   deploy:
-    runs-on: [self-hosted] 
+    runs-on: [self-hosted, erp] 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
