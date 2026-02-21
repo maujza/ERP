@@ -31,12 +31,17 @@ services:
       "
     ports:
       - "9000:9000"
+      - "5173:5173"
     environment:
       NODE_ENV: development
       DATABASE_URL: postgres://medusa:medusa@db:5432/medusa?sslmode=disable
       STORE_CORS: http://localhost:7358,http://localhost:9000
       ADMIN_CORS: http://localhost:9000
       AUTH_CORS: http://localhost:9000
+      HMR_PORT: 5173
+      HMR_CLIENT_PORT: 5173
+      HMR_HOST: localhost
+      HMR_BIND_HOST: 0.0.0.0
       JWT_SECRET: supersecret
       COOKIE_SECRET: supersecret
       MEDUSA_ADMIN_EMAIL: admin@aurelia.com
