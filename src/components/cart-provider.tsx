@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   createContext,
   useCallback,
@@ -272,8 +273,10 @@ function CartToast({
 }
 
 function MiniCartDrawer() {
+  const router = useRouter();
   const { language } = useLanguage();
   const { items, isDrawerOpen, closeDrawer, subtotal, updateQuantity, removeFromCart } = useCart();
+  const [showCheckoutChoice, setShowCheckoutChoice] = useState(false);
   const t = language === "ko"
     ? {
         cart: "장바구니",
@@ -284,6 +287,11 @@ function MiniCartDrawer() {
         subtotal: "소계",
         continueShopping: "쇼핑 계속하기",
         goCheckout: "결제로 이동",
+        checkoutChoiceTitle: "주문을 어떻게 진행할까요?",
+        checkoutChoiceBody: "계정으로 계속하거나 비회원으로 바로 결제할 수 있습니다.",
+        checkoutChoiceGuest: "비회원으로 계속",
+        checkoutChoiceLogin: "계정으로 계속",
+        checkoutChoiceCancel: "닫기",
       }
     : {
         cart: "Carrito",
@@ -294,7 +302,22 @@ function MiniCartDrawer() {
         subtotal: "Subtotal",
         continueShopping: "Continuar comprando",
         goCheckout: "Finalizar compra",
+        checkoutChoiceTitle: "¿Cómo querés finalizar?",
+        checkoutChoiceBody: "Podés continuar con tu cuenta o terminar como invitado.",
+        checkoutChoiceGuest: "Continuar sin cuenta",
+        checkoutChoiceLogin: "Entrar con mi cuenta",
+        checkoutChoiceCancel: "Cancelar",
       };
+
+  const onCheckoutClick = async () => {
+    try {
+      await sdk.store.customer.retrieve();
+      closeDrawer();
+      router.push("/checkout");
+    } catch {
+      setShowCheckoutChoice(true);
+    }
+  };
 
   return (
     <>
@@ -381,14 +404,54 @@ function MiniCartDrawer() {
             <Button variant="outline" onClick={closeDrawer}>
               {t.continueShopping}
             </Button>
-            <Button asChild>
-              <Link href="/checkout" onClick={closeDrawer}>
-                {t.goCheckout}
-              </Link>
+            <Button onClick={() => void onCheckoutClick()}>
+              {t.goCheckout}
             </Button>
           </div>
         </div>
       </aside>
+      {showCheckoutChoice && (
+        <>
+          <div className="fixed inset-0 z-[80] bg-black/50" onClick={() => setShowCheckoutChoice(false)} />
+          <div className="fixed inset-0 z-[85] flex items-center justify-center p-4">
+            <div className="w-full max-w-md rounded-3xl border border-black/10 bg-white p-6 shadow-2xl">
+              <h3 className="text-xl font-bold text-black">{t.checkoutChoiceTitle}</h3>
+              <p className="mt-2 text-sm text-slate-600">{t.checkoutChoiceBody}</p>
+              <div className="mt-5 grid gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCheckoutChoice(false);
+                    closeDrawer();
+                    router.push("/checkout?guest=1");
+                  }}
+                  className="rounded-xl border border-black/15 bg-white px-4 py-2.5 text-sm font-semibold text-black"
+                >
+                  {t.checkoutChoiceGuest}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCheckoutChoice(false);
+                    closeDrawer();
+                    router.push("/auth?next=/checkout");
+                  }}
+                  className="rounded-xl bg-black px-4 py-2.5 text-sm font-semibold text-white hover:bg-black/90"
+                >
+                  {t.checkoutChoiceLogin}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowCheckoutChoice(false)}
+                  className="rounded-xl px-4 py-2 text-sm font-medium text-slate-600"
+                >
+                  {t.checkoutChoiceCancel}
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </>
   );
 }

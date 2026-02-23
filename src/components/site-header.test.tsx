@@ -122,6 +122,13 @@ describe("SiteHeader – rendering", () => {
     expect(within(nav).getByText("Finalizar compra")).toBeInTheDocument();
   });
 
+  it("renders account icon action on the right side", () => {
+    render(<SiteHeader />);
+    const accountLink = document.querySelector('a[href="/account"]');
+    expect(accountLink).toBeInTheDocument();
+    expect(accountLink).toHaveAttribute("href", "/account");
+  });
+
   it("does NOT render a Coleccion link (without accent) — regression guard", () => {
     render(<SiteHeader />);
     expect(screen.queryByText("Coleccion")).toBeNull();

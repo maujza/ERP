@@ -6,6 +6,7 @@ import { Filter, X } from "lucide-react";
 
 import { SafeImage } from "@/components/safe-image";
 import { useLanguage } from "@/components/language-provider";
+import { ProductQuickView } from "@/components/product-quick-view";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -321,7 +322,8 @@ export default function CatalogPage() {
                 const isDiscounted = Boolean(product.originalPrice && product.originalPrice > product.price);
                 const outOfStock = product.stock <= 0;
                 return (
-                  <article key={product.id} className="overflow-hidden rounded-2xl border border-black/10 bg-white">
+                  <article key={product.id} className="group relative overflow-hidden rounded-2xl border border-black/10 bg-white">
+                    <ProductQuickView productId={product.id} />
                     <Link href={`/product/${product.id}`} className="block">
                       <div className="relative h-44 w-full">
                         <SafeImage src={product.image} alt={getProductName(product, language)} fill className="object-cover" />

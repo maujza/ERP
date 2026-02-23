@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { FormEvent, useMemo, useState } from "react";
-import { Languages, Menu, Search, ShoppingBag, X } from "lucide-react";
+import { Languages, Menu, Search, ShoppingBag, User, X } from "lucide-react";
 
 import { useLanguage } from "@/components/language-provider";
 import { LanguageToggle } from "@/components/language-toggle";
@@ -115,6 +115,14 @@ export function SiteHeader() {
               {totalItems}
             </span>
           </button>
+
+          <Link
+            href="/account"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/15"
+            aria-label={language === "ko" ? "내 계정" : "Mi cuenta"}
+          >
+            <User className="h-4 w-4" />
+          </Link>
 
           <LanguageToggle className="hidden md:inline-flex" />
         </div>

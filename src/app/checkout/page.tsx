@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, Loader2 } from "lucide-react";
 
 import { useLanguage } from "@/components/language-provider";
@@ -90,6 +90,11 @@ export default function CheckoutPage() {
         checkout: "결제로 이동",
         continueUnits: "개",
         noStockVariant: "단일 옵션",
+        checkoutChoiceTitle: "주문을 어떻게 진행할까요?",
+        checkoutChoiceBody: "계정으로 계속하거나 비회원으로 바로 결제할 수 있습니다.",
+        checkoutChoiceGuest: "비회원으로 계속",
+        checkoutChoiceLogin: "계정으로 계속",
+        checkoutChoiceCancel: "닫기",
       }
     : {
         requiredField: "Campo obligatorio",
@@ -150,6 +155,11 @@ export default function CheckoutPage() {
         checkout: "Finalizar compra",
         continueUnits: "unidades",
         noStockVariant: "Variante única",
+        checkoutChoiceTitle: "¿Cómo querés finalizar?",
+        checkoutChoiceBody: "Podés continuar con tu cuenta o terminar como invitado.",
+        checkoutChoiceGuest: "Continuar sin cuenta",
+        checkoutChoiceLogin: "Entrar con mi cuenta",
+        checkoutChoiceCancel: "Cancelar",
       };
 
   const [summaryOpenMobile, setSummaryOpenMobile] = useState(false);
@@ -190,6 +200,48 @@ export default function CheckoutPage() {
   const [loadingInstallments, setLoadingInstallments] = useState(false);
   const [installments, setInstallments] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCustomerAuthenticated, setIsCustomerAuthenticated] = useState(false);
+  const [checkedCustomerAuth, setCheckedCustomerAuth] = useState(false);
+  const [showCheckoutChoice, setShowCheckoutChoice] = useState(false);
+  const [allowGuestCheckout, setAllowGuestCheckout] = useState(false);
+  const [hasPromptedCheckoutChoice, setHasPromptedCheckoutChoice] = useState(false);
+
+  const checkCustomerAuth = async (syncState = true) => {
+    try {
+      await sdk.store.customer.retrieve();
+      if (syncState) {
+        setIsCustomerAuthenticated(true);
+        setCheckedCustomerAuth(true);
+      }
+      return true;
+    } catch {
+      if (syncState) {
+        setIsCustomerAuthenticated(false);
+        setCheckedCustomerAuth(true);
+      }
+      return false;
+    }
+  };
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("guest") === "1") {
+      setAllowGuestCheckout(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    void checkCustomerAuth(false).then((isAuthenticated) => {
+      if (!mounted) return;
+      setIsCustomerAuthenticated(isAuthenticated);
+      setCheckedCustomerAuth(true);
+    });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const cartLines = useMemo(
     () => items.map((line) => ({
@@ -198,6 +250,22 @@ export default function CheckoutPage() {
     })),
     [items],
   );
+
+  useEffect(() => {
+    if (hasPromptedCheckoutChoice) return;
+    if (!checkedCustomerAuth) return;
+    if (isCustomerAuthenticated) return;
+    if (allowGuestCheckout) return;
+    if (cartLines.length === 0) return;
+    setShowCheckoutChoice(true);
+    setHasPromptedCheckoutChoice(true);
+  }, [
+    allowGuestCheckout,
+    cartLines.length,
+    checkedCustomerAuth,
+    hasPromptedCheckoutChoice,
+    isCustomerAuthenticated,
+  ]);
 
   const shippingAmount = useMemo(() => {
     const method = shippingMethods.find((item) => item.id === selectedShippingMethod);
@@ -435,8 +503,16 @@ export default function CheckoutPage() {
     return "";
   };
 
-  const submitOrder = async () => {
+  const submitOrder = async (forceGuest = false) => {
     if (isSubmitting) return;
+    const isAuthenticated = checkedCustomerAuth ? isCustomerAuthenticated : await checkCustomerAuth(true);
+    if (!isAuthenticated && !(allowGuestCheckout || forceGuest)) {
+      setShowCheckoutChoice(true);
+      return;
+    }
+    if (forceGuest && !allowGuestCheckout) {
+      setAllowGuestCheckout(true);
+    }
 
     try {
       // WhatsApp path: create a Medusa order then open WhatsApp
@@ -613,8 +689,15 @@ export default function CheckoutPage() {
               placeholder={t.emailPlaceholder}
             />
             {showLoginHint && (
-              <p className="mt-2 text-xs text-[#666666]">
-                {t.loginHint} <button className="underline">{t.loginAction}</button>
+            <p className="mt-2 text-xs text-[#666666]">
+                {t.loginHint}{" "}
+                <button
+                  type="button"
+                  className="underline"
+                  onClick={() => router.push("/auth?next=/checkout")}
+                >
+                  {t.loginAction}
+                </button>
               </p>
             )}
           </Card>
@@ -909,18 +992,60 @@ export default function CheckoutPage() {
         <Button
           disabled={isSubmitting}
           className={`w-full ${paymentMethod === "wpp" ? "bg-[#25d366] hover:bg-[#1fb558]" : ""}`}
-          onClick={submitOrder}
+          onClick={() => {
+            void submitOrder();
+          }}
         >
           {paymentMethod === "wpp" ? t.wppSend : t.payNow}
         </Button>
       </div>
+
+      {showCheckoutChoice && (
+        <>
+          <div className="fixed inset-0 z-[95] bg-black/50" onClick={() => setShowCheckoutChoice(false)} />
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <div className="w-full max-w-md rounded-3xl border border-black/10 bg-white p-6 shadow-2xl">
+              <h3 className="text-xl font-bold text-black">{t.checkoutChoiceTitle}</h3>
+              <p className="mt-2 text-sm text-slate-600">{t.checkoutChoiceBody}</p>
+              <div className="mt-5 grid gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCheckoutChoice(false);
+                    void submitOrder(true);
+                  }}
+                  className="rounded-xl border border-black/15 bg-white px-4 py-2.5 text-sm font-semibold text-black"
+                >
+                  {t.checkoutChoiceGuest}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => router.push("/auth?next=/checkout")}
+                  className="rounded-xl bg-black px-4 py-2.5 text-sm font-semibold !text-white hover:bg-black/90"
+                >
+                  {t.checkoutChoiceLogin}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowCheckoutChoice(false)}
+                  className="rounded-xl px-4 py-2 text-sm font-medium text-slate-600"
+                >
+                  {t.checkoutChoiceCancel}
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       <div className="hidden md:fixed md:bottom-5 md:right-5 md:block">
         <Button
           size="lg"
           disabled={isSubmitting}
           className={paymentMethod === "wpp" ? "bg-[#25d366] hover:bg-[#1fb558]" : ""}
-          onClick={submitOrder}
+          onClick={() => {
+            void submitOrder();
+          }}
         >
           {paymentMethod === "wpp" ? t.wppSend : t.payNow}
         </Button>

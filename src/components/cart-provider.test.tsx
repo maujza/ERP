@@ -1,8 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, act, renderHook, waitFor } from "@testing-library/react";
+import { render, screen, act, renderHook, waitFor, fireEvent } from "@testing-library/react";
 import { CartProvider, useCart } from "./cart-provider";
 
 // ---- Next.js mocks --------------------------------------------------------
+const mockPush = vi.fn();
+
 vi.mock("next/image", () => ({
   default: ({ src, alt }: { src: string; alt: string }) => (
     <img src={src} alt={alt} />
@@ -25,6 +27,10 @@ vi.mock("next/link", () => ({
   ),
 }));
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: mockPush }),
+}));
+
 vi.mock("@/components/language-provider", () => ({
   useLanguage: () => ({
     language: "es" as const,
@@ -39,20 +45,33 @@ const mockRetrieve = vi.fn();
 const mockCreateLineItem = vi.fn();
 const mockUpdateLineItem = vi.fn();
 const mockDeleteLineItem = vi.fn();
+const mockCustomerRetrieve = vi.fn();
 
-vi.mock("@/lib/medusa", () => ({
-  sdk: {
-    store: {
-      cart: {
-        create: (...args: unknown[]) => mockCreate(...args),
-        retrieve: (...args: unknown[]) => mockRetrieve(...args),
-        createLineItem: (...args: unknown[]) => mockCreateLineItem(...args),
-        updateLineItem: (...args: unknown[]) => mockUpdateLineItem(...args),
-        deleteLineItem: (...args: unknown[]) => mockDeleteLineItem(...args),
+vi.mock("@/lib/medusa", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/medusa")>();
+  return {
+    ...actual,
+    MEDUSA_REGION_ID: "reg_test",
+    sdk: {
+      ...actual.sdk,
+      store: {
+        ...actual.sdk.store,
+        cart: {
+          ...actual.sdk.store.cart,
+          create: (...args: unknown[]) => mockCreate(...args),
+          retrieve: (...args: unknown[]) => mockRetrieve(...args),
+          createLineItem: (...args: unknown[]) => mockCreateLineItem(...args),
+          updateLineItem: (...args: unknown[]) => mockUpdateLineItem(...args),
+          deleteLineItem: (...args: unknown[]) => mockDeleteLineItem(...args),
+        },
+        customer: {
+          ...actual.sdk.store.customer,
+          retrieve: (...args: unknown[]) => mockCustomerRetrieve(...args),
+        },
       },
     },
-  },
-}));
+  };
+});
 
 // ---- Cart response helpers -------------------------------------------------
 type RawLineItem = {
@@ -91,6 +110,15 @@ function wrapper({ children }: { children: React.ReactNode }) {
   return <CartProvider>{children}</CartProvider>;
 }
 
+function DrawerHarness() {
+  const { openDrawer } = useCart();
+  return (
+    <button type="button" onClick={openDrawer}>
+      Open Drawer
+    </button>
+  );
+}
+
 // ---- Setup: clear mocks and localStorage between tests --------------------
 beforeEach(() => {
   localStorage.clear();
@@ -101,6 +129,8 @@ beforeEach(() => {
   mockCreateLineItem.mockResolvedValue(makeCartResponse());
   mockUpdateLineItem.mockResolvedValue(makeCartResponse());
   mockDeleteLineItem.mockResolvedValue(makeDeleteResponse());
+  mockCustomerRetrieve.mockRejectedValue(new Error("Unauthorized"));
+  mockPush.mockReset();
 });
 
 // ---------------------------------------------------------------------------
@@ -157,6 +187,11 @@ describe("CartProvider – addToCart", () => {
     const { result } = renderHook(() => useCart(), { wrapper });
     await act(async () => {
       await result.current.addToCart("var_1");
+    });
+    await waitFor(() => {
+      expect(result.current.cartId).toBe("test-cart");
+    });
+    await act(async () => {
       await result.current.addToCart("var_2");
     });
 
@@ -475,5 +510,38 @@ describe("CartProvider – MiniCartDrawer renders", () => {
     );
     await act(async () => {});
     expect(screen.getByText("Tu carrito esta vacio.")).toBeInTheDocument();
+  });
+});
+
+describe("CartProvider – checkout choice from drawer", () => {
+  it("shows account-choice popup for unauthenticated users", async () => {
+    render(
+      <CartProvider>
+        <DrawerHarness />
+      </CartProvider>
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Open Drawer" }));
+    fireEvent.click(screen.getByRole("button", { name: "Finalizar compra" }));
+
+    expect(await screen.findByText("¿Cómo querés finalizar?")).toBeInTheDocument();
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it("continues to checkout directly when authenticated", async () => {
+    mockCustomerRetrieve.mockResolvedValue({ customer: { id: "cus_1" } });
+
+    render(
+      <CartProvider>
+        <DrawerHarness />
+      </CartProvider>
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Open Drawer" }));
+    fireEvent.click(screen.getByRole("button", { name: "Finalizar compra" }));
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith("/checkout");
+    });
   });
 });

@@ -25,7 +25,7 @@ services:
         npx medusa db:migrate &&
         npx medusa exec ./src/scripts/seed-aurelia.ts &&
         npx medusa exec ./src/scripts/seed-demo-historic.ts &&
-        npx medusa user -e admin@aurelia.com -p supersecret || true &&
+        npx medusa user -e admin@aurelia.com -p supersecret >/dev/null 2>&1 || true &&
         npm run build &&
         npm run start
       "
@@ -37,7 +37,7 @@ services:
       DATABASE_URL: postgres://medusa:medusa@db:5432/medusa?sslmode=disable
       STORE_CORS: http://localhost:7358,http://localhost:9000
       ADMIN_CORS: http://localhost:9000
-      AUTH_CORS: http://localhost:9000
+      AUTH_CORS: http://localhost:7358,http://localhost:9000
       HMR_PORT: 5173
       HMR_CLIENT_PORT: 5173
       HMR_HOST: localhost

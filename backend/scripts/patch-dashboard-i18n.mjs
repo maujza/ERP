@@ -21,15 +21,11 @@ const replacements = [
   ["Last name", "Apellido"],
   ["Company (Optional)", "Empresa (Opcional)"],
   ["Checkout", "Finalizar compra"],
-  ["checkout", "finalizar compra"],
 ]
 
 const files = [
   "node_modules/@medusajs/dashboard/src/i18n/translations/en.json",
   "node_modules/@medusajs/dashboard/src/i18n/translations/es.json",
-  "node_modules/@medusajs/dashboard/dist/en.json",
-  "node_modules/@medusajs/dashboard/dist/es.json",
-  "node_modules/@medusajs/dashboard/dist/chunk-SZ2YWQ76.mjs",
 ]
 
 const replaceAll = (content) =>
