@@ -275,8 +275,7 @@ export default function HomePage() {
               const outOfStock = product.stock <= 0;
 
               return (
-                <article key={product.id} className="group relative overflow-hidden rounded-2xl border border-black/10 bg-white">
-                  <ProductQuickView productId={product.id} />
+                <article key={product.id} className="relative overflow-hidden rounded-2xl border border-black/10 bg-white">
                   <Link href={`/product/${product.id}`} className="block">
                     <div className="relative h-40 w-full">
                       <SafeImage src={product.image} alt={getProductName(product, language)} fill className="object-cover" />
@@ -309,8 +308,9 @@ export default function HomePage() {
                       {outOfStock && <Badge variant="outline">{t.soldOut}</Badge>}
                     </div>
                   </Link>
-                  <div className="px-3 pb-3">
-                    <Button asChild className="w-full" disabled={outOfStock}>
+                  <div className="flex items-center gap-2 px-3 pb-3">
+                    <ProductQuickView productId={product.id} className="h-10 shrink-0 px-3" />
+                    <Button asChild className="h-10 w-full" disabled={outOfStock}>
                       <Link href={`/product/${product.id}`}>{outOfStock ? t.soldOut : t.addToCart}</Link>
                     </Button>
                   </div>

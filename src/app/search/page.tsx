@@ -91,8 +91,7 @@ function SearchContent() {
           {results.map((product) => {
             const outOfStock = product.stock <= 0;
             return (
-              <article key={product.id} className="group relative overflow-hidden rounded-2xl border border-black/10 bg-white">
-                <ProductQuickView productId={product.id} />
+              <article key={product.id} className="relative overflow-hidden rounded-2xl border border-black/10 bg-white">
                 <Link href={`/product/${product.id}`} className="block">
                   <div className="relative h-40 w-full">
                     <SafeImage src={product.image} alt={getProductName(product, language)} fill className="object-cover" />
@@ -103,13 +102,14 @@ function SearchContent() {
                     {outOfStock && <Badge variant="glow">{t.soldOut}</Badge>}
                   </div>
                 </Link>
-                <div className="px-3 pb-3">
+                <div className="flex items-center gap-2 px-3 pb-3">
+                  <ProductQuickView productId={product.id} className="h-10 shrink-0 px-3" />
                   {outOfStock ? (
-                    <Button className="w-full" disabled>
+                    <Button className="h-10 w-full" disabled>
                       {t.soldOut}
                     </Button>
                   ) : (
-                    <Button asChild className="w-full">
+                    <Button asChild className="h-10 w-full">
                       <Link href={`/product/${product.id}`}>{t.add}</Link>
                     </Button>
                   )}
