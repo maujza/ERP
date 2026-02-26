@@ -27,23 +27,22 @@ services:
         npx medusa exec ./src/scripts/seed-demo-historic.ts &&
         npx medusa user -e admin@aurelia.com -p supersecret >/dev/null 2>&1 || true &&
         npm run build &&
+        mkdir -p /app/public &&
+        rm -rf /app/public/admin &&
+        cp -R /app/.medusa/server/public/admin /app/public/admin &&
         npm run start
       "
     ports:
       - "9000:9000"
-      - "5173:5173"
     environment:
-      NODE_ENV: development
+      NODE_ENV: production
       DATABASE_URL: postgres://medusa:medusa@db:5432/medusa?sslmode=disable
-      STORE_CORS: http://localhost:7358,http://localhost:9000
-      ADMIN_CORS: http://localhost:9000
-      AUTH_CORS: http://localhost:7358,http://localhost:9000
-      HMR_PORT: 5173
-      HMR_CLIENT_PORT: 5173
-      HMR_HOST: localhost
-      HMR_BIND_HOST: 0.0.0.0
+      STORE_CORS: http://localhost:7358,http://127.0.0.1:7358,http://localhost:9000,http://127.0.0.1:9000
+      ADMIN_CORS: http://localhost:9000,http://127.0.0.1:9000
+      AUTH_CORS: http://localhost:7358,http://127.0.0.1:7358,http://localhost:9000,http://127.0.0.1:9000
       JWT_SECRET: supersecret
       COOKIE_SECRET: supersecret
+      MEDUSA_FORCE_INSECURE_COOKIES: "true"
       MEDUSA_ADMIN_EMAIL: admin@aurelia.com
       MEDUSA_ADMIN_PASSWORD: supersecret
     depends_on:

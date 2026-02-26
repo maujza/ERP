@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { formatArs } from "@/lib/shop-data";
 import { sdk } from "@/lib/medusa";
+import { saveWhatsAppDraft, type WhatsAppDraft, openWhatsAppDraft } from "@/lib/whatsapp";
 
 type CheckoutErrors = Record<string, string>;
 
@@ -24,6 +25,8 @@ type ShippingMethod = {
 
 const requiredShippingFields = ["firstName", "lastName", "address", "postalCode", "city", "province"] as const;
 const fallbackShippingMethodIds = new Set(["standard", "express"]);
+const WHATSAPP_NUMBER = "5491100000000";
+type PaymentMethod = "card" | "mp" | "wpp" | "cash" | "transfer";
 
 export default function CheckoutPage() {
   const { language } = useLanguage();
@@ -36,6 +39,9 @@ export default function CheckoutPage() {
         invalidPostal: "우편번호 형식이 올바르지 않습니다",
         invalidEmail: "이메일 형식이 올바르지 않습니다",
         enterEmail: "이메일을 입력하세요",
+        phone: "WhatsApp 번호",
+        phonePlaceholder: "+54 9 11 1234-5678",
+        invalidPhone: "전화번호 형식이 올바르지 않습니다",
         invalidCard: "카드 번호가 올바르지 않습니다",
         expiryFormat: "형식 MM/AA",
         invalidCvc: "보안코드가 올바르지 않습니다",
@@ -44,6 +50,7 @@ export default function CheckoutPage() {
         requiredCity: "도시를 입력하세요",
         enterCode: "코드를 입력하세요",
         invalidCode: "유효하지 않은 코드",
+        phoneHint: "연락이 안 될 경우 이 번호로 연락드립니다.",
         step1: "1단계 - 연락처",
         step2: "2단계 - 배송지",
         step3: "3단계 - 배송 방식",
@@ -62,6 +69,8 @@ export default function CheckoutPage() {
         completeAddress: "배송 계산을 위해 주소를 완료하세요.",
         card: "신용카드",
         mp: "메르카도파고",
+        cash: "현금",
+        transfer: "계좌이체",
         cardHolder: "카드 소유자",
         cardNumber: "카드 번호",
         expiry: "유효기간",
@@ -83,6 +92,7 @@ export default function CheckoutPage() {
         payNow: "지금 결제",
         wpp: "WhatsApp으로 주문",
         wppSend: "WhatsApp으로 보내기",
+        paymentVia: "결제 방법",
         paymentTitle: "결제 방법 선택",
         emptyCartTitle: "장바구니가 비어 있습니다",
         emptyCartDesc: "결제를 시작하려면 상품을 추가하세요.",
@@ -101,6 +111,9 @@ export default function CheckoutPage() {
         invalidPostal: "Código postal inválido",
         invalidEmail: "Email inválido",
         enterEmail: "Ingresa tu email",
+        phone: "Número de WhatsApp",
+        phonePlaceholder: "+54 9 11 1234-5678",
+        invalidPhone: "Número de teléfono inválido",
         invalidCard: "Número de tarjeta inválido",
         expiryFormat: "Formato MM/AA",
         invalidCvc: "Código inválido",
@@ -109,6 +122,7 @@ export default function CheckoutPage() {
         requiredCity: "Ciudad requerida",
         enterCode: "Ingresá un código",
         invalidCode: "Código inválido",
+        phoneHint: "Si el chat falla, te contactamos por este número.",
         step1: "Paso 1 - Contacto",
         step2: "Paso 2 - Dirección de envío",
         step3: "Paso 3 - Método de envío",
@@ -127,6 +141,8 @@ export default function CheckoutPage() {
         completeAddress: "Completá la dirección para calcular envíos.",
         card: "Tarjeta de crédito",
         mp: "Mercado Pago",
+        cash: "Efectivo",
+        transfer: "Transferencia",
         cardHolder: "Titular",
         cardNumber: "Número de tarjeta",
         expiry: "Fecha de vencimiento",
@@ -148,6 +164,7 @@ export default function CheckoutPage() {
         payNow: "Pagar ahora",
         wpp: "Pedir por WhatsApp",
         wppSend: "Enviar pedido por WhatsApp",
+        paymentVia: "Pago elegido",
         paymentTitle: "¿Cómo querés pagar?",
         emptyCartTitle: "Tu carrito está vacío",
         emptyCartDesc: "Agregá productos para iniciar la finalización de compra.",
@@ -164,6 +181,8 @@ export default function CheckoutPage() {
 
   const [summaryOpenMobile, setSummaryOpenMobile] = useState(false);
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [phoneError, setPhoneError] = useState("");
   const [showLoginHint, setShowLoginHint] = useState(false);
   const [contactComplete, setContactComplete] = useState(false);
 
@@ -185,7 +204,7 @@ export default function CheckoutPage() {
   const [discountError, setDiscountError] = useState("");
   const [discountAmount, setDiscountAmount] = useState(0);
 
-  const [paymentMethod, setPaymentMethod] = useState<"card" | "mp" | "wpp">("card");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("card");
   const [payment, setPayment] = useState({
     cardName: "",
     cardNumber: "",
@@ -273,6 +292,15 @@ export default function CheckoutPage() {
   }, [selectedShippingMethod, shippingMethods]);
 
   const total = subtotal + shippingAmount - discountAmount;
+  const isWhatsAppPaymentMethod = paymentMethod === "wpp" || paymentMethod === "cash" || paymentMethod === "transfer";
+
+  const resolvePaymentLabel = (method: PaymentMethod) => {
+    if (method === "card") return t.card;
+    if (method === "mp") return t.mp;
+    if (method === "cash") return t.cash;
+    if (method === "transfer") return t.transfer;
+    return t.wpp;
+  };
 
   const resolveRealShippingOptionId = async () => {
     if (!cartId) return "";
@@ -293,6 +321,13 @@ export default function CheckoutPage() {
   const validateEmail = (value: string) => {
     if (!value.trim()) return t.enterEmail;
     if (!/^\S+@\S+\.\S+$/.test(value)) return t.invalidEmail;
+    return "";
+  };
+
+  const validatePhone = (value: string) => {
+    const digits = value.replace(/\D/g, "");
+    if (isWhatsAppPaymentMethod && !digits) return t.requiredField;
+    if (digits && digits.length < 8) return t.invalidPhone;
     return "";
   };
 
@@ -468,7 +503,18 @@ export default function CheckoutPage() {
     return Object.keys(nextErrors).length === 0;
   };
 
-  const completeCartAsOrder = async () => {
+  const savePhoneToProfile = async (phoneNumber: string) => {
+    if (!isCustomerAuthenticated || !phoneNumber) return;
+    await sdk.store.customer.update({ phone: phoneNumber }).catch(() => {});
+  };
+
+  const completeCartAsOrder = async (options?: {
+    phone?: string;
+    whatsapp?: {
+      paymentMethod: PaymentMethod;
+      customerPhone?: string;
+    };
+  }) => {
     if (!cartId) return "";
 
     await sdk.store.cart.update(cartId, {
@@ -482,6 +528,18 @@ export default function CheckoutPage() {
               postal_code: shipping.postalCode || "1000",
               city: shipping.city || "Buenos Aires",
               country_code: "ar",
+              phone: options?.phone || undefined,
+            },
+          }
+        : {}),
+      ...(options?.whatsapp
+        ? {
+            metadata: {
+              whatsapp_required: true,
+              whatsapp_message_sent: false,
+              whatsapp_payment_method: options.whatsapp.paymentMethod,
+              whatsapp_assignee: "aurelia",
+              customer_phone: options.whatsapp.customerPhone || undefined,
             },
           }
         : {}),
@@ -516,10 +574,15 @@ export default function CheckoutPage() {
 
     try {
       // WhatsApp path: create a Medusa order then open WhatsApp
-      if (paymentMethod === "wpp") {
+      if (isWhatsAppPaymentMethod) {
         const emailError = validateEmail(email);
         if (emailError) {
           setContactComplete(false);
+          return;
+        }
+        const phoneValidationError = validatePhone(phone);
+        if (phoneValidationError) {
+          setPhoneError(phoneValidationError);
           return;
         }
 
@@ -527,7 +590,13 @@ export default function CheckoutPage() {
         if (cartId) {
           setIsSubmitting(true);
           try {
-            orderId = await completeCartAsOrder();
+            orderId = await completeCartAsOrder({
+              phone: phone.trim() || undefined,
+              whatsapp: {
+                paymentMethod,
+                customerPhone: phone.trim() || undefined,
+              },
+            });
           } catch {
             // Keep WhatsApp fallback even when order creation fails.
           } finally {
@@ -559,13 +628,25 @@ export default function CheckoutPage() {
             : null,
           addressParts ? `${t.address}: ${addressParts}` : null,
           `${t.email}: ${email}`,
+          phone.trim() ? `${t.phone}: ${phone.trim()}` : null,
+          `${t.paymentVia}: ${resolvePaymentLabel(paymentMethod)}`,
           orderId ? `N° pedido: ${orderId}` : null,
         ]
           .filter(Boolean)
           .join("\n");
-        // Replace this number with the store's WhatsApp number (country code + number, no spaces or +)
-        const WPP_NUMBER = "5491100000000";
-        window.open(`https://wa.me/${WPP_NUMBER}?text=${encodeURIComponent(msg)}`, "_blank");
+        const draft: WhatsAppDraft = {
+          createdAt: new Date().toISOString(),
+          message: msg,
+          orderId,
+          paymentMethod,
+          phone: WHATSAPP_NUMBER,
+        };
+        saveWhatsAppDraft(draft);
+        openWhatsAppDraft(draft);
+        if (orderId) {
+          void savePhoneToProfile(phone.trim());
+          router.push(`/order-confirmation?wa=1&order_id=${encodeURIComponent(orderId)}`);
+        }
         return;
       }
 
@@ -588,8 +669,9 @@ export default function CheckoutPage() {
         if (!cartId) return;
         setIsSubmitting(true);
         try {
-          const orderId = await completeCartAsOrder();
+          const orderId = await completeCartAsOrder({ phone: phone.trim() || undefined });
           if (orderId) {
+            void savePhoneToProfile(phone.trim());
             router.push(`/order-confirmation?order_id=${encodeURIComponent(orderId)}`);
             return;
           }
@@ -608,8 +690,9 @@ export default function CheckoutPage() {
       if (!cartId) return;
       setIsSubmitting(true);
       try {
-        const orderId = await completeCartAsOrder();
+        const orderId = await completeCartAsOrder({ phone: phone.trim() || undefined });
         if (orderId) {
+          void savePhoneToProfile(phone.trim());
           router.push(`/order-confirmation?order_id=${encodeURIComponent(orderId)}`);
         }
       } finally {
@@ -661,20 +744,33 @@ export default function CheckoutPage() {
                 {t.mp}
               </button>
               <button
-                onClick={() => setPaymentMethod("wpp")}
+                onClick={() => setPaymentMethod("cash")}
                 className={`rounded-2xl border px-4 py-3 text-left text-sm font-medium ${
-                  paymentMethod === "wpp" ? "border-[#25d366] bg-[#25d366] text-white" : "border-black/15 bg-white"
+                  paymentMethod === "cash" ? "border-[#111111] bg-[#111111] text-white" : "border-black/15 bg-white"
                 }`}
               >
-                {t.wpp}
+                {t.cash}
+              </button>
+              <button
+                onClick={() => setPaymentMethod("transfer")}
+                className={`rounded-2xl border px-4 py-3 text-left text-sm font-medium ${
+                  paymentMethod === "transfer" ? "border-[#111111] bg-[#111111] text-white" : "border-black/15 bg-white"
+                }`}
+              >
+                {t.transfer}
               </button>
             </div>
-            {paymentMethod === "wpp" && (
-              <p className="rounded-2xl bg-[#f0faf4] p-3 text-sm text-[#1a7a3a]">
-                {language === "ko"
-                  ? "주문 정보가 WhatsApp 메시지로 전송됩니다. 이메일만 입력하면 바로 보낼 수 있습니다."
-                  : "Completa solo tu email y te enviamos el resumen. Un asesor coordina el pago por WhatsApp."}
-              </p>
+            {(paymentMethod === "cash" || paymentMethod === "transfer") && (
+              <div className="flex items-start gap-3 rounded-2xl border border-[#25d366]/40 bg-[#f0faf4] p-3">
+                <svg viewBox="0 0 24 24" className="mt-0.5 h-4 w-4 shrink-0 fill-[#25d366]" aria-hidden="true">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                </svg>
+                <p className="text-sm text-[#1a7a3a]">
+                  {language === "ko"
+                    ? "주문 정보가 WhatsApp 메시지로 전송됩니다. 이메일만 입력하면 바로 보낼 수 있습니다."
+                    : "Coordinaremos el pago por WhatsApp. Al confirmar, te enviamos el resumen y un asesor te contacta."}
+                </p>
+              </div>
             )}
           </Card>
 
@@ -699,6 +795,24 @@ export default function CheckoutPage() {
                   {t.loginAction}
                 </button>
               </p>
+            )}
+            <label className="mt-3 block text-sm font-medium text-[#111111]">
+              {t.phone}
+              {!isWhatsAppPaymentMethod && (
+                <span className="ml-1 text-xs font-normal text-[#888888]">(opcional)</span>
+              )}
+            </label>
+            <input
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              onBlur={() => setPhoneError(validatePhone(phone))}
+              className="mt-1 w-full rounded-2xl border border-black/15 px-3 py-2 text-sm outline-none"
+              placeholder={t.phonePlaceholder}
+              type="tel"
+            />
+            {phoneError && <p className="mt-1 text-xs text-[#b00020]">{phoneError}</p>}
+            {isWhatsAppPaymentMethod && !phoneError && (
+              <p className="mt-1 text-xs text-[#666666]">{t.phoneHint}</p>
             )}
           </Card>
 
@@ -991,12 +1105,12 @@ export default function CheckoutPage() {
       <div className="fixed inset-x-0 bottom-0 z-45 border-t border-black/10 bg-white p-3 md:hidden">
         <Button
           disabled={isSubmitting}
-          className={`w-full ${paymentMethod === "wpp" ? "bg-[#25d366] hover:bg-[#1fb558]" : ""}`}
+          className={`w-full ${isWhatsAppPaymentMethod ? "bg-[#25d366] hover:bg-[#1fb558]" : ""}`}
           onClick={() => {
             void submitOrder();
           }}
         >
-          {paymentMethod === "wpp" ? t.wppSend : t.payNow}
+          {isWhatsAppPaymentMethod ? t.wppSend : t.payNow}
         </Button>
       </div>
 
@@ -1042,12 +1156,12 @@ export default function CheckoutPage() {
         <Button
           size="lg"
           disabled={isSubmitting}
-          className={paymentMethod === "wpp" ? "bg-[#25d366] hover:bg-[#1fb558]" : ""}
+          className={isWhatsAppPaymentMethod ? "bg-[#25d366] hover:bg-[#1fb558]" : ""}
           onClick={() => {
             void submitOrder();
           }}
         >
-          {paymentMethod === "wpp" ? t.wppSend : t.payNow}
+          {isWhatsAppPaymentMethod ? t.wppSend : t.payNow}
         </Button>
       </div>
     </div>

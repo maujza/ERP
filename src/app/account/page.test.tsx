@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 
 import AccountPage from "./page";
 
@@ -120,9 +120,6 @@ describe("AccountPage authenticated state", () => {
     expect(screen.getByText("Pago: Autorizado")).toBeInTheDocument();
     expect(screen.getByText("Envio: Aun no despachado")).toBeInTheDocument();
     expect(screen.getByText("Seguimiento: Entrega pendiente")).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "Ver detalle" }));
-    expect(screen.getByText("Timeline")).toBeInTheDocument();
     expect(screen.getByText("Pedido confirmado")).toBeInTheDocument();
     expect(screen.getByText("Pago validado")).toBeInTheDocument();
     expect(screen.getByText("Preparando / enviando")).toBeInTheDocument();

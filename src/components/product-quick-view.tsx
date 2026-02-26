@@ -278,7 +278,21 @@ export function ProductQuickView({ productId, className }: { productId: string; 
                     >
                       −
                     </button>
-                    <span className="min-w-[2rem] text-center text-sm font-semibold">{qty}</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={maxQty}
+                      value={qty}
+                      onChange={(e) => {
+                        const v = Number.parseInt(e.target.value, 10);
+                        if (!Number.isNaN(v)) setQty(Math.min(maxQty, Math.max(1, v)));
+                      }}
+                      onBlur={(e) => {
+                        const v = Number.parseInt(e.target.value, 10);
+                        if (Number.isNaN(v) || v < 1) setQty(1);
+                      }}
+                      className="h-9 w-14 rounded-xl border border-black/20 px-2 text-center text-sm font-semibold outline-none focus:border-black/40"
+                    />
                     <button
                       onClick={() => setQty((current) => Math.min(maxQty, current + 1))}
                       className="h-9 w-9 rounded-full border border-black/20 text-lg font-semibold leading-none"

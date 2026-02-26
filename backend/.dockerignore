@@ -5,3 +5,4 @@ npm-debug.log*
 .medusa
 dist
 coverage
+**/__tests__

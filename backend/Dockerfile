@@ -7,9 +7,9 @@ RUN npm ci --legacy-peer-deps
 
 COPY . .
 
-ENV NODE_ENV=development
+ENV NODE_ENV=production
 ENV PORT=9000
 
 EXPOSE 9000
 
-CMD ["npm", "run", "dev"]
+CMD ["npm", "run", "start"]

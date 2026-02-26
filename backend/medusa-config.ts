@@ -2,6 +2,8 @@ import { loadEnv, defineConfig } from '@medusajs/framework/utils'
 
 loadEnv(process.env.NODE_ENV || 'development', process.cwd())
 
+const forceInsecureCookies = process.env.MEDUSA_FORCE_INSECURE_COOKIES === "true"
+
 module.exports = defineConfig({
   projectConfig: {
     databaseUrl: process.env.DATABASE_URL,
@@ -15,6 +17,12 @@ module.exports = defineConfig({
       },
       jwtSecret: process.env.JWT_SECRET || "supersecret",
       cookieSecret: process.env.COOKIE_SECRET || "supersecret",
-    }
+    },
+    cookieOptions: forceInsecureCookies
+      ? {
+          secure: false,
+          sameSite: "lax",
+        }
+      : undefined,
   }
 })

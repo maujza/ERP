@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { CheckCircle2, CreditCard, Home, Package2, ShoppingBag, XCircle } from "lucide-react";
 
 import { sdk } from "@/lib/medusa";
 
@@ -132,7 +133,6 @@ export default function AccountPage() {
   const [customerEmail, setCustomerEmail] = useState("");
   const [orders, setOrders] = useState<OrderSummary[]>([]);
   const [priceListTier, setPriceListTier] = useState("General");
-  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
   const [copiedPromoCode, setCopiedPromoCode] = useState("");
 
   useEffect(() => {
@@ -316,7 +316,6 @@ export default function AccountPage() {
                 const date = order.created_at ? new Date(order.created_at) : null;
                 const discountTotal = Number(order.discount_total ?? 0);
                 const tracking = buildTracking(order);
-                const isExpanded = expandedOrderId === order.id;
                 const trackingHint =
                   tracking.progress >= 100
                     ? "Pedido finalizado."
@@ -355,44 +354,14 @@ export default function AccountPage() {
                       </span>
                     </div>
                     <div className="mt-3">
-                      <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
-                        <div
-                          className="h-full rounded-full bg-black transition-all"
-                          style={{ width: `${tracking.progress}%` }}
-                        />
-                      </div>
-                      <p className="mt-1 text-xs text-slate-600">Seguimiento: {trackingHint}</p>
+                      <OrderStepper steps={tracking.steps} />
+                      <p className="mt-2 text-xs text-slate-500">Seguimiento: {trackingHint}</p>
                     </div>
-                    <div className="mt-3 flex items-center justify-between gap-2">
-                      <p className="text-xs text-slate-500">
-                        {discountTotal > 0 ? `Descuentos aplicados: -${discountTotal.toLocaleString("es-AR")}` : "Sin descuento aplicado"}
+                    {discountTotal > 0 && (
+                      <p className="mt-2 text-xs text-slate-500">
+                        Descuentos aplicados: -{discountTotal.toLocaleString("es-AR")}
                       </p>
-                      <button
-                        onClick={() => setExpandedOrderId((prev) => (prev === order.id ? null : order.id))}
-                        className="rounded-lg border border-black/15 bg-white px-3 py-1 text-xs font-semibold text-black hover:border-black/35"
-                      >
-                        {isExpanded ? "Ocultar detalle" : "Ver detalle"}
-                      </button>
-                    </div>
-                    {isExpanded ? (
-                      <div className="mt-3 rounded-xl border border-black/10 bg-white p-3">
-                        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Timeline</p>
-                        <div className="mt-2 space-y-2">
-                          {tracking.steps.map((step) => (
-                            <div key={step.key} className="flex items-center gap-2 text-xs">
-                              <span
-                                className={`inline-block size-2 rounded-full ${
-                                  step.done ? "bg-emerald-500" : step.current ? "bg-black" : "bg-slate-300"
-                                }`}
-                              />
-                              <span className={step.done || step.current ? "text-slate-800" : "text-slate-500"}>
-                                {step.label}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : null}
+                    )}
                   </article>
                 );
               })}
@@ -401,5 +370,57 @@ export default function AccountPage() {
         </div>
       </section>
     </main>
+  );
+}
+
+const STEP_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  confirmed: ShoppingBag,
+  payment: CreditCard,
+  shipping: Package2,
+  delivered: Home,
+  canceled: XCircle,
+};
+
+function OrderStepper({ steps }: { steps: TrackingStep[] }) {
+  return (
+    <div className="flex items-center gap-0">
+      {steps.map((step, idx) => {
+        const Icon = STEP_ICONS[step.key] ?? CheckCircle2;
+        return (
+          <div key={step.key} className="flex flex-1 items-center">
+            <div className="flex flex-col items-center gap-1">
+              <div
+                className={`flex h-8 w-8 items-center justify-center rounded-full border-2 transition-colors ${
+                  step.done
+                    ? "border-emerald-500 bg-emerald-500 text-white"
+                    : step.current
+                      ? "border-black bg-black text-white"
+                      : "border-slate-300 bg-white text-slate-400"
+                }`}
+                title={step.label}
+              >
+                {step.done && !step.current ? (
+                  <CheckCircle2 className="h-4 w-4" />
+                ) : (
+                  <Icon className="h-4 w-4" />
+                )}
+              </div>
+              <span
+                className={`max-w-[60px] text-center text-[10px] leading-tight ${
+                  step.done || step.current ? "text-slate-700" : "text-slate-400"
+                } ${step.current ? "font-semibold" : ""}`}
+              >
+                {step.label}
+              </span>
+            </div>
+            {idx < steps.length - 1 && (
+              <div
+                className={`mb-4 h-0.5 flex-1 ${step.done ? "bg-emerald-400" : "bg-slate-200"}`}
+              />
+            )}
+          </div>
+        );
+      })}
+    </div>
   );
 }

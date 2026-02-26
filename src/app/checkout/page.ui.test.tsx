@@ -162,4 +162,50 @@ describe("CheckoutPage", () => {
 
     expect(screen.queryByText("¿Cómo querés finalizar?")).not.toBeInTheDocument();
   });
+
+  // ─── phone field ────────────────────────────────────────────────────────────
+
+  it("renders the phone label 'Número de WhatsApp' in Step 1", () => {
+    render(<CheckoutPage />);
+    expect(screen.getByText("Número de WhatsApp")).toBeInTheDocument();
+  });
+
+  it("renders a tel input for the phone number", () => {
+    render(<CheckoutPage />);
+    const phoneInput = screen.getByPlaceholderText("+54 9 11 1234-5678");
+    expect(phoneInput).toBeInTheDocument();
+    expect(phoneInput).toHaveAttribute("type", "tel");
+  });
+
+  it("shows '(opcional)' when card payment is selected (default)", () => {
+    render(<CheckoutPage />);
+    expect(screen.getByText("(opcional)")).toBeInTheDocument();
+  });
+
+  it("hides '(opcional)' after switching to Efectivo", () => {
+    render(<CheckoutPage />);
+    fireEvent.click(screen.getByRole("button", { name: "Efectivo" }));
+    expect(screen.queryByText("(opcional)")).not.toBeInTheDocument();
+  });
+
+  it("hides '(opcional)' after switching to Transferencia", () => {
+    render(<CheckoutPage />);
+    fireEvent.click(screen.getByRole("button", { name: "Transferencia" }));
+    expect(screen.queryByText("(opcional)")).not.toBeInTheDocument();
+  });
+
+  it("shows the WhatsApp hint text after switching to Efectivo", () => {
+    render(<CheckoutPage />);
+    fireEvent.click(screen.getByRole("button", { name: "Efectivo" }));
+    expect(
+      screen.getByText("Si el chat falla, te contactamos por este número.")
+    ).toBeInTheDocument();
+  });
+
+  it("does not show the WhatsApp hint text for card payment", () => {
+    render(<CheckoutPage />);
+    expect(
+      screen.queryByText("Si el chat falla, te contactamos por este número.")
+    ).not.toBeInTheDocument();
+  });
 });

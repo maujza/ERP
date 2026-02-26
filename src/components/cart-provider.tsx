@@ -10,6 +10,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type KeyboardEvent,
 } from "react";
 import { X } from "lucide-react";
 
@@ -272,10 +273,56 @@ function CartToast({
   );
 }
 
+function QuantityInput({
+  lineId,
+  quantity,
+  ariaLabel,
+  onUpdate,
+}: {
+  lineId: string;
+  quantity: number;
+  ariaLabel: string;
+  onUpdate: (id: string, qty: number) => void;
+}) {
+  const [local, setLocal] = useState(String(quantity));
+
+  useEffect(() => {
+    setLocal(String(quantity));
+  }, [quantity]);
+
+  const commit = () => {
+    const parsed = Number.parseInt(local, 10);
+    if (!Number.isNaN(parsed) && parsed > 0) {
+      if (parsed !== quantity) onUpdate(lineId, parsed);
+    } else {
+      setLocal(String(quantity));
+    }
+  };
+
+  const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.currentTarget.blur();
+    }
+  };
+
+  return (
+    <input
+      type="number"
+      min={1}
+      value={local}
+      onChange={(e) => setLocal(e.target.value)}
+      onBlur={commit}
+      onKeyDown={onKeyDown}
+      aria-label={ariaLabel}
+      className="h-8 w-16 rounded-xl border border-black/15 px-2 text-center text-sm font-semibold"
+    />
+  );
+}
+
 function MiniCartDrawer() {
   const router = useRouter();
   const { language } = useLanguage();
-  const { items, isDrawerOpen, closeDrawer, subtotal, updateQuantity, removeFromCart } = useCart();
+  const { items, isDrawerOpen, closeDrawer, subtotal, updateQuantity, removeFromCart, clearCart } = useCart();
   const [showCheckoutChoice, setShowCheckoutChoice] = useState(false);
   const t = language === "ko"
     ? {
@@ -284,7 +331,9 @@ function MiniCartDrawer() {
         empty: "장바구니가 비어 있습니다.",
         backHome: "홈으로",
         removeProduct: "상품 제거",
+        quantity: "수량",
         subtotal: "소계",
+        clear: "장바구니 비우기",
         continueShopping: "쇼핑 계속하기",
         goCheckout: "결제로 이동",
         checkoutChoiceTitle: "주문을 어떻게 진행할까요?",
@@ -299,7 +348,9 @@ function MiniCartDrawer() {
         empty: "Tu carrito esta vacio.",
         backHome: "Volver al home",
         removeProduct: "Quitar producto",
+        quantity: "Cantidad",
         subtotal: "Subtotal",
+        clear: "Vaciar carrito",
         continueShopping: "Continuar comprando",
         goCheckout: "Finalizar compra",
         checkoutChoiceTitle: "¿Cómo querés finalizar?",
@@ -383,7 +434,12 @@ function MiniCartDrawer() {
                   >
                     -
                   </button>
-                  <span className="text-sm font-semibold">{line.quantity}</span>
+                  <QuantityInput
+                    lineId={line.id}
+                    quantity={line.quantity}
+                    ariaLabel={`${t.quantity} ${line.title}`}
+                    onUpdate={updateQuantity}
+                  />
                   <button
                     onClick={() => updateQuantity(line.id, line.quantity + 1)}
                     className="h-7 w-7 rounded-full border border-black/15"
@@ -401,6 +457,9 @@ function MiniCartDrawer() {
             <span className="font-semibold text-[#111111]">{formatArs(subtotal, language)}</span>
           </div>
           <div className="grid gap-2">
+            <Button variant="outline" onClick={clearCart} disabled={items.length === 0}>
+              {t.clear}
+            </Button>
             <Button variant="outline" onClick={closeDrawer}>
               {t.continueShopping}
             </Button>
