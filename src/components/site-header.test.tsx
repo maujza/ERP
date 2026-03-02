@@ -119,7 +119,14 @@ describe("SiteHeader – rendering", () => {
     const nav = document.querySelector("nav")!;
     expect(within(nav).getByText("Home")).toBeInTheDocument();
     expect(within(nav).getByText("Colección")).toBeInTheDocument();
-    expect(within(nav).getByText("Checkout")).toBeInTheDocument();
+    expect(within(nav).getByText("Finalizar compra")).toBeInTheDocument();
+  });
+
+  it("renders account icon action on the right side", () => {
+    render(<SiteHeader />);
+    const accountLink = document.querySelector('a[href="/account"]');
+    expect(accountLink).toBeInTheDocument();
+    expect(accountLink).toHaveAttribute("href", "/account");
   });
 
   it("does NOT render a Coleccion link (without accent) — regression guard", () => {
@@ -268,8 +275,8 @@ describe("SiteHeader – mobile menu content", () => {
     expect(within(getAside()!).getByText("Colección")).toBeInTheDocument();
   });
 
-  it("shows Checkout nav link inside the aside", () => {
-    expect(within(getAside()!).getByText("Checkout")).toBeInTheDocument();
+  it("shows Finalizar compra nav link inside the aside", () => {
+    expect(within(getAside()!).getByText("Finalizar compra")).toBeInTheDocument();
   });
 
   it("shows at least one category link in the aside", () => {

@@ -18,7 +18,7 @@ export function WhatsAppFloat() {
   return (
     <Link
       href="https://wa.me/5491112345678"
-      className={`fixed right-5 z-40 rounded-full bg-[#111111] px-4 py-3 text-sm font-semibold !text-white shadow-xl ${bottomClass}`}
+      className={`fixed right-5 z-30 rounded-full bg-[#111111] px-4 py-3 text-sm font-semibold !text-white shadow-xl ${bottomClass}`}
       target="_blank"
       rel="noreferrer"
     >

@@ -10,13 +10,11 @@
  *  - Add-to-cart button uses the primary (red) variant
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import SearchPage from "./page";
 
-// ---------------------------------------------------------------------------
-// Next.js mocks
-// ---------------------------------------------------------------------------
 let mockQ = "aros";
+const mockProductList = vi.fn();
 
 vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(`q=${encodeURIComponent(mockQ)}`),
@@ -44,69 +42,77 @@ vi.mock("next/image", () => ({
   ),
 }));
 
-// ---------------------------------------------------------------------------
-// Provider / data mocks
-// ---------------------------------------------------------------------------
 vi.mock("@/components/language-provider", () => ({
   useLanguage: () => ({ language: "es" as const }),
 }));
 
-vi.mock("@/components/cart-provider", () => ({
-  useCart: () => ({ addToCart: vi.fn() }),
+vi.mock("@/components/product-quick-view", () => ({
+  ProductQuickView: ({ className }: { className?: string }) => (
+    <button className={className}>Vista rapida</button>
+  ),
 }));
 
-// Minimal deterministic product set for search tests
-vi.mock("@/lib/shop-data", () => ({
-  products: [
-    {
-      id: "p1",
-      name: "Aros Siena",
-      description: "Aros dorados de calidad",
-      category: "Aros",
-      subcategory: "Novedades",
-      brand: "Aurelia",
-      image: "/img/p1.jpg",
-      price: 10000,
-      stock: 5,
+vi.mock("@/lib/medusa", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/medusa")>();
+  return {
+    ...actual,
+    withStorePricingContext: <T extends Record<string, unknown>>(params: T) => params,
+    sdk: {
+      ...actual.sdk,
+      store: {
+        ...actual.sdk.store,
+        product: {
+          ...actual.sdk.store.product,
+          list: (...args: unknown[]) => mockProductList(...args),
+        },
+      },
     },
-    {
-      id: "p2",
-      name: "Collar Luna",
-      description: "Collar elegante de plata",
-      category: "Collares",
-      subcategory: "Best Sellers",
-      brand: "Aurelia",
-      image: "/img/p2.jpg",
-      price: 20000,
-      stock: 3,
-    },
-    {
-      id: "p3",
-      name: "Pulsera Capri",
-      description: "Pulsera de plata italiana",
-      category: "Pulseras",
-      subcategory: "Novedades",
-      brand: "Lumiere",
-      image: "/img/p3.jpg",
-      price: 15000,
-      stock: 0,
-    },
-  ],
-  getProductName: (p: { name: string }) => p.name,
-  formatArs: (n: number) => `$${n}`,
-}));
+  };
+});
 
-// ---------------------------------------------------------------------------
-// Reset query before each test
-// ---------------------------------------------------------------------------
+const products = [
+  {
+    id: "p1",
+    title: "Aros Siena",
+    description: "Aros dorados de calidad",
+    thumbnail: "/img/p1.jpg",
+    metadata: { category: "Aros", subcategory: "Novedades", brand: "Aurelia" },
+    variants: [{ id: "v1", title: "default", inventory_quantity: 5, calculated_price: { calculated_amount: 10000 } }],
+  },
+  {
+    id: "p2",
+    title: "Collar Luna",
+    description: "Collar elegante de plata",
+    thumbnail: "/img/p2.jpg",
+    metadata: { category: "Collares", subcategory: "Best Sellers", brand: "Aurelia" },
+    variants: [{ id: "v2", title: "default", inventory_quantity: 3, calculated_price: { calculated_amount: 20000 } }],
+  },
+  {
+    id: "p3",
+    title: "Pulsera Capri",
+    description: "Pulsera de plata italiana",
+    thumbnail: "/img/p3.jpg",
+    metadata: { category: "Pulseras", subcategory: "Novedades", brand: "Lumiere" },
+    variants: [{ id: "v3", title: "default", inventory_quantity: 0, calculated_price: { calculated_amount: 15000 } }],
+  },
+];
+
 beforeEach(() => {
   vi.clearAllMocks();
   mockQ = "";
+  mockProductList.mockImplementation(async (params?: { q?: string }) => {
+    const query = String(params?.q || "").trim().toLowerCase();
+    const filtered = !query
+      ? []
+      : products.filter((product) => {
+          const haystack = `${product.title} ${product.description} ${product.metadata.category}`.toLowerCase();
+          return haystack.includes(query);
+        });
+
+    return { products: filtered };
+  });
 });
 
-// ---------------------------------------------------------------------------
-// Empty query state
-// ---------------------------------------------------------------------------
 describe("SearchPage – empty query", () => {
   it("shows the 'type to search' prompt when query is empty", () => {
     mockQ = "";
@@ -121,52 +127,49 @@ describe("SearchPage – empty query", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Query-based search results
-// ---------------------------------------------------------------------------
 describe("SearchPage – query results", () => {
-  it("shows matching product when query matches product name", () => {
+  it("shows matching product when query matches product name", async () => {
     mockQ = "aros";
     render(<SearchPage />);
-    expect(screen.getByText("Aros Siena")).toBeInTheDocument();
+    expect(await screen.findByText("Aros Siena")).toBeInTheDocument();
   });
 
-  it("does NOT show non-matching products", () => {
+  it("does NOT show non-matching products", async () => {
     mockQ = "aros";
     render(<SearchPage />);
+    await screen.findByText("Aros Siena");
     expect(screen.queryByText("Collar Luna")).toBeNull();
   });
 
-  it("matches by product description (partial match)", () => {
+  it("matches by product description (partial match)", async () => {
     mockQ = "plata";
     render(<SearchPage />);
-    expect(screen.getByText("Collar Luna")).toBeInTheDocument();
+    expect(await screen.findByText("Collar Luna")).toBeInTheDocument();
   });
 
-  it("matches by category name", () => {
+  it("matches by category name", async () => {
     mockQ = "collares";
     render(<SearchPage />);
-    expect(screen.getByText("Collar Luna")).toBeInTheDocument();
+    expect(await screen.findByText("Collar Luna")).toBeInTheDocument();
   });
 
-  it("search is case-insensitive", () => {
+  it("search is case-insensitive", async () => {
     mockQ = "AROS";
     render(<SearchPage />);
-    expect(screen.getByText("Aros Siena")).toBeInTheDocument();
+    expect(await screen.findByText("Aros Siena")).toBeInTheDocument();
   });
 
-  it("shows all matching products when multiple match", () => {
+  it("shows all matching products when multiple match", async () => {
     mockQ = "plata";
     render(<SearchPage />);
-    // "Collar Luna" has "de plata" → matches; "Pulsera Capri" has "plata italiana" → matches
-    expect(screen.getByText("Collar Luna")).toBeInTheDocument();
-    expect(screen.getByText("Pulsera Capri")).toBeInTheDocument();
+    expect(await screen.findByText("Collar Luna")).toBeInTheDocument();
+    expect(await screen.findByText("Pulsera Capri")).toBeInTheDocument();
   });
 
-  it("shows the result count in the header", () => {
+  it("shows the result count in the header", async () => {
     mockQ = "aros";
     render(<SearchPage />);
-    expect(screen.getByText(/1.*productos encontrados/)).toBeInTheDocument();
+    expect(await screen.findByText(/1.*productos encontrados/)).toBeInTheDocument();
   });
 
   it("shows the search term in the heading", () => {
@@ -177,113 +180,100 @@ describe("SearchPage – query results", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Re-trigger on new query — the core bug fix
-// Simulates navigating to /search?q=term2 while already on the search page.
-// ---------------------------------------------------------------------------
 describe("SearchPage – re-triggers on new query (useSearchParams fix)", () => {
-  it("shows different results after query changes (re-render)", () => {
+  it("shows different results after query changes (re-render)", async () => {
     mockQ = "aros";
     const { rerender } = render(<SearchPage />);
-    expect(screen.getByText("Aros Siena")).toBeInTheDocument();
+    expect(await screen.findByText("Aros Siena")).toBeInTheDocument();
     expect(screen.queryByText("Collar Luna")).toBeNull();
 
-    // Simulate URL change: new search for "collar"
     mockQ = "collar";
     rerender(<SearchPage />);
 
-    expect(screen.queryByText("Aros Siena")).toBeNull();
-    expect(screen.getByText("Collar Luna")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByText("Aros Siena")).toBeNull();
+      expect(screen.getByText("Collar Luna")).toBeInTheDocument();
+    });
   });
 
-  it("shows empty state after switching to a non-matching query", () => {
+  it("shows empty state after switching to a non-matching query", async () => {
     mockQ = "aros";
     const { rerender } = render(<SearchPage />);
-    expect(screen.getByText("Aros Siena")).toBeInTheDocument();
+    expect(await screen.findByText("Aros Siena")).toBeInTheDocument();
 
     mockQ = "xyz_no_match";
     rerender(<SearchPage />);
 
-    expect(screen.queryByText("Aros Siena")).toBeNull();
-    expect(screen.getByText("No encontramos resultados.")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByText("Aros Siena")).toBeNull();
+      expect(screen.getByText("No encontramos resultados.")).toBeInTheDocument();
+    });
   });
 
-  it("restores results when switching back to a matching query", () => {
+  it("restores results when switching back to a matching query", async () => {
     mockQ = "collar";
     const { rerender } = render(<SearchPage />);
-    expect(screen.getByText("Collar Luna")).toBeInTheDocument();
+    expect(await screen.findByText("Collar Luna")).toBeInTheDocument();
 
     mockQ = "aros";
     rerender(<SearchPage />);
-    expect(screen.queryByText("Collar Luna")).toBeNull();
-    expect(screen.getByText("Aros Siena")).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.queryByText("Collar Luna")).toBeNull();
+      expect(screen.getByText("Aros Siena")).toBeInTheDocument();
+    });
   });
 });
 
-// ---------------------------------------------------------------------------
-// No results state
-// ---------------------------------------------------------------------------
 describe("SearchPage – no results", () => {
-  it("shows no-results message when query has no matches", () => {
+  it("shows no-results message when query has no matches", async () => {
     mockQ = "xyz_nothing";
     render(<SearchPage />);
-    expect(screen.getByText("No encontramos resultados.")).toBeInTheDocument();
+    expect(await screen.findByText("No encontramos resultados.")).toBeInTheDocument();
   });
 
-  it("shows a link to the full catalog when there are no results", () => {
+  it("shows a link to the full catalog when there are no results", async () => {
     mockQ = "xyz_nothing";
     render(<SearchPage />);
-    expect(screen.getByRole("link", { name: /colección completa/i })).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: /colección completa/i })).toBeInTheDocument();
   });
 });
 
-// ---------------------------------------------------------------------------
-// Out-of-stock product
-// ---------------------------------------------------------------------------
 describe("SearchPage – out of stock product", () => {
-  it("shows AGOTADO badge for out-of-stock products", () => {
+  it("shows AGOTADO badge for out-of-stock products", async () => {
     mockQ = "pulsera";
     render(<SearchPage />);
-    // Pulsera Capri has stock: 0; both the <Badge> and the disabled <Button> render "AGOTADO"
-    expect(screen.getAllByText("AGOTADO").length).toBeGreaterThanOrEqual(1);
+    const agotadoLabels = await screen.findAllByText("AGOTADO");
+    expect(agotadoLabels.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("add button is disabled for out-of-stock products", () => {
+  it("add button is disabled for out-of-stock products", async () => {
     mockQ = "pulsera";
     render(<SearchPage />);
-    const buttons = screen.getAllByRole("button");
-    const agotadoBtn = buttons.find((b) => b.textContent === "AGOTADO");
+    const agotadoBtn = await screen.findByRole("button", { name: "AGOTADO" });
     expect(agotadoBtn).toBeDisabled();
   });
 });
 
-// ---------------------------------------------------------------------------
-// Button variant — primary (red) style
-// ---------------------------------------------------------------------------
 describe("SearchPage – button consistency", () => {
-  it("add-to-cart CTA does NOT use the outline variant (regression guard)", () => {
+  it("add-to-cart CTA does NOT use the outline variant (regression guard)", async () => {
     mockQ = "aros";
     render(<SearchPage />);
-    // In-stock state renders CTA as link (Button asChild)
-    const addBtn = screen.getByRole("link", { name: "Agregar" });
-    // outline variant adds a specific border class; default (red) does not
+    const addBtn = await screen.findByRole("link", { name: "Agregar" });
     expect(addBtn).not.toHaveClass("border-black/20");
   });
 });
 
-// ---------------------------------------------------------------------------
-// Breadcrumb
-// ---------------------------------------------------------------------------
 describe("SearchPage – breadcrumb", () => {
-  it("renders a Home breadcrumb link", () => {
+  it("renders a Home breadcrumb link", async () => {
     mockQ = "aros";
     render(<SearchPage />);
-    expect(screen.getByRole("link", { name: "Home" })).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "Home" })).toBeInTheDocument();
   });
 
-  it("Home breadcrumb links to /", () => {
+  it("Home breadcrumb links to /", async () => {
     mockQ = "aros";
     render(<SearchPage />);
-    expect(screen.getByRole("link", { name: "Home" })).toHaveAttribute("href", "/");
+    expect(await screen.findByRole("link", { name: "Home" })).toHaveAttribute("href", "/");
   });
 });

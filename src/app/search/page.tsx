@@ -1,15 +1,17 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { Suspense, useMemo } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
+import { SafeImage } from "@/components/safe-image";
 import { useLanguage } from "@/components/language-provider";
+import { ProductQuickView } from "@/components/product-quick-view";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { formatArs, getProductName, products } from "@/lib/shop-data";
+import { formatArs, getProductName, hasPurchasablePrice, isJewelryProduct, mapMedusaProduct, type Product } from "@/lib/shop-data";
+import { sdk, withStorePricingContext } from "@/lib/medusa";
 
 function SearchContent() {
   const { language } = useLanguage();
@@ -43,15 +45,21 @@ function SearchContent() {
         add: "Agregar",
       };
 
-  const results = useMemo(() => {
-    if (!query) return [];
-    return products.filter(
-      (product) =>
-        getProductName(product, language).toLowerCase().includes(query) ||
-        product.description.toLowerCase().includes(query) ||
-        product.category.toLowerCase().includes(query),
-    );
-  }, [language, query]);
+  const [results, setResults] = useState<Product[]>([]);
+
+  useEffect(() => {
+    if (!query) {
+      setResults([]);
+      return;
+    }
+    sdk.store.product.list(withStorePricingContext({
+      q: rawQuery,
+      limit: 50,
+      fields: "+variants.calculated_price,+variants.inventory_quantity,+metadata,+categories",
+    })).then(({ products }) => {
+      setResults(products.map(mapMedusaProduct).filter(hasPurchasablePrice).filter(isJewelryProduct));
+    }).catch(() => {});
+  }, [query, rawQuery]);
 
   return (
     <main className="mx-auto w-full max-w-[1300px] px-4 py-6 md:px-6 md:py-8">
@@ -83,10 +91,10 @@ function SearchContent() {
           {results.map((product) => {
             const outOfStock = product.stock <= 0;
             return (
-              <article key={product.id} className="overflow-hidden rounded-2xl border border-black/10 bg-white">
+              <article key={product.id} className="relative overflow-hidden rounded-2xl border border-black/10 bg-white">
                 <Link href={`/product/${product.id}`} className="block">
                   <div className="relative h-40 w-full">
-                    <Image src={product.image} alt={getProductName(product, language)} fill className="object-cover" />
+                    <SafeImage src={product.image} alt={getProductName(product, language)} fill className="object-cover" />
                   </div>
                   <div className="space-y-2 p-3">
                     <p className="line-clamp-2 text-sm font-semibold">{getProductName(product, language)}</p>
@@ -94,13 +102,14 @@ function SearchContent() {
                     {outOfStock && <Badge variant="glow">{t.soldOut}</Badge>}
                   </div>
                 </Link>
-                <div className="px-3 pb-3">
+                <div className="flex items-center gap-2 px-3 pb-3">
+                  <ProductQuickView productId={product.id} className="h-10 shrink-0 px-3" />
                   {outOfStock ? (
-                    <Button className="w-full" disabled>
+                    <Button className="h-10 w-full" disabled>
                       {t.soldOut}
                     </Button>
                   ) : (
-                    <Button asChild className="w-full">
+                    <Button asChild className="h-10 w-full">
                       <Link href={`/product/${product.id}`}>{t.add}</Link>
                     </Button>
                   )}

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { FormEvent, useMemo, useState } from "react";
-import { Languages, Menu, Search, ShoppingBag, X } from "lucide-react";
+import { Languages, Menu, Search, ShoppingBag, User, X } from "lucide-react";
 
 import { useLanguage } from "@/components/language-provider";
 import { LanguageToggle } from "@/components/language-toggle";
@@ -23,12 +23,14 @@ export function SiteHeader() {
   const isBackoffice = pathname.startsWith("/backoffice");
 
   const categories = useMemo(() => navCategories.slice(0, 5), []);
+  const checkoutNavLink = language === "ko"
+    ? { href: "/checkout", label: "결제" }
+    : { href: "/checkout", label: "Finalizar compra" };
   const t = language === "ko"
     ? {
         navLinks: [
           { href: "/", label: "홈" },
           { href: "/catalog", label: "컬렉션" },
-          { href: "/checkout", label: "결제" },
         ],
         searchPlaceholder: "상품 검색",
         openMenu: "메뉴 열기",
@@ -39,7 +41,6 @@ export function SiteHeader() {
         navLinks: [
           { href: "/", label: "Home" },
           { href: "/catalog", label: "Colección" },
-          { href: "/checkout", label: "Checkout" },
         ],
         searchPlaceholder: "Buscar productos",
         openMenu: "Abrir menú",
@@ -61,7 +62,7 @@ export function SiteHeader() {
 
   return (
     <>
-      <header className="fixed top-0 z-50 w-full border-b border-black/10 bg-white/95 backdrop-blur">
+      <header className="fixed top-0 z-50 w-full border-b border-black/10 bg-white">
         <div className="mx-auto flex w-full max-w-[1400px] items-center gap-3 px-4 py-3 md:gap-6">
           <button
             className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/15 md:hidden"
@@ -81,6 +82,11 @@ export function SiteHeader() {
                 {link.label}
               </Link>
             ))}
+            {totalItems > 0 && (
+              <button onClick={openDrawer} className="rounded-full bg-black px-4 py-1.5 text-sm font-semibold text-white hover:bg-black/80">
+                {checkoutNavLink.label}
+              </button>
+            )}
           </nav>
 
           <form onSubmit={submitSearch} className="ml-auto hidden w-full max-w-md items-center md:flex">
@@ -115,6 +121,14 @@ export function SiteHeader() {
               {totalItems}
             </span>
           </button>
+
+          <Link
+            href="/account"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/15"
+            aria-label={language === "ko" ? "내 계정" : "Mi cuenta"}
+          >
+            <User className="h-4 w-4" />
+          </Link>
 
           <LanguageToggle className="hidden md:inline-flex" />
         </div>
@@ -166,6 +180,14 @@ export function SiteHeader() {
               {link.label}
             </Link>
           ))}
+          {totalItems > 0 && (
+            <button
+              onClick={() => { setMobileMenuOpen(false); openDrawer(); }}
+              className="block w-full rounded-2xl bg-black px-4 py-3 text-left text-sm font-semibold text-white"
+            >
+              {checkoutNavLink.label}
+            </button>
+          )}
         </div>
         <div className="mt-6 space-y-2">
           <p className="text-xs uppercase tracking-[0.2em] text-[#666666]">{t.categories}</p>

@@ -1,23 +1,27 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Filter, X } from "lucide-react";
 
+import { SafeImage } from "@/components/safe-image";
 import { useLanguage } from "@/components/language-provider";
+import { ProductQuickView } from "@/components/product-quick-view";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   formatArs,
   getProductName,
-  products,
+  hasPurchasablePrice,
+  isJewelryProduct,
+  mapMedusaProduct,
   subcategories,
   translateLabel,
   type Product,
   type SortOption,
 } from "@/lib/shop-data";
+import { sdk, withStorePricingContext } from "@/lib/medusa";
 
 const priceFilters = [
   { id: "all", label: "Todos" },
@@ -94,6 +98,7 @@ export default function CatalogPage() {
     { id: "price_desc" as SortOption, label: language === "ko" ? "높은 가격" : "Precio: mayor" },
   ];
 
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [activeSubcategory, setActiveSubcategory] = useState("Todos");
   const [search, setSearch] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -105,13 +110,22 @@ export default function CatalogPage() {
 
   const gridRef = useRef<HTMLDivElement | null>(null);
 
+  useEffect(() => {
+    sdk.store.product.list(withStorePricingContext({
+      limit: 100,
+      fields: "+variants.calculated_price,+variants.inventory_quantity,+metadata,+categories",
+    })).then(({ products }) => {
+      setAllProducts(products.map(mapMedusaProduct).filter(hasPurchasablePrice).filter(isJewelryProduct));
+    }).catch(() => {});
+  }, []);
+
   const categories = useMemo(
-    () => Array.from(new Set(products.map((product) => product.category))),
-    [],
+    () => Array.from(new Set(allProducts.map((product) => product.category))).filter(Boolean),
+    [allProducts],
   );
   const brands = useMemo(
-    () => Array.from(new Set(products.map((product) => product.brand))),
-    [],
+    () => Array.from(new Set(allProducts.map((product) => product.brand))).filter(Boolean),
+    [allProducts],
   );
 
   useEffect(() => {
@@ -129,7 +143,7 @@ export default function CatalogPage() {
   const filteredProducts = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
 
-    const list = products.filter((product) => {
+    const list = allProducts.filter((product) => {
       const subcategoryMatch =
         activeSubcategory === "Todos" || product.subcategory === activeSubcategory;
       const categoryMatch =
@@ -151,7 +165,7 @@ export default function CatalogPage() {
       return [...list].sort((a, b) => b.price - a.price);
     }
     return list;
-  }, [activeSubcategory, language, priceFilter, search, selectedBrands, selectedCategories, sortBy]);
+  }, [allProducts, activeSubcategory, language, priceFilter, search, selectedBrands, selectedCategories, sortBy]);
 
   const pageSize = 8;
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / pageSize));
@@ -308,10 +322,10 @@ export default function CatalogPage() {
                 const isDiscounted = Boolean(product.originalPrice && product.originalPrice > product.price);
                 const outOfStock = product.stock <= 0;
                 return (
-                  <article key={product.id} className="overflow-hidden rounded-2xl border border-black/10 bg-white">
+                  <article key={product.id} className="relative overflow-hidden rounded-2xl border border-black/10 bg-white">
                     <Link href={`/product/${product.id}`} className="block">
                       <div className="relative h-44 w-full">
-                        <Image src={product.image} alt={getProductName(product, language)} fill className="object-cover" />
+                        <SafeImage src={product.image} alt={getProductName(product, language)} fill className="object-cover" />
                         <div className="absolute left-2 top-2 flex flex-wrap gap-1">
                           <Badge variant="outline" className="bg-white/90">
                             {translateLabel(product.category, language)}
@@ -342,8 +356,9 @@ export default function CatalogPage() {
                         </div>
                       </div>
                     </Link>
-                    <div className="px-3 pb-3">
-                      <Button asChild className="w-full" disabled={outOfStock}>
+                    <div className="flex items-center gap-2 px-3 pb-3">
+                      <ProductQuickView productId={product.id} className="h-10 shrink-0 px-3" />
+                      <Button asChild className="h-10 w-full" disabled={outOfStock}>
                         <Link href={`/product/${product.id}`}>{outOfStock ? t.soldOut : t.add}</Link>
                       </Button>
                     </div>

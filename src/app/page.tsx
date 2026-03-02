@@ -1,44 +1,52 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowRight } from "lucide-react";
 
+import { SafeImage } from "@/components/safe-image";
 import { useLanguage } from "@/components/language-provider";
+import { ProductQuickView } from "@/components/product-quick-view";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   brands,
   formatArs,
-  getProductDescription,
   getProductName,
+  hasPurchasablePrice,
+  isJewelryProduct,
+  mapMedusaProduct,
   navCategories,
-  products,
+  Product,
   translateLabel,
 } from "@/lib/shop-data";
+import { sdk, withStorePricingContext } from "@/lib/medusa";
 
-const lookDots = [
-  {
-    productId: "siena-pack",
-    mobileClass: "left-[32%] top-[34%]",
-    desktopClass: "md:left-[26%] md:top-[30%]",
-  },
-  {
-    productId: "layering-aura",
-    mobileClass: "left-[60%] top-[47%]",
-    desktopClass: "md:left-[58%] md:top-[40%]",
-  },
-  {
-    productId: "capri-pulseras",
-    mobileClass: "left-[43%] top-[66%]",
-    desktopClass: "md:left-[46%] md:top-[64%]",
-  },
+const lookDotPositions = [
+  { mobileClass: "left-[32%] top-[34%]", desktopClass: "md:left-[26%] md:top-[30%]" },
+  { mobileClass: "left-[60%] top-[47%]", desktopClass: "md:left-[58%] md:top-[40%]" },
+  { mobileClass: "left-[43%] top-[66%]", desktopClass: "md:left-[46%] md:top-[64%]" },
 ];
 
 export default function HomePage() {
   const { language } = useLanguage();
   const [slideIndex, setSlideIndex] = useState(0);
+  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+
+  useEffect(() => {
+    sdk.store.product.list(withStorePricingContext({
+      limit: 100,
+      fields: "+variants.calculated_price,+variants.inventory_quantity,+metadata,+categories",
+    })).then(({ products }) => {
+      setFeaturedProducts(
+        products
+          .map(mapMedusaProduct)
+          .filter(hasPurchasablePrice)
+          .filter(isJewelryProduct)
+          .slice(0, 6),
+      );
+    }).catch(() => {});
+  }, []);
 
   const t = language === "ko"
     ? {
@@ -98,7 +106,7 @@ export default function HomePage() {
           },
           {
             title: "Operacion comercial en modo simple.",
-            description: "Catalogo, carrito, checkout y seguimiento en un solo flujo para tu equipo.",
+            description: "Catalogo, carrito, finalizar compra y seguimiento en un solo flujo para tu equipo.",
             image:
               "https://images.unsplash.com/photo-1704957205218-d436eac4c607?auto=format&fit=crop&w=1400&q=80",
           },
@@ -109,7 +117,7 @@ export default function HomePage() {
           { title: "Novedades", href: "/catalog?subcategory=Novedades" },
           { title: "Best sellers", href: "/catalog?subcategory=Best%20Sellers" },
           { title: "Armar pedido", href: "/catalog" },
-          { title: "Ir a checkout", href: "/checkout" },
+          { title: "Finalizar compra", href: "/checkout" },
         ],
         collections: "Colecciones",
         collection: "Coleccion",
@@ -129,7 +137,6 @@ export default function HomePage() {
     return () => window.clearInterval(timer);
   }, [t.heroSlides.length]);
 
-  const featuredProducts = useMemo(() => products.slice(0, 6), []);
 
   return (
     <div className="relative isolate overflow-hidden bg-[#f6f5f2]">
@@ -167,7 +174,7 @@ export default function HomePage() {
               </div>
             </div>
             <div className="order-2 relative h-64 w-full md:h-full md:min-h-[420px]">
-              <Image
+              <SafeImage
                 src={t.heroSlides[slideIndex].image}
                 alt={t.heroSlides[slideIndex].title}
                 fill
@@ -268,10 +275,10 @@ export default function HomePage() {
               const outOfStock = product.stock <= 0;
 
               return (
-                <article key={product.id} className="overflow-hidden rounded-2xl border border-black/10 bg-white">
+                <article key={product.id} className="relative overflow-hidden rounded-2xl border border-black/10 bg-white">
                   <Link href={`/product/${product.id}`} className="block">
                     <div className="relative h-40 w-full">
-                      <Image src={product.image} alt={getProductName(product, language)} fill className="object-cover" />
+                      <SafeImage src={product.image} alt={getProductName(product, language)} fill className="object-cover" />
                     </div>
                     <div className="space-y-2 p-3">
                       <p className="line-clamp-2 text-sm font-semibold text-[#111111]">
@@ -301,8 +308,9 @@ export default function HomePage() {
                       {outOfStock && <Badge variant="outline">{t.soldOut}</Badge>}
                     </div>
                   </Link>
-                  <div className="px-3 pb-3">
-                    <Button asChild className="w-full" disabled={outOfStock}>
+                  <div className="flex items-center gap-2 px-3 pb-3">
+                    <ProductQuickView productId={product.id} className="h-10 shrink-0 px-3" />
+                    <Button asChild className="h-10 w-full" disabled={outOfStock}>
                       <Link href={`/product/${product.id}`}>{outOfStock ? t.soldOut : t.addToCart}</Link>
                     </Button>
                   </div>
@@ -318,22 +326,26 @@ export default function HomePage() {
             <p className="text-xs uppercase tracking-[0.2em] text-[#666666]">{t.tapDots}</p>
           </div>
           <div className="relative mx-auto h-[360px] max-w-[780px] overflow-hidden rounded-2xl md:h-[520px]">
-            <Image
+            <SafeImage
               src="https://images.unsplash.com/photo-1704957205218-d436eac4c607?auto=format&fit=crop&w=1400&q=80"
               alt={t.shopLook}
               fill
               className="object-cover"
             />
-            {lookDots.map((dot) => (
-              <Link
-                key={dot.productId}
-                href={`/product/${dot.productId}`}
-                className={`absolute z-10 h-7 w-7 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-[#111111] ${dot.mobileClass} ${dot.desktopClass}`}
-                aria-label={`${t.ctaMore} ${dot.productId}`}
-              >
-                <span className="absolute left-1/2 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white" />
-              </Link>
-            ))}
+            {lookDotPositions.map((pos, i) => {
+              const product = featuredProducts[i];
+              if (!product) return null;
+              return (
+                <Link
+                  key={product.id}
+                  href={`/product/${product.id}`}
+                  className={`absolute z-10 h-7 w-7 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-[#111111] ${pos.mobileClass} ${pos.desktopClass}`}
+                  aria-label={`${t.ctaMore} ${product.name}`}
+                >
+                  <span className="absolute left-1/2 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white" />
+                </Link>
+              );
+            })}
           </div>
         </section>
       </main>

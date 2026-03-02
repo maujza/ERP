@@ -3,6 +3,7 @@
  *
  * Covers:
  *  - Email validation
+ *  - Phone validation
  *  - Shipping field validation
  *  - Payment validation rules
  *  - Discount code application
@@ -22,6 +23,7 @@ const t = {
   invalidPostal: "Código postal inválido",
   invalidEmail: "Email inválido",
   enterEmail: "Ingresa tu email",
+  invalidPhone: "Número de teléfono inválido",
   invalidCard: "Número de tarjeta inválido",
   expiryFormat: "Formato MM/AA",
   invalidCvc: "Código inválido",
@@ -35,6 +37,13 @@ const t = {
 function validateEmail(value: string): string {
   if (!value.trim()) return t.enterEmail;
   if (!/^\S+@\S+\.\S+$/.test(value)) return t.invalidEmail;
+  return "";
+}
+
+function validatePhone(value: string, isWhatsAppPaymentMethod: boolean): string {
+  const digits = value.replace(/\D/g, "");
+  if (isWhatsAppPaymentMethod && !digits) return t.requiredField;
+  if (digits && digits.length < 8) return t.invalidPhone;
   return "";
 }
 
@@ -634,5 +643,61 @@ describe("login hint logic", () => {
     expect(shouldShowLoginHint("user@hotmail.com")).toBe(false);
     expect(shouldShowLoginHint("user@yahoo.com")).toBe(false);
     expect(shouldShowLoginHint("user@example.com")).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// validatePhone
+// ---------------------------------------------------------------------------
+describe("validatePhone – WhatsApp payment method (required)", () => {
+  const isWA = true;
+
+  it("returns requiredField for empty string", () => {
+    expect(validatePhone("", isWA)).toBe(t.requiredField);
+  });
+
+  it("returns requiredField for whitespace-only string", () => {
+    expect(validatePhone("   ", isWA)).toBe(t.requiredField);
+  });
+
+  it("returns invalidPhone for fewer than 8 digits", () => {
+    expect(validatePhone("1234567", isWA)).toBe(t.invalidPhone);
+  });
+
+  it("returns empty string for exactly 8 digits", () => {
+    expect(validatePhone("12345678", isWA)).toBe("");
+  });
+
+  it("returns empty string for a full Argentine number with formatting", () => {
+    expect(validatePhone("+54 9 11 1234-5678", isWA)).toBe("");
+  });
+
+  it("strips non-digit characters before counting", () => {
+    // 7 digits after stripping → invalid
+    expect(validatePhone("+54-123-45", isWA)).toBe(t.invalidPhone);
+  });
+
+  it("returns empty string for numbers longer than 8 digits", () => {
+    expect(validatePhone("1234567890", isWA)).toBe("");
+  });
+});
+
+describe("validatePhone – non-WhatsApp payment method (optional)", () => {
+  const isWA = false;
+
+  it("returns empty string for empty input (field is optional)", () => {
+    expect(validatePhone("", isWA)).toBe("");
+  });
+
+  it("returns empty string for whitespace-only input", () => {
+    expect(validatePhone("   ", isWA)).toBe("");
+  });
+
+  it("still returns invalidPhone when digits provided but fewer than 8", () => {
+    expect(validatePhone("1234567", isWA)).toBe(t.invalidPhone);
+  });
+
+  it("returns empty string when 8+ digits provided", () => {
+    expect(validatePhone("+54 9 11 1234-5678", isWA)).toBe("");
   });
 });

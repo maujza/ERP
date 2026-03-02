@@ -1,0 +1,33 @@
+{
+  "login": {
+    "title": "Bienvenido a Aurelia Backoffice"
+  },
+  "invite": {
+    "title": "Bienvenido a Aurelia Backoffice"
+  },
+  "draftOrders": {
+    "domain": "Pedidos borrador",
+    "list": {
+      "description": "Crea un nuevo pedido borrador para comenzar.",
+      "noRecordsMessage": "No se encontraron pedidos borrador",
+      "filtered": {
+        "heading": "No se encontraron resultados",
+        "description": "No hay pedidos borrador que coincidan con los filtros aplicados."
+      }
+    },
+    "create": {
+      "createDraftOrder": "Crear pedido borrador",
+      "createDraftOrderHint": "Crea un pedido borrador para preparar detalles antes de confirmar la orden."
+    },
+    "status": {
+      "open": "Abierto",
+      "completed": "Completado"
+    }
+  },
+  "statuses": {
+    "draft": "Borrador"
+  },
+  "fields": {
+    "draft": "Borrador"
+  }
+}

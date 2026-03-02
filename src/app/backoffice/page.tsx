@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { sdk, withStorePricingContext } from "@/lib/medusa";
 import {
   BadgeCheck,
   Boxes,
@@ -358,6 +359,69 @@ export default function BackofficePage() {
 
   const [activeSection, setActiveSection] = useState<string>("overview");
   const [catalogData, setCatalogData] = useState(initialCatalogProducts);
+  const [liveOrderCount, setLiveOrderCount] = useState<number | null>(null);
+
+  // Fetch real data from Medusa admin (requires admin session from localhost:9000/app)
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    sdk.admin.product.list({ limit: 50 }).then(({ products }: any) => {
+      if (products?.length) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        setCatalogData(products.map((p: any) => {
+          const firstVariant = p.variants?.[0];
+          const retailPrice = firstVariant?.calculated_price?.calculated_amount ?? firstVariant?.prices?.[0]?.amount ?? 0;
+          const wholesalePrice = firstVariant?.calculated_price?.original_amount ?? retailPrice;
+          const stock = p.variants?.reduce(
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (sum: number, v: any) => sum + (v.inventory_quantity ?? 0), 0
+          ) ?? 0;
+          return {
+            id: p.id,
+            name: p.title ?? "",
+            category: p.categories?.[0]?.name ?? p.metadata?.category ?? "",
+            wholesalePrice,
+            retailPrice,
+            quantity: stock,
+            status: p.status === "published",
+            images: p.images?.map((img: any) => img.url) ?? (p.thumbnail ? [p.thumbnail] : []),
+          };
+        }));
+      }
+    }).catch(() => { /* admin not authenticated — keep mock data */ });
+
+    // Keep product pricing aligned with active price lists even without admin auth.
+    sdk.store.product.list(withStorePricingContext({
+      limit: 50,
+      fields: "+variants.calculated_price,+variants.inventory_quantity,+metadata,+categories",
+    })).then(({ products }: any) => {
+      if (!products?.length) return;
+      setCatalogData(products.map((p: any) => {
+        const firstVariant = p.variants?.[0];
+        const retailPrice = firstVariant?.calculated_price?.calculated_amount ?? firstVariant?.prices?.[0]?.amount ?? 0;
+        const wholesalePrice = firstVariant?.calculated_price?.original_amount ?? retailPrice;
+        const quantity = p.variants?.reduce(
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (sum: number, v: any) => sum + (v.inventory_quantity ?? 0),
+          0,
+        ) ?? 0;
+        return {
+          id: p.id,
+          name: p.title ?? "",
+          category: p.categories?.[0]?.name ?? p.metadata?.category ?? "",
+          wholesalePrice,
+          retailPrice,
+          quantity,
+          status: p.status === "published",
+          images: p.images?.map((img: any) => img.url) ?? (p.thumbnail ? [p.thumbnail] : []),
+        };
+      }));
+    }).catch(() => { /* keep admin or mock data */ });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    sdk.admin.order.list({ limit: 1 }).then(({ count }: any) => {
+      if (typeof count === "number") setLiveOrderCount(count);
+    }).catch(() => { /* admin not authenticated */ });
+  }, []);
   const [editingId, setEditingId] = useState<string | null>(null);
   const emptyForm = {
     id: "",
@@ -432,8 +496,13 @@ export default function BackofficePage() {
         stuckOrdersTitle: "Pedidos detenidos",
         stuckOrdersDesc: "Status sin cambios > 24h",
       };
+  const kpisLive = kpis.map((item) =>
+    item.label === "Pedidos activos" && liveOrderCount !== null
+      ? { ...item, value: String(liveOrderCount) }
+      : item
+  );
   const kpisView = isKorean
-    ? kpis.map((item) => ({
+    ? kpisLive.map((item) => ({
         ...item,
         label:
           item.label === "Pedidos activos"
@@ -444,7 +513,7 @@ export default function BackofficePage() {
                 ? "준비된 재입고"
                 : "중요 알림",
       }))
-    : kpis;
+    : kpisLive;
   const revenueTrendView = isKorean
     ? revenueTrend.map((point) => ({
         ...point,

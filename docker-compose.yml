@@ -1,9 +1,69 @@
 services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: medusa
+      POSTGRES_USER: medusa
+      POSTGRES_PASSWORD: medusa
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medusa -d medusa"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build:
+      context: ./backend
+    command: >
+      sh -c "
+        ln -sfn /app/src /src &&
+        node ./scripts/patch-dashboard-i18n.mjs &&
+        npx medusa db:migrate &&
+        npx medusa exec ./src/scripts/seed-aurelia.ts &&
+        npx medusa exec ./src/scripts/seed-demo-historic.ts &&
+        npx medusa user -e admin@aurelia.com -p supersecret >/dev/null 2>&1 || true &&
+        npm run build &&
+        mkdir -p /app/public &&
+        rm -rf /app/public/admin &&
+        cp -R /app/.medusa/server/public/admin /app/public/admin &&
+        npm run start
+      "
+    ports:
+      - "9000:9000"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://medusa:medusa@db:5432/medusa?sslmode=disable
+      STORE_CORS: http://localhost:7358,http://127.0.0.1:7358,http://localhost:9000,http://127.0.0.1:9000
+      ADMIN_CORS: http://localhost:9000,http://127.0.0.1:9000
+      AUTH_CORS: http://localhost:7358,http://127.0.0.1:7358,http://localhost:9000,http://127.0.0.1:9000
+      JWT_SECRET: supersecret
+      COOKIE_SECRET: supersecret
+      MEDUSA_FORCE_INSECURE_COOKIES: "true"
+      MEDUSA_ADMIN_EMAIL: admin@aurelia.com
+      MEDUSA_ADMIN_PASSWORD: supersecret
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
   web:
-    build: .
+    build:
+      context: .
     ports:
       - "7358:3000"
+    env_file:
+      - .env.local
     environment:
       - NODE_ENV=production
       - NEXT_TELEMETRY_DISABLED=1
+    command: sh -c "npm run build && npm run start -- --hostname 0.0.0.0 --port 3000"
     restart: unless-stopped
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

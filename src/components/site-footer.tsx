@@ -45,7 +45,7 @@ export function SiteFooter() {
           links: [
             { href: "/catalog", label: "Coleccion" },
             { href: "/search?q=aros", label: "Buscar" },
-            { href: "/checkout", label: "Checkout" },
+            { href: "/checkout", label: "Finalizar compra" },
           ],
         },
         {

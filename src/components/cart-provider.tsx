@@ -1,61 +1,72 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
+import { useRouter } from "next/navigation";
 import {
   createContext,
   useCallback,
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
+  type KeyboardEvent,
 } from "react";
 import { X } from "lucide-react";
 
 import { useLanguage } from "@/components/language-provider";
+import { SafeImage } from "@/components/safe-image";
 import { Button } from "@/components/ui/button";
-import {
-  formatArs,
-  getProductById,
-  getProductName,
-  translateLabel,
-} from "@/lib/shop-data";
+import { formatArs } from "@/lib/shop-data";
+import { MEDUSA_COUNTRY_CODE, MEDUSA_REGION_ID, sdk } from "@/lib/medusa";
 
-type CartLine = {
-  key: string;
-  productId: string;
-  variantId?: string;
+const CART_ID_KEY = "aurelia-cart-id";
+
+type CartLineItem = {
+  id: string;
+  variantId: string;
+  title: string;
+  variantTitle: string;
+  thumbnail: string | null;
   quantity: number;
+  unitPrice: number;
 };
 
 type CartContextValue = {
-  items: CartLine[];
+  cartId: string | null;
+  items: CartLineItem[];
   isDrawerOpen: boolean;
   openDrawer: () => void;
   closeDrawer: () => void;
-  addToCart: (
-    productId: string,
-    variantId?: string,
-    options?: { openDrawer?: boolean; quantity?: number },
-  ) => void;
-  updateQuantity: (key: string, quantity: number) => void;
-  removeFromCart: (key: string) => void;
+  clearCart: () => void;
+  addToCart: (variantId: string, quantity?: number, options?: { openDrawer?: boolean }) => Promise<void>;
+  updateQuantity: (lineItemId: string, quantity: number) => Promise<void>;
+  removeFromCart: (lineItemId: string) => Promise<void>;
   totalItems: number;
   subtotal: number;
 };
 
-const CART_STORAGE_KEY = "aurelia-cart";
-
 const CartContext = createContext<CartContextValue | null>(null);
 
-function getLineKey(productId: string, variantId?: string) {
-  return `${productId}::${variantId ?? "default"}`;
+function lineItemsFromCart(cart: { items?: unknown[] | null } | null): CartLineItem[] {
+  if (!cart?.items) return [];
+  return (cart.items as Record<string, unknown>[]).map((item) => ({
+    id: item.id as string,
+    variantId: (item.variant_id as string) ?? "",
+    title: (item.title as string) ?? "",
+    variantTitle: ((item.variant as Record<string, unknown>)?.title as string) ?? "",
+    thumbnail: (item.thumbnail as string | null) ?? null,
+    quantity: (item.quantity as number) ?? 0,
+    unitPrice: (item.unit_price as number) ?? 0,
+  }));
 }
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<CartLine[]>([]);
+  const resolvedRegionIdRef = useRef<string>(MEDUSA_REGION_ID);
+  const [cartId, setCartId] = useState<string | null>(null);
+  const [items, setItems] = useState<CartLineItem[]>([]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [lastAdded, setLastAdded] = useState<{ productId: string; variantId?: string } | null>(null);
+  const [lastAdded, setLastAdded] = useState<CartLineItem | null>(null);
 
   useEffect(() => {
     if (!lastAdded) return;
@@ -63,84 +74,144 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     return () => clearTimeout(timer);
   }, [lastAdded]);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const raw = localStorage.getItem(CART_STORAGE_KEY);
-    if (!raw) return;
-    try {
-      const parsed = JSON.parse(raw) as CartLine[];
-      setItems(parsed);
-    } catch {
-      setItems([]);
-    }
+  const clearCart = useCallback(() => {
+    localStorage.removeItem(CART_ID_KEY);
+    setCartId(null);
+    setItems([]);
+    setLastAdded(null);
   }, []);
 
+  // Hydrate cart from localStorage on mount
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
-  }, [items]);
+    const storedId = localStorage.getItem(CART_ID_KEY);
+    if (!storedId) return;
+    sdk.store.cart.retrieve(storedId).then(({ cart }) => {
+      if ((cart as { completed_at?: string | null })?.completed_at) {
+        clearCart();
+        return;
+      }
+      setCartId(storedId);
+      setItems(lineItemsFromCart(cart));
+    }).catch(() => {
+      clearCart();
+    });
+  }, [clearCart]);
 
-  const addToCart = useCallback(
-    (productId: string, variantId?: string, options?: { openDrawer?: boolean; quantity?: number }) => {
-      const key = getLineKey(productId, variantId);
-      const qty = options?.quantity ?? 1;
-      setItems((prev) => {
-        const current = prev.find((line) => line.key === key);
-        if (current) {
-          return prev.map((line) =>
-            line.key === key ? { ...line, quantity: line.quantity + qty } : line,
-          );
-        }
-        return [...prev, { key, productId, variantId, quantity: qty }];
+  const resolveRegionId = useCallback(async () => {
+    if (resolvedRegionIdRef.current) return resolvedRegionIdRef.current;
+
+    type StoreRegion = {
+      id?: string;
+      countries?: Array<{ iso_2?: string }>;
+    };
+    const storeApi = sdk.store as unknown as {
+      region: { list: (query: { limit: number }) => Promise<{ regions: StoreRegion[] }> };
+    };
+    const { regions } = await storeApi.region.list({ limit: 50 });
+    const matched = regions.find((region) =>
+      region.countries?.some((country) => country.iso_2?.toLowerCase() === MEDUSA_COUNTRY_CODE),
+    );
+    const resolved = matched?.id ?? regions[0]?.id;
+    if (!resolved) {
+      throw new Error("No Medusa region available");
+    }
+    resolvedRegionIdRef.current = resolved;
+    return resolved;
+  }, []);
+
+  const getOrCreateCart = useCallback(async (): Promise<string> => {
+    if (cartId) return cartId;
+    const regionId = await resolveRegionId();
+    const { cart } = await sdk.store.cart.create({ region_id: regionId });
+    const id = cart.id;
+    localStorage.setItem(CART_ID_KEY, id);
+    setCartId(id);
+    return id;
+  }, [cartId, resolveRegionId]);
+
+  const addToCart = useCallback(async (
+    variantId: string,
+    quantity = 1,
+    options?: { openDrawer?: boolean },
+  ) => {
+    try {
+      const id = await getOrCreateCart();
+      const { cart } = await sdk.store.cart.createLineItem(id, {
+        variant_id: variantId,
+        quantity,
       });
+      const updatedItems = lineItemsFromCart(cart);
+      setItems(updatedItems);
       if (options?.openDrawer) {
         setIsDrawerOpen(true);
       } else {
-        setLastAdded({ productId, variantId });
+        const added = updatedItems.find((li) => li.variantId === variantId);
+        if (added) setLastAdded(added);
       }
-    },
-    [],
-  );
+    } catch (error) {
+      console.error("Failed to add item to cart", error);
+      if (error instanceof Error && error.message.toLowerCase().includes("already completed")) {
+        clearCart();
+      }
+    }
+  }, [clearCart, getOrCreateCart]);
 
-  const updateQuantity = useCallback((key: string, quantity: number) => {
-    setItems((prev) => {
-      if (quantity <= 0) return prev.filter((line) => line.key !== key);
-      return prev.map((line) => (line.key === key ? { ...line, quantity } : line));
-    });
-  }, []);
+  const updateQuantity = useCallback(async (lineItemId: string, quantity: number) => {
+    if (!cartId) return;
+    try {
+      if (quantity <= 0) {
+        const { parent: cart } = await sdk.store.cart.deleteLineItem(cartId, lineItemId);
+        setItems(lineItemsFromCart(cart ?? null));
+      } else {
+        const { cart } = await sdk.store.cart.updateLineItem(cartId, lineItemId, { quantity });
+        setItems(lineItemsFromCart(cart));
+      }
+    } catch (error) {
+      console.error("Failed to update cart line item", error);
+      if (error instanceof Error && error.message.toLowerCase().includes("already completed")) {
+        clearCart();
+      }
+    }
+  }, [cartId, clearCart]);
 
-  const removeFromCart = useCallback((key: string) => {
-    setItems((prev) => prev.filter((line) => line.key !== key));
-  }, []);
+  const removeFromCart = useCallback(async (lineItemId: string) => {
+    if (!cartId) return;
+    try {
+      const { parent: cart } = await sdk.store.cart.deleteLineItem(cartId, lineItemId);
+      setItems(lineItemsFromCart(cart ?? null));
+    } catch (error) {
+      console.error("Failed to remove cart line item", error);
+      if (error instanceof Error && error.message.toLowerCase().includes("already completed")) {
+        clearCart();
+      }
+    }
+  }, [cartId, clearCart]);
 
   const subtotal = useMemo(
-    () =>
-      items.reduce((acc, line) => {
-        const product = getProductById(line.productId);
-        if (!product) return acc;
-        return acc + product.price * line.quantity;
-      }, 0),
+    () => items.reduce((acc, li) => acc + li.unitPrice * li.quantity, 0),
     [items],
   );
 
   const totalItems = useMemo(
-    () => items.reduce((acc, line) => acc + line.quantity, 0),
+    () => items.reduce((acc, li) => acc + li.quantity, 0),
     [items],
   );
 
   const value = useMemo<CartContextValue>(
     () => ({
+      cartId,
       items,
       isDrawerOpen,
       openDrawer: () => setIsDrawerOpen(true),
       closeDrawer: () => setIsDrawerOpen(false),
+      clearCart,
       addToCart,
       updateQuantity,
       removeFromCart,
       totalItems,
       subtotal,
     }),
-    [items, isDrawerOpen, addToCart, updateQuantity, removeFromCart, totalItems, subtotal],
+    [cartId, items, isDrawerOpen, clearCart, addToCart, updateQuantity, removeFromCart, totalItems, subtotal],
   );
 
   return (
@@ -148,11 +219,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       {children}
       <MiniCartDrawer />
       {lastAdded && (
-        <CartToast
-          productId={lastAdded.productId}
-          variantId={lastAdded.variantId}
-          onDismiss={() => setLastAdded(null)}
-        />
+        <CartToast item={lastAdded} onDismiss={() => setLastAdded(null)} />
       )}
     </CartContext.Provider>
   );
@@ -167,48 +234,32 @@ export function useCart() {
 }
 
 function CartToast({
-  productId,
-  variantId,
+  item,
   onDismiss,
 }: {
-  productId: string;
-  variantId?: string;
+  item: CartLineItem;
   onDismiss: () => void;
 }) {
   const { language } = useLanguage();
-  const product = getProductById(productId);
-  if (!product) return null;
-
-  const variant = product.variants?.find((v) => v.id === variantId);
-  const t =
-    language === "ko"
-      ? { added: "장바구니에 추가됨", variant: "옵션", dismiss: "닫기" }
-      : { added: "Agregado al carrito", variant: "Variante", dismiss: "Cerrar" };
+  const t = language === "ko"
+    ? { added: "장바구니에 추가됨", dismiss: "닫기" }
+    : { added: "Agregado al carrito", dismiss: "Cerrar" };
 
   return (
     <div className="toast-enter fixed left-4 right-4 top-20 z-[90] rounded-2xl border border-black/10 bg-white p-3 shadow-xl md:left-auto md:right-5 md:w-72">
       <div className="flex items-start gap-3">
-        <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl">
-          <Image
-            src={product.image}
-            alt={getProductName(product, language)}
-            fill
-            className="object-cover"
-          />
+        <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-[#f3f3f3]">
+          {item.thumbnail && (
+            <SafeImage src={item.thumbnail} alt={item.title} fill className="object-cover" />
+          )}
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-xs font-semibold text-[#ff2d55]">{t.added}</p>
-          <p className="line-clamp-2 text-sm font-semibold text-[#111111]">
-            {getProductName(product, language)}
-          </p>
-          {variant && (
-            <p className="text-xs text-[#666666]">
-              {t.variant}: {translateLabel(variant.label, language)}
-            </p>
+          <p className="line-clamp-2 text-sm font-semibold text-[#111111]">{item.title}</p>
+          {item.variantTitle && (
+            <p className="text-xs text-[#666666]">{item.variantTitle}</p>
           )}
-          <p className="text-sm font-medium text-[#111111]">
-            {formatArs(product.price, language)}
-          </p>
+          <p className="text-sm font-medium text-[#111111]">{formatArs(item.unitPrice, language)}</p>
         </div>
         <button
           onClick={onDismiss}
@@ -222,34 +273,102 @@ function CartToast({
   );
 }
 
+function QuantityInput({
+  lineId,
+  quantity,
+  ariaLabel,
+  onUpdate,
+}: {
+  lineId: string;
+  quantity: number;
+  ariaLabel: string;
+  onUpdate: (id: string, qty: number) => void;
+}) {
+  const [local, setLocal] = useState(String(quantity));
+
+  useEffect(() => {
+    setLocal(String(quantity));
+  }, [quantity]);
+
+  const commit = () => {
+    const parsed = Number.parseInt(local, 10);
+    if (!Number.isNaN(parsed) && parsed > 0) {
+      if (parsed !== quantity) onUpdate(lineId, parsed);
+    } else {
+      setLocal(String(quantity));
+    }
+  };
+
+  const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.currentTarget.blur();
+    }
+  };
+
+  return (
+    <input
+      type="number"
+      min={1}
+      value={local}
+      onChange={(e) => setLocal(e.target.value)}
+      onBlur={commit}
+      onKeyDown={onKeyDown}
+      aria-label={ariaLabel}
+      className="h-8 w-16 rounded-xl border border-black/15 px-2 text-center text-sm font-semibold"
+    />
+  );
+}
+
 function MiniCartDrawer() {
+  const router = useRouter();
   const { language } = useLanguage();
-  const { items, isDrawerOpen, closeDrawer, subtotal, updateQuantity, removeFromCart } = useCart();
+  const { items, isDrawerOpen, closeDrawer, subtotal, updateQuantity, removeFromCart, clearCart } = useCart();
+  const [showCheckoutChoice, setShowCheckoutChoice] = useState(false);
   const t = language === "ko"
     ? {
         cart: "장바구니",
         closeCart: "장바구니 닫기",
         empty: "장바구니가 비어 있습니다.",
         backHome: "홈으로",
-        variant: "옵션",
-        singleVariant: "단일 옵션",
         removeProduct: "상품 제거",
+        quantity: "수량",
         subtotal: "소계",
+        clear: "장바구니 비우기",
         continueShopping: "쇼핑 계속하기",
         goCheckout: "결제로 이동",
+        checkoutChoiceTitle: "주문을 어떻게 진행할까요?",
+        checkoutChoiceBody: "계정으로 계속하거나 비회원으로 바로 결제할 수 있습니다.",
+        checkoutChoiceGuest: "비회원으로 계속",
+        checkoutChoiceLogin: "계정으로 계속",
+        checkoutChoiceCancel: "닫기",
       }
     : {
         cart: "Carrito",
         closeCart: "Cerrar carrito",
         empty: "Tu carrito esta vacio.",
         backHome: "Volver al home",
-        variant: "Variante",
-        singleVariant: "Variante unica",
         removeProduct: "Quitar producto",
+        quantity: "Cantidad",
         subtotal: "Subtotal",
+        clear: "Vaciar carrito",
         continueShopping: "Continuar comprando",
-        goCheckout: "Ir al checkout",
+        goCheckout: "Finalizar compra",
+        checkoutChoiceTitle: "¿Cómo querés finalizar?",
+        checkoutChoiceBody: "Podés continuar con tu cuenta o terminar como invitado.",
+        checkoutChoiceGuest: "Continuar sin cuenta",
+        checkoutChoiceLogin: "Entrar con mi cuenta",
+        checkoutChoiceCancel: "Cancelar",
       };
+
+  const onCheckoutClick = async () => {
+    try {
+      await sdk.store.customer.retrieve();
+      closeDrawer();
+      router.push("/checkout");
+    } catch {
+      setShowCheckoutChoice(true);
+    }
+  };
 
   return (
     <>
@@ -285,53 +404,51 @@ function MiniCartDrawer() {
               </Button>
             </div>
           ) : (
-            items.map((line) => {
-              const product = getProductById(line.productId);
-              if (!product) return null;
-              const variant = product.variants?.find((item) => item.id === line.variantId);
-              return (
-                <div key={line.key} className="rounded-2xl border border-black/10 p-3">
-                  <div className="flex gap-3">
-                    <div className="relative h-16 w-16 overflow-hidden rounded-xl">
-                      <Image src={product.image} alt={getProductName(product, language)} fill className="object-cover" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="line-clamp-2 text-sm font-semibold text-[#111111]">
-                        {getProductName(product, language)}
-                      </p>
-                      <p className="text-xs text-[#666666]">
-                        {variant
-                          ? `${t.variant}: ${translateLabel(variant.label, language)}`
-                          : t.singleVariant}
-                      </p>
-                      <p className="text-sm font-medium text-[#111111]">{formatArs(product.price, language)}</p>
-                    </div>
-                    <button
-                      className="h-fit rounded-full p-1 text-[#666666] hover:bg-[#f3f3f3]"
-                      onClick={() => removeFromCart(line.key)}
-                      aria-label={t.removeProduct}
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
+            items.map((line) => (
+              <div key={line.id} className="rounded-2xl border border-black/10 p-3">
+                <div className="flex gap-3">
+                  <div className="relative h-16 w-16 overflow-hidden rounded-xl bg-[#f3f3f3]">
+                    {line.thumbnail && (
+                      <SafeImage src={line.thumbnail} alt={line.title} fill className="object-cover" />
+                    )}
                   </div>
-                  <div className="mt-2 flex items-center gap-2">
-                    <button
-                      onClick={() => updateQuantity(line.key, line.quantity - 1)}
-                      className="h-7 w-7 rounded-full border border-black/15"
-                    >
-                      -
-                    </button>
-                    <span className="text-sm font-semibold">{line.quantity}</span>
-                    <button
-                      onClick={() => updateQuantity(line.key, line.quantity + 1)}
-                      className="h-7 w-7 rounded-full border border-black/15"
-                    >
-                      +
-                    </button>
+                  <div className="min-w-0 flex-1">
+                    <p className="line-clamp-2 text-sm font-semibold text-[#111111]">{line.title}</p>
+                    {line.variantTitle && (
+                      <p className="text-xs text-[#666666]">{line.variantTitle}</p>
+                    )}
+                    <p className="text-sm font-medium text-[#111111]">{formatArs(line.unitPrice, language)}</p>
                   </div>
+                  <button
+                    className="h-fit rounded-full p-1 text-[#666666] hover:bg-[#f3f3f3]"
+                    onClick={() => removeFromCart(line.id)}
+                    aria-label={t.removeProduct}
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
                 </div>
-              );
-            })
+                <div className="mt-2 flex items-center gap-2">
+                  <button
+                    onClick={() => updateQuantity(line.id, line.quantity - 1)}
+                    className="h-7 w-7 rounded-full border border-black/15"
+                  >
+                    -
+                  </button>
+                  <QuantityInput
+                    lineId={line.id}
+                    quantity={line.quantity}
+                    ariaLabel={`${t.quantity} ${line.title}`}
+                    onUpdate={updateQuantity}
+                  />
+                  <button
+                    onClick={() => updateQuantity(line.id, line.quantity + 1)}
+                    className="h-7 w-7 rounded-full border border-black/15"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            ))
           )}
         </div>
         <div className="border-t border-black/10 px-5 py-4">
@@ -340,17 +457,60 @@ function MiniCartDrawer() {
             <span className="font-semibold text-[#111111]">{formatArs(subtotal, language)}</span>
           </div>
           <div className="grid gap-2">
+            <Button variant="outline" onClick={clearCart} disabled={items.length === 0}>
+              {t.clear}
+            </Button>
             <Button variant="outline" onClick={closeDrawer}>
               {t.continueShopping}
             </Button>
-            <Button asChild>
-              <Link href="/checkout" onClick={closeDrawer}>
-                {t.goCheckout}
-              </Link>
+            <Button onClick={() => void onCheckoutClick()}>
+              {t.goCheckout}
             </Button>
           </div>
         </div>
       </aside>
+      {showCheckoutChoice && (
+        <>
+          <div className="fixed inset-0 z-[80] bg-black/50" onClick={() => setShowCheckoutChoice(false)} />
+          <div className="fixed inset-0 z-[85] flex items-center justify-center p-4">
+            <div className="w-full max-w-md rounded-3xl border border-black/10 bg-white p-6 shadow-2xl">
+              <h3 className="text-xl font-bold text-black">{t.checkoutChoiceTitle}</h3>
+              <p className="mt-2 text-sm text-slate-600">{t.checkoutChoiceBody}</p>
+              <div className="mt-5 grid gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCheckoutChoice(false);
+                    closeDrawer();
+                    router.push("/checkout?guest=1");
+                  }}
+                  className="rounded-xl border border-black/15 bg-white px-4 py-2.5 text-sm font-semibold text-black"
+                >
+                  {t.checkoutChoiceGuest}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCheckoutChoice(false);
+                    closeDrawer();
+                    router.push("/auth?next=/checkout");
+                  }}
+                  className="rounded-xl bg-black px-4 py-2.5 text-sm font-semibold text-white hover:bg-black/90"
+                >
+                  {t.checkoutChoiceLogin}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowCheckoutChoice(false)}
+                  className="rounded-xl px-4 py-2 text-sm font-medium text-slate-600"
+                >
+                  {t.checkoutChoiceCancel}
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </>
   );
 }
