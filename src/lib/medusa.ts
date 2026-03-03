@@ -1,7 +1,11 @@
 import Medusa from "@medusajs/js-sdk"
 
-export const MEDUSA_BACKEND_URL =
+const RAW_MEDUSA_BACKEND_URL =
   process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "http://localhost:9000"
+export const MEDUSA_BACKEND_URL =
+  typeof window !== "undefined" && RAW_MEDUSA_BACKEND_URL.startsWith("/")
+    ? new URL(RAW_MEDUSA_BACKEND_URL, window.location.origin).toString()
+    : RAW_MEDUSA_BACKEND_URL
 export const MEDUSA_PUBLISHABLE_KEY =
   process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY || ""
 export const MEDUSA_REGION_ID = process.env.NEXT_PUBLIC_MEDUSA_REGION_ID || ""
