@@ -317,7 +317,7 @@ export default function CatalogPage() {
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
+            <div className="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
               {paginated.map((product) => {
                 const isDiscounted = Boolean(product.originalPrice && product.originalPrice > product.price);
                 const outOfStock = product.stock <= 0;
@@ -356,9 +356,9 @@ export default function CatalogPage() {
                         </div>
                       </div>
                     </Link>
-                    <div className="flex items-center gap-2 px-3 pb-3">
-                      <ProductQuickView productId={product.id} className="h-10 shrink-0 px-3" />
-                      <Button asChild className="h-10 w-full" disabled={outOfStock}>
+                    <div className="flex flex-col gap-2 px-3 pb-3 xl:flex-row xl:items-center">
+                      <ProductQuickView productId={product.id} className="h-10 w-full px-3 xl:w-auto xl:shrink-0" />
+                      <Button asChild className="min-h-10 h-auto w-full px-3 py-2 text-xs !whitespace-normal leading-tight xl:h-10 xl:py-0 xl:text-sm xl:!whitespace-nowrap" disabled={outOfStock}>
                         <Link href={`/product/${product.id}`}>{outOfStock ? t.soldOut : t.add}</Link>
                       </Button>
                     </div>

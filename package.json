@@ -9,7 +9,9 @@
     "lint": "eslint",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "compose:up": "./scripts/compose-up.sh",
+    "medusa:sync-env": "./scripts/sync-medusa-env.sh"
   },
   "dependencies": {
     "@medusajs/js-sdk": "^2.13.1",
