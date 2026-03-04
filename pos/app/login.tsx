@@ -15,6 +15,8 @@ const normalizeUrl = (url: string): string => {
   return url.replace(/^https?:\/\//, '');
 };
 
+const isBrowser = typeof window !== 'undefined';
+
 const validateMedusaUrl = async (url: string): Promise<boolean> => {
   try {
     const normalizedUrl = normalizeUrl(url);
@@ -26,13 +28,22 @@ const validateMedusaUrl = async (url: string): Promise<boolean> => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-    const response = await fetch(`https://${normalizedUrl}/health`, {
+    // The /health route is reachable, but on web it doesn't emit CORS headers.
+    // Use an auth route for browser validation because it correctly responds with CORS.
+    const validationUrl = isBrowser
+      ? `https://${normalizedUrl}/auth/user/emailpass`
+      : `https://${normalizedUrl}/health`;
+    const response = await fetch(validationUrl, {
       method: 'GET',
       signal: controller.signal,
       credentials: 'omit',
     });
 
     clearTimeout(timeoutId);
+
+    if (isBrowser) {
+      return response.status === 401 || response.ok;
+    }
 
     if (!response.ok) {
       console.error(`Invalid response from Medusa URL: ${response.status}`);

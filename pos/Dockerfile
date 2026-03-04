@@ -21,4 +21,4 @@ ENV EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0 \
 
 EXPOSE 8081 19000 19001 19002
 
-CMD ["sh","-c","node devtools-proxy.mjs & npm run start -- --tunnel --port 8081"]
+CMD ["sh","-c","npm run start -- --tunnel --port 8081"]

@@ -37,9 +37,9 @@ services:
     environment:
       NODE_ENV: production
       DATABASE_URL: postgres://medusa:medusa@db:5432/medusa?sslmode=disable
-      STORE_CORS: http://localhost:7358,http://127.0.0.1:7358,http://localhost:9000,http://127.0.0.1:9000,http://pione:7358,http://pione:9000
-      ADMIN_CORS: http://localhost:9000,http://127.0.0.1:9000,http://pione:9000
-      AUTH_CORS: http://localhost:7358,http://127.0.0.1:7358,http://localhost:9000,http://127.0.0.1:9000,http://pione:7358,http://pione:9000
+      STORE_CORS: http://localhost:7358,http://127.0.0.1:7358,http://localhost:8081,http://127.0.0.1:8081,http://localhost:9000,http://127.0.0.1:9000,http://pione:7358,http://pione:8081,http://pione:9000,https://pos.aurelia.gleeze.com
+      ADMIN_CORS: http://localhost:8081,http://127.0.0.1:8081,http://localhost:9000,http://127.0.0.1:9000,http://pione:8081,http://pione:9000,https://pos.aurelia.gleeze.com
+      AUTH_CORS: http://localhost:7358,http://127.0.0.1:7358,http://localhost:8081,http://127.0.0.1:8081,http://localhost:9000,http://127.0.0.1:9000,http://pione:7358,http://pione:8081,http://pione:9000,https://pos.aurelia.gleeze.com
       JWT_SECRET: supersecret
       COOKIE_SECRET: supersecret
       MEDUSA_FORCE_INSECURE_COOKIES: "true"
@@ -69,24 +69,12 @@ services:
   pos:
     build:
       context: ./pos
-    command: sh -c "node devtools-proxy.mjs & npm run start -- --tunnel --port 8081"
-    environment:
-      - EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0
-      - EXPO_NO_TELEMETRY=1
+      dockerfile: Dockerfile.web
     ports:
-      - "8081:8081"
-      - "19000:19000"
-      - "19001:19001"
-      - "19002:19002"
-    volumes:
-      - ./pos:/app
-      - pos_node_modules:/app/node_modules
-      - pos_expo_cache:/app/.expo
-    tty: true
-    stdin_open: true
+      - "8081:3000"
     restart: unless-stopped
+    depends_on:
+      - backend
 
 volumes:
   postgres_data:
-  pos_node_modules:
-  pos_expo_cache:

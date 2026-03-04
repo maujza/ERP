@@ -10,7 +10,7 @@ import { useSettings } from '@/contexts/settings';
 import { AdminProductImage } from '@medusajs/types';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import * as React from 'react';
-import { Image, ScrollView, View } from 'react-native';
+import { Image, Platform, ScrollView, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 import Carousel, { CarouselRenderItem, ICarouselInstance, Pagination } from 'react-native-reanimated-carousel';
 import { useSafeAreaFrame } from 'react-native-safe-area-context';
@@ -158,6 +158,16 @@ const ProductDetails: React.FC<{ animateOut: (callback?: () => void) => void }> 
   const currencyCode = settings.data?.region?.currency_code || 'eur';
   const price = selectedVariant?.prices?.find((price) => price.currency_code === currencyCode);
 
+  const goToCart = React.useCallback(() => {
+    if (Platform.OS === 'web') {
+      router.replace('/(tabs)/cart');
+      return;
+    }
+
+    animateOut();
+    router.dismissTo('/(tabs)/cart');
+  }, [animateOut]);
+
   return (
     <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="pb-safe-offset-6">
       {/* Responsive layout: single column on mobile, two columns on tablet */}
@@ -283,8 +293,7 @@ const ProductDetails: React.FC<{ animateOut: (callback?: () => void) => void }> 
                   },
                   {
                     onSuccess: () => {
-                      animateOut();
-                      router.dismissTo('/(tabs)/cart');
+                      goToCart();
                     },
                   },
                 );
@@ -301,6 +310,19 @@ const ProductDetails: React.FC<{ animateOut: (callback?: () => void) => void }> 
 
 export default function ProductDetailsScreen() {
   const [visible, setVisible] = React.useState(false);
+
+  if (Platform.OS === 'web') {
+    return (
+      <View className="flex-1 bg-white px-4 pt-4">
+        <View className="mb-4 flex-row justify-end">
+          <Button variant="outline" onPress={() => router.back()}>
+            Back
+          </Button>
+        </View>
+        <ProductDetails animateOut={(callback) => callback?.()} />
+      </View>
+    );
+  }
 
   useFocusEffect(
     React.useCallback(() => {

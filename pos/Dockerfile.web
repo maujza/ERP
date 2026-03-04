@@ -1,0 +1,33 @@
+FROM node:20-bookworm-slim AS builder
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends git python3 build-essential \
+  && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+
+ENV EXPO_NO_TELEMETRY=1 \
+    NODE_ENV=production
+
+RUN npx expo export -p web --max-workers 2
+
+FROM node:20-bookworm-slim AS runner
+
+WORKDIR /app
+
+RUN npm install -g serve
+
+COPY --from=builder /app/dist ./dist
+
+ENV NODE_ENV=production
+
+EXPOSE 3000
+
+CMD ["serve", "-s", "dist", "-l", "3000"]
