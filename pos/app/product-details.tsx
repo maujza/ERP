@@ -108,6 +108,16 @@ const ProductDetails: React.FC<{ animateOut: (callback?: () => void) => void }> 
     },
   });
 
+  const goToCart = () => {
+    if (Platform.OS === 'web') {
+      router.replace('/(tabs)/cart');
+      return;
+    }
+
+    animateOut();
+    router.dismissTo('/(tabs)/cart');
+  };
+
   React.useEffect(() => {
     if (productQuery.data) {
       const firstVariant = productQuery.data.product.variants?.[0];
@@ -157,16 +167,6 @@ const ProductDetails: React.FC<{ animateOut: (callback?: () => void) => void }> 
 
   const currencyCode = settings.data?.region?.currency_code || 'eur';
   const price = selectedVariant?.prices?.find((price) => price.currency_code === currencyCode);
-
-  const goToCart = React.useCallback(() => {
-    if (Platform.OS === 'web') {
-      router.replace('/(tabs)/cart');
-      return;
-    }
-
-    animateOut();
-    router.dismissTo('/(tabs)/cart');
-  }, [animateOut]);
 
   return (
     <ScrollView showsVerticalScrollIndicator={false} contentContainerClassName="pb-safe-offset-6">
