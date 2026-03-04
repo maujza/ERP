@@ -63,7 +63,7 @@ export function SiteHeader() {
   return (
     <>
       <header className="fixed top-0 z-50 w-full border-b border-black/10 bg-white">
-        <div className="mx-auto flex w-full max-w-[1400px] items-center gap-3 px-4 py-3 md:gap-6">
+        <div className="mx-auto flex w-full max-w-[1400px] items-center gap-2 px-2.5 py-3 min-[361px]:gap-3 min-[361px]:px-4 md:gap-6">
           <button
             className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/15 md:hidden"
             onClick={() => setMobileMenuOpen(true)}
@@ -72,7 +72,10 @@ export function SiteHeader() {
             <Menu className="h-5 w-5" />
           </button>
 
-          <Link href="/" className="text-xl font-black tracking-[0.18em] text-black md:text-2xl">
+          <Link
+            href="/"
+            className="text-lg font-black tracking-[0.12em] text-black max-[360px]:max-w-[108px] max-[360px]:truncate min-[361px]:text-xl min-[361px]:tracking-[0.16em] md:text-2xl md:tracking-[0.18em]"
+          >
             AURELIA
           </Link>
 
@@ -124,7 +127,7 @@ export function SiteHeader() {
 
           <Link
             href="/account"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/15"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/15 max-[360px]:hidden"
             aria-label={language === "ko" ? "내 계정" : "Mi cuenta"}
           >
             <User className="h-4 w-4" />

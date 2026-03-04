@@ -87,7 +87,7 @@ function SearchContent() {
           </Button>
         </Card>
       ) : (
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <div className="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2 md:grid-cols-4">
           {results.map((product) => {
             const outOfStock = product.stock <= 0;
             return (
@@ -102,14 +102,14 @@ function SearchContent() {
                     {outOfStock && <Badge variant="glow">{t.soldOut}</Badge>}
                   </div>
                 </Link>
-                <div className="flex items-center gap-2 px-3 pb-3">
-                  <ProductQuickView productId={product.id} className="h-10 shrink-0 px-3" />
+                <div className="flex flex-col gap-2 px-3 pb-3 sm:flex-row sm:items-center">
+                  <ProductQuickView productId={product.id} className="h-10 w-full px-3 sm:w-auto sm:shrink-0" />
                   {outOfStock ? (
-                    <Button className="h-10 w-full" disabled>
+                    <Button className="min-h-10 h-auto w-full px-3 py-2 text-xs !whitespace-normal leading-tight sm:h-10 sm:py-0 sm:text-sm sm:!whitespace-nowrap" disabled>
                       {t.soldOut}
                     </Button>
                   ) : (
-                    <Button asChild className="h-10 w-full">
+                    <Button asChild className="min-h-10 h-auto w-full px-3 py-2 text-xs !whitespace-normal leading-tight sm:h-10 sm:py-0 sm:text-sm sm:!whitespace-nowrap">
                       <Link href={`/product/${product.id}`}>{t.add}</Link>
                     </Button>
                   )}
