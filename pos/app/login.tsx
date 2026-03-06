@@ -119,6 +119,8 @@ export default function LoginScreen() {
             schema={loginSchema}
             onSubmit={handleLogin}
             defaultValues={defaultValues}
+            mode="onSubmit"
+            reValidateMode="onSubmit"
             className="gap-6"
           >
             <TextField

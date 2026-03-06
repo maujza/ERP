@@ -13,6 +13,8 @@ interface FormProps<T extends FieldValues, Output> {
     event?: React.BaseSyntheticEvent,
   ) => unknown | Promise<unknown>;
   defaultValues?: UseFormProps<T>['defaultValues'];
+  mode?: UseFormProps<T>['mode'];
+  reValidateMode?: UseFormProps<T>['reValidateMode'];
   children: React.ReactNode;
   className?: string;
 }
@@ -37,13 +39,16 @@ export function Form<T extends FieldValues, Output>({
   schema,
   onSubmit,
   defaultValues,
+  mode = 'onChange',
+  reValidateMode,
   children,
   className = '',
 }: FormProps<T, Output>) {
   const methods = useForm({
     resolver: zodResolver(schema),
     defaultValues,
-    mode: 'onChange',
+    mode,
+    reValidateMode,
   });
 
   const handleSubmit = methods.handleSubmit((data, event) => {

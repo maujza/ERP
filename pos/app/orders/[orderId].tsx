@@ -3,13 +3,14 @@ import { useOrder } from '@/api/hooks/orders';
 import { InfoBanner } from '@/components/InfoBanner';
 import { LoadingBanner } from '@/components/LoadingBanner';
 import { BottomSheet } from '@/components/ui/BottomSheet';
+import { Button } from '@/components/ui/Button';
 import { FulfillmentStatus, OrderStatus, PaymentStatus } from '@/components/ui/OrderStatus';
 import { Text } from '@/components/ui/Text';
 import { useSettings } from '@/contexts/settings';
 import { AdminOrder, AdminOrderLineItem } from '@medusajs/types';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import React from 'react';
-import { FlatList, Image, TouchableOpacity, View } from 'react-native';
+import { FlatList, Image, Platform, ScrollView, TouchableOpacity, View } from 'react-native';
 
 const CustomerInformation: React.FC<{
   order: AdminOrder;
@@ -170,7 +171,7 @@ const OrderInformation: React.FC<{
           </View>
           <View className="flex-1">
             <Text className="text-right text-sm">
-              {order.payment_collections
+              {(order.payment_collections ?? [])
                 .reduce(
                   (acc, collection) => acc + (collection.captured_amount ?? 0) - (collection.refunded_amount ?? 0),
                   0,
@@ -205,7 +206,7 @@ const OrderInformation: React.FC<{
           </View>
           <View className="flex-1">
             <Text className="text-right text-sm">
-              {(order.summary.pending_difference ?? 0).toLocaleString('en-US', {
+              {(order.summary?.pending_difference ?? 0).toLocaleString('en-US', {
                 style: 'currency',
                 currency,
                 currencyDisplay: 'narrowSymbol',
@@ -267,6 +268,9 @@ const OrderDetails: React.FC<{ animateOut: (callback?: () => void) => void }> = 
   const renderItem = React.useCallback(
     ({ item }: { item: AdminOrderLineItem }) => {
       const thumbnail = item.thumbnail || item.product?.thumbnail || item.product?.images?.[0]?.url;
+      const variantOptions = item.variant?.options?.map((option) => option.value).filter(Boolean) ?? [];
+      const variantLabel = variantOptions.length > 0 ? variantOptions.join(', ') : 'Default variant';
+
       return (
         <TouchableOpacity className="flex-row gap-4" onPress={() => handleProductPress(item)}>
           <View className="aspect-square h-16 overflow-hidden rounded-lg bg-gray-300">
@@ -274,9 +278,7 @@ const OrderDetails: React.FC<{ animateOut: (callback?: () => void) => void }> = 
           </View>
           <View>
             <Text>{item.title}</Text>
-            <Text className="mt-auto text-sm text-gray-300">
-              {item.variant?.options?.map((o) => o.value).join(', ')}
-            </Text>
+            <Text className="mt-auto text-sm text-gray-300">{variantLabel}</Text>
           </View>
           <View className="ml-auto">
             <Text>
@@ -319,17 +321,31 @@ const OrderDetails: React.FC<{ animateOut: (callback?: () => void) => void }> = 
           </InfoBanner>
         </View>
       ) : orderQuery.isSuccess && orderQuery.data ? (
-        <FlatList
-          data={orderQuery.data.order.items}
-          renderItem={renderItem}
-          ItemSeparatorComponent={() => <View className="my-6 h-hairline w-full bg-gray-200" />}
-          className="shrink grow-0"
-          contentContainerClassName="pt-4 grow-0 pb-safe-offset-6"
-          ListFooterComponentClassName="mt-14"
-          ListFooterComponent={<OrderInformation order={orderQuery.data.order} currency={currency} />}
-          showsVerticalScrollIndicator={false}
-          keyboardDismissMode="on-drag"
-        />
+        Platform.OS === 'web' ? (
+          <ScrollView className="flex-1" contentContainerClassName="pt-4 pb-6" showsVerticalScrollIndicator={false}>
+            {orderQuery.data.order.items.map((item, index) => (
+              <View key={item.id ?? `${item.product_id || 'item'}-${index}`}>
+                {renderItem({ item })}
+                {index < orderQuery.data.order.items.length - 1 && <View className="my-6 h-hairline w-full bg-gray-200" />}
+              </View>
+            ))}
+            <View className="mt-14">
+              <OrderInformation order={orderQuery.data.order} currency={currency} />
+            </View>
+          </ScrollView>
+        ) : (
+          <FlatList
+            data={orderQuery.data.order.items}
+            renderItem={renderItem}
+            ItemSeparatorComponent={() => <View className="my-6 h-hairline w-full bg-gray-200" />}
+            className="shrink grow-0"
+            contentContainerClassName="pt-4 grow-0 pb-safe-offset-6"
+            ListFooterComponentClassName="mt-14"
+            ListFooterComponent={<OrderInformation order={orderQuery.data.order} currency={currency} />}
+            showsVerticalScrollIndicator={false}
+            keyboardDismissMode="on-drag"
+          />
+        )
       ) : (
         <View className="py-11">
           <InfoBanner colorScheme="error">An unknown error occurred while fetching the order details.</InfoBanner>
@@ -341,6 +357,19 @@ const OrderDetails: React.FC<{ animateOut: (callback?: () => void) => void }> = 
 
 export default function OrderDetailsScreen() {
   const [visible, setVisible] = React.useState(false);
+
+  if (Platform.OS === 'web') {
+    return (
+      <View className="flex-1 bg-white px-4 pt-4">
+        <View className="mb-4 flex-row justify-end">
+          <Button variant="outline" onPress={() => router.back()}>
+            Back
+          </Button>
+        </View>
+        <OrderDetails animateOut={(callback) => callback?.()} />
+      </View>
+    );
+  }
 
   useFocusEffect(
     React.useCallback(() => {
@@ -363,7 +392,7 @@ export default function OrderDetailsScreen() {
   }, []);
 
   return (
-    <BottomSheet visible={visible} onClose={() => router.back()} showCloseButton={false} dismissOnOverlayPress>
+    <BottomSheet visible={visible} onClose={() => router.back()} showCloseButton dismissOnOverlayPress>
       {renderContent}
     </BottomSheet>
   );

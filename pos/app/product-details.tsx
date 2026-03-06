@@ -43,9 +43,11 @@ const ProductImagesCarousel: React.FC<{ images: AdminProductImage[] }> = ({ imag
     <View
       className="w-full"
       onLayout={(event) => {
-        event.target.measure((x, y, width) => {
-          setWidth(width);
-        });
+        const layoutWidth = Math.round(event.nativeEvent.layout.width);
+
+        if (layoutWidth > 0) {
+          setWidth((prevWidth) => (prevWidth === layoutWidth ? prevWidth : layoutWidth));
+        }
       }}
     >
       <Carousel
