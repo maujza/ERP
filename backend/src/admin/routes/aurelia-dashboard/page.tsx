@@ -199,6 +199,35 @@ const resolveDisplayedOrderState = (order: DashboardOrder, isSpanish: boolean) =
   return translateStatus(fulfillment || payment || workflow || "unknown", isSpanish)
 }
 
+/** Large-format KPI card for hero metrics */
+const HeroCard = ({
+  label,
+  value,
+  hint,
+  accent,
+}: {
+  hint: string
+  label: string
+  value: string
+  accent?: string
+}) => (
+  <div className="rounded-md border border-ui-border-base bg-ui-bg-base px-5 py-4">
+    <Text size="small" leading="compact" className="text-ui-fg-subtle">
+      {label}
+    </Text>
+    <p
+      className="mt-2 font-semibold leading-none"
+      style={{ fontSize: "1.625rem", ...(accent ? { color: accent } : {}) }}
+    >
+      {value}
+    </p>
+    <Text size="small" leading="compact" className="mt-1.5 text-ui-fg-subtle">
+      {hint}
+    </Text>
+  </div>
+)
+
+/** Standard small KPI card */
 const MetricCard = ({
   label,
   value,
@@ -209,21 +238,34 @@ const MetricCard = ({
   label: string
   value: string
   accent?: string
-}) => {
-  return (
-    <div className="rounded-md border border-ui-border-base bg-ui-bg-base px-4 py-3">
-      <Text size="small" leading="compact" weight="plus">
-        {label}
-      </Text>
-      <Text className="mt-1" weight="plus" style={accent ? { color: accent } : undefined}>
-        {value}
-      </Text>
-      <Text size="small" leading="compact" className="mt-1 text-ui-fg-subtle">
-        {hint}
-      </Text>
-    </div>
-  )
-}
+}) => (
+  <div className="rounded-md border border-ui-border-base bg-ui-bg-base px-4 py-3">
+    <Text size="small" leading="compact" weight="plus">
+      {label}
+    </Text>
+    <Text className="mt-1" weight="plus" style={accent ? { color: accent } : undefined}>
+      {value}
+    </Text>
+    <Text size="small" leading="compact" className="mt-1 text-ui-fg-subtle">
+      {hint}
+    </Text>
+  </div>
+)
+
+/** Thin section divider with label */
+const SectionDivider = ({ label }: { label: string }) => (
+  <div className="flex items-center gap-3 border-t border-ui-border-base px-6 py-3">
+    <Text
+      size="small"
+      leading="compact"
+      className="whitespace-nowrap text-ui-fg-muted"
+      style={{ fontSize: "0.68rem", letterSpacing: "0.07em", textTransform: "uppercase", fontWeight: 600 }}
+    >
+      {label}
+    </Text>
+    <div className="h-px flex-1 bg-ui-border-base" />
+  </div>
+)
 
 const buildRevenueTrend = (orders: DashboardOrder[], locale: string): RevenuePoint[] => {
   const now = new Date()
@@ -402,7 +444,7 @@ const buildMomRevenue = (
 const AureliaDashboardPage = () => {
   const { i18n } = useTranslation()
   const isSpanish = i18n.language.toLowerCase().startsWith("es")
-  const locale = isSpanish ? "es-ES" : "en-US"
+  const locale = isSpanish ? "es-AR" : "en-US"
 
   const copy = isSpanish
     ? {
@@ -412,12 +454,12 @@ const AureliaDashboardPage = () => {
         channelOrders: "pedidos",
         customers: "Clientes",
         customersHint: "Clientes registrados",
-        dailyOrders: "Pedidos por día (14 días)",
+        dailyOrders: "Pedidos por día — 14 días",
         dashboardDescription: "Métricas de impacto comercial para operación, pagos y cumplimiento.",
         dashboardTitle: "Aurelia Backoffice Dashboard",
         failedLoad: "No se pudieron cargar las métricas del dashboard:",
         fulfillmentMix: "Estado de cumplimiento",
-        fulfillmentRate: "Cumplimiento",
+        fulfillmentRate: "Tasa de cumplimiento",
         fulfillmentRateHint: "Pedidos completados en muestra",
         lastMonth: "Mes anterior",
         lastMonthHint: "Revenue del mes pasado",
@@ -437,12 +479,16 @@ const AureliaDashboardPage = () => {
         pendingOrdersHint: `En base a los últimos ${ORDER_SAMPLE_SIZE} pedidos`,
         products: "Productos",
         productsHint: "Productos en catálogo",
-        recentRevenue: "Revenue reciente",
+        recentRevenue: "Revenue total",
         recentRevenueHint: `Suma de últimos ${ORDER_SAMPLE_SIZE} pedidos`,
         revenueTrend: "Tendencia de revenue",
         revenueTrendHint: "Últimos 6 meses",
         sampleOrders: "pedidos en muestra",
-        statusLeaderboard: "Ranking de estados",
+        sectionCustomers: "Clientes y pedidos",
+        sectionFulfillment: "Cumplimiento y canales",
+        sectionKpis: "Métricas secundarias",
+        sectionRevenue: "Revenue y pagos",
+        sectionVolume: "Volumen de pedidos",
         thisMonth: "Este mes",
         thisMonthHint: "Revenue del mes en curso",
         topCustomers: "Top clientes por revenue",
@@ -451,7 +497,7 @@ const AureliaDashboardPage = () => {
         whatsappAlertHint: "Pedidos que requieren contacto manual por WhatsApp",
         whatsappAlertTitle: "Pendientes WhatsApp",
         whatsappOnlyForAllowed: "No tenés permiso para recibir estas alertas.",
-        weeklyOrders: "Tendencia semanal (13 semanas)",
+        weeklyOrders: "Pedidos por semana — 13 semanas",
         weeklyOrdersHint: "Pedidos por semana",
       }
     : {
@@ -461,11 +507,11 @@ const AureliaDashboardPage = () => {
         channelOrders: "orders",
         customers: "Customers",
         customersHint: "Registered customers",
-        dailyOrders: "Orders per day (14 days)",
+        dailyOrders: "Orders per day — 14 days",
         dashboardDescription: "High-impact metrics for operations, payments, and fulfillment.",
         dashboardTitle: "Aurelia Backoffice Dashboard",
         failedLoad: "Failed to load dashboard metrics:",
-        fulfillmentMix: "Fulfillment Status Mix",
+        fulfillmentMix: "Fulfillment Status",
         fulfillmentRate: "Fulfillment Rate",
         fulfillmentRateHint: "Fulfilled orders in sample",
         lastMonth: "Last Month",
@@ -479,19 +525,23 @@ const AureliaDashboardPage = () => {
         ordersHint: "Total orders in your store",
         paidOrders: "Paid Orders",
         paidOrdersHint: "Orders with captured/authorized payment",
-        paymentMix: "Payment Status Mix",
+        paymentMix: "Payment Status",
         paymentRate: "Payment Success Rate",
         paymentRateHint: "Successful payments in sample",
         pendingOrders: "Pending Orders",
         pendingOrdersHint: `Based on latest ${ORDER_SAMPLE_SIZE} orders`,
         products: "Products",
         productsHint: "Products in catalog",
-        recentRevenue: "Recent Revenue",
+        recentRevenue: "Total Revenue",
         recentRevenueHint: `Sum of latest ${ORDER_SAMPLE_SIZE} orders`,
         revenueTrend: "Revenue Trend",
         revenueTrendHint: "Last 6 months",
         sampleOrders: "orders in sample",
-        statusLeaderboard: "Status Leaderboard",
+        sectionCustomers: "Customers & Orders",
+        sectionFulfillment: "Fulfillment & Channels",
+        sectionKpis: "Secondary Metrics",
+        sectionRevenue: "Revenue & Payments",
+        sectionVolume: "Order Volume",
         thisMonth: "This Month",
         thisMonthHint: "Current month revenue",
         topCustomers: "Top Customers by Revenue",
@@ -500,12 +550,12 @@ const AureliaDashboardPage = () => {
         whatsappAlertHint: "Orders requiring manual follow-up over WhatsApp",
         whatsappAlertTitle: "WhatsApp Pending",
         whatsappOnlyForAllowed: "You do not have permission to receive these alerts.",
-        weeklyOrders: "Weekly Trend (13 weeks)",
+        weeklyOrders: "Orders per week — 13 weeks",
         weeklyOrdersHint: "Orders per week",
       }
 
   const { data, error, isError, isLoading } = useQuery<DashboardData>({
-    queryKey: ["aurelia-backoffice-metrics-v3", locale],
+    queryKey: ["aurelia-backoffice-metrics-v4", locale],
     queryFn: async () => {
       const [ordersResult, productsResult, customersResult, ordersSampleResult, channelsResult, visibilityResult] =
         await Promise.all([
@@ -630,6 +680,7 @@ const AureliaDashboardPage = () => {
 
   return (
     <Container className="p-0">
+      {/* ── Header ── */}
       <div className="border-b border-ui-border-base px-6 py-4">
         <Heading level="h1">{copy.dashboardTitle}</Heading>
         <Text size="small" leading="compact" className="mt-1 text-ui-fg-subtle">
@@ -653,44 +704,66 @@ const AureliaDashboardPage = () => {
 
       {!isLoading && !isError && data ? (
         <div className="flex flex-col">
-          <div className="border-b border-ui-border-base px-6 py-4">
-            {data.canReceiveWhatsappAlerts ? (
-              data.whatsappPendingOrders.length ? (
-                <div className="rounded-md border border-ui-tag-green-border bg-ui-tag-green-bg p-4">
-                  <Text size="small" leading="compact" weight="plus">
-                    {copy.whatsappAlertTitle}
-                  </Text>
-                  <Text size="small" leading="compact" className="mt-1 text-ui-fg-subtle">
-                    {copy.whatsappAlertHint}
-                  </Text>
-                  <div className="mt-3 space-y-2">
-                    {data.whatsappPendingOrders.map((order) => (
-                      <div
-                        key={order.id}
-                        className="flex items-center justify-between rounded-md border border-ui-border-base bg-ui-bg-base px-3 py-2"
-                      >
-                        <Text size="small" leading="compact" weight="plus">
-                          #{order.display_id ?? order.id}
-                        </Text>
-                        <Text size="small" leading="compact" className="text-ui-fg-subtle">
-                          {order.email ?? copy.unknown}
-                        </Text>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : null
-            ) : (
-              <div className="rounded-md border border-ui-border-base bg-ui-bg-base p-4">
-                <Text size="small" leading="compact" className="text-ui-fg-subtle">
-                  {copy.whatsappOnlyForAllowed}
+
+          {/* ── WhatsApp Alert Banner (actionable, shown first) ── */}
+          {data.canReceiveWhatsappAlerts && data.whatsappPendingOrders.length ? (
+            <div className="border-b border-ui-border-base px-6 py-4">
+              <div className="rounded-md border border-ui-tag-green-border bg-ui-tag-green-bg p-4">
+                <Text size="small" leading="compact" weight="plus">
+                  {copy.whatsappAlertTitle}
                 </Text>
+                <Text size="small" leading="compact" className="mt-1 text-ui-fg-subtle">
+                  {copy.whatsappAlertHint}
+                </Text>
+                <div className="mt-3 space-y-2">
+                  {data.whatsappPendingOrders.map((order) => (
+                    <div
+                      key={order.id}
+                      className="flex items-center justify-between rounded-md border border-ui-border-base bg-ui-bg-base px-3 py-2"
+                    >
+                      <Text size="small" leading="compact" weight="plus">
+                        #{order.display_id ?? order.id}
+                      </Text>
+                      <Text size="small" leading="compact" className="text-ui-fg-subtle">
+                        {order.email ?? copy.unknown}
+                      </Text>
+                    </div>
+                  ))}
+                </div>
               </div>
-            )}
+            </div>
+          ) : null}
+
+          {/* ── Hero KPIs: the 4 most actionable numbers ── */}
+          <div className="grid grid-cols-2 gap-3 px-6 py-4 xl:grid-cols-4">
+            <HeroCard
+              label={copy.recentRevenue}
+              value={formatCurrency(data.revenue, data.currencyCode, locale)}
+              hint={copy.recentRevenueHint}
+            />
+            <HeroCard
+              label={copy.momGrowth}
+              value={`${data.momGrowth >= 0 ? "+" : ""}${data.momGrowth}%`}
+              hint={copy.momGrowthHint}
+              accent={data.momGrowth >= 0 ? "#16a34a" : "#dc2626"}
+            />
+            <HeroCard
+              label={copy.pendingOrders}
+              value={data.pendingOrders.toLocaleString(locale)}
+              hint={copy.pendingOrdersHint}
+              accent={data.pendingOrders > 0 ? "#c2410c" : undefined}
+            />
+            <HeroCard
+              label={copy.fulfillmentRate}
+              value={`${data.fulfillmentRate}%`}
+              hint={copy.fulfillmentRateHint}
+              accent={data.fulfillmentRate >= 80 ? "#16a34a" : data.fulfillmentRate >= 50 ? "#ca8a04" : "#dc2626"}
+            />
           </div>
 
-          {/* ── Metric Cards ── */}
-          <div className="grid grid-cols-1 gap-3 px-6 py-4 md:grid-cols-2 xl:grid-cols-4">
+          {/* ── Secondary Metrics ── */}
+          <SectionDivider label={copy.sectionKpis} />
+          <div className="grid grid-cols-2 gap-3 px-6 pb-4 md:grid-cols-4">
             <MetricCard
               label={copy.orders}
               value={data.ordersCount.toLocaleString(locale)}
@@ -705,16 +778,6 @@ const AureliaDashboardPage = () => {
               label={copy.customers}
               value={data.customersCount.toLocaleString(locale)}
               hint={copy.customersHint}
-            />
-            <MetricCard
-              label={copy.pendingOrders}
-              value={data.pendingOrders.toLocaleString(locale)}
-              hint={copy.pendingOrdersHint}
-            />
-            <MetricCard
-              label={copy.recentRevenue}
-              value={formatCurrency(data.revenue, data.currencyCode, locale)}
-              hint={copy.recentRevenueHint}
             />
             <MetricCard
               label={copy.avgOrderValue}
@@ -732,11 +795,6 @@ const AureliaDashboardPage = () => {
               hint={copy.lastMonthHint}
             />
             <MetricCard
-              label={copy.fulfillmentRate}
-              value={`${data.fulfillmentRate}%`}
-              hint={copy.fulfillmentRateHint}
-            />
-            <MetricCard
               label={copy.paymentRate}
               value={`${data.paymentRate}%`}
               hint={copy.paymentRateHint}
@@ -746,16 +804,12 @@ const AureliaDashboardPage = () => {
               value={data.paidCount.toLocaleString(locale)}
               hint={copy.paidOrdersHint}
             />
-            <MetricCard
-              label={copy.momGrowth}
-              value={`${data.momGrowth >= 0 ? "+" : ""}${data.momGrowth}%`}
-              hint={copy.momGrowthHint}
-              accent={data.momGrowth >= 0 ? "#16a34a" : "#dc2626"}
-            />
           </div>
 
-          {/* ── Revenue Trend + Fulfillment Donut ── */}
-          <div className="grid grid-cols-1 gap-6 border-t border-ui-border-base px-6 py-4 xl:grid-cols-[1.8fr_1.1fr]">
+          {/* ── Revenue & Payments ── */}
+          <SectionDivider label={copy.sectionRevenue} />
+          <div className="grid grid-cols-1 gap-6 px-6 pb-4 xl:grid-cols-[1.8fr_1.1fr]">
+            {/* Revenue area chart — monthly amounts are continuous accumulation, area chart is correct */}
             <div className="rounded-md border border-ui-border-base bg-ui-bg-base p-4">
               <div className="flex items-center justify-between">
                 <Text size="small" leading="compact" weight="plus">
@@ -802,6 +856,173 @@ const AureliaDashboardPage = () => {
               </div>
             </div>
 
+            {/* Payment status mix — horizontal bars are correct for part-to-whole */}
+            <div className="rounded-md border border-ui-border-base bg-ui-bg-base p-4">
+              <Text size="small" leading="compact" weight="plus">
+                {copy.paymentMix}
+              </Text>
+              {data.paymentMix.length ? (
+                <div className="mt-4 space-y-4">
+                  {data.paymentMix.map((status, index) => (
+                    <div key={status.label}>
+                      <div className="flex items-center justify-between">
+                        <Text size="small" leading="compact" weight="plus">
+                          {status.label}
+                        </Text>
+                        <div className="flex items-center gap-2">
+                          <Text size="small" leading="compact" className="text-ui-fg-subtle">
+                            {status.total.toLocaleString(locale)}
+                          </Text>
+                          <Text size="small" leading="compact" weight="plus">
+                            {status.percent}%
+                          </Text>
+                        </div>
+                      </div>
+                      <div className="mt-1.5 h-2 rounded-full bg-ui-bg-subtle">
+                        <div
+                          className="h-full rounded-full"
+                          style={{
+                            backgroundColor: DONUT_COLORS[index % DONUT_COLORS.length],
+                            width: `${status.percent}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <Text size="small" leading="compact" className="mt-3 text-ui-fg-subtle">
+                  {copy.noOrders}
+                </Text>
+              )}
+            </div>
+          </div>
+
+          {/* ── Order Volume ── */}
+          {/* Bar charts: discrete counts per period are better as bars than area/line */}
+          <SectionDivider label={copy.sectionVolume} />
+          <div className="grid grid-cols-1 gap-6 px-6 pb-4 xl:grid-cols-2">
+            {/* Weekly orders — bar chart */}
+            <div className="rounded-md border border-ui-border-base bg-ui-bg-base p-4">
+              <Text size="small" leading="compact" weight="plus">
+                {copy.weeklyOrders}
+              </Text>
+              <div className="mt-3">
+                <div className="relative h-44 w-full">
+                  {(() => {
+                    const maxVal = Math.max(...data.weeklyOrderTrend.map((p) => p.value), 1)
+                    const n = data.weeklyOrderTrend.length
+                    const gap = 100 / n
+                    const barW = gap * 0.65
+                    const barOffset = gap * 0.175
+                    return (
+                      <svg
+                        className="h-full w-full"
+                        viewBox="0 0 100 100"
+                        preserveAspectRatio="none"
+                      >
+                        {data.weeklyOrderTrend.map((point, i) => {
+                          const barH = (point.value / maxVal) * 88
+                          return (
+                            <rect
+                              key={i}
+                              x={i * gap + barOffset}
+                              y={100 - barH}
+                              width={barW}
+                              height={barH}
+                              fill="#0f172a"
+                              opacity={0.75}
+                              rx={0.5}
+                            />
+                          )
+                        })}
+                      </svg>
+                    )
+                  })()}
+                  {/* X-axis labels — show every 3rd week to avoid crowding */}
+                  <div className="absolute inset-0 flex items-end justify-between px-1">
+                    {data.weeklyOrderTrend.map((point, index) =>
+                      index % 3 === 0 ? (
+                        <Text
+                          key={`${point.week}-${index}`}
+                          size="small"
+                          leading="compact"
+                          className="text-ui-fg-subtle"
+                        >
+                          {point.week}
+                        </Text>
+                      ) : (
+                        <span key={`${point.week}-${index}`} />
+                      )
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Daily orders — bar chart */}
+            <div className="rounded-md border border-ui-border-base bg-ui-bg-base p-4">
+              <Text size="small" leading="compact" weight="plus">
+                {copy.dailyOrders}
+              </Text>
+              <div className="mt-3">
+                <div className="relative h-44 w-full">
+                  {(() => {
+                    const maxVal = Math.max(...data.dailyOrderTrend.map((p) => p.value), 1)
+                    const n = data.dailyOrderTrend.length
+                    const gap = 100 / n
+                    const barW = gap * 0.65
+                    const barOffset = gap * 0.175
+                    return (
+                      <svg
+                        className="h-full w-full"
+                        viewBox="0 0 100 100"
+                        preserveAspectRatio="none"
+                      >
+                        {data.dailyOrderTrend.map((point, i) => {
+                          const barH = (point.value / maxVal) * 88
+                          return (
+                            <rect
+                              key={i}
+                              x={i * gap + barOffset}
+                              y={100 - barH}
+                              width={barW}
+                              height={barH}
+                              fill="#1e40af"
+                              opacity={0.75}
+                              rx={0.5}
+                            />
+                          )
+                        })}
+                      </svg>
+                    )
+                  })()}
+                  {/* X-axis labels — show every 2nd day */}
+                  <div className="absolute inset-0 flex items-end justify-between px-1">
+                    {data.dailyOrderTrend.map((point, index) =>
+                      index % 2 === 0 ? (
+                        <Text
+                          key={point.day}
+                          size="small"
+                          leading="compact"
+                          className="text-ui-fg-subtle"
+                        >
+                          {point.day}
+                        </Text>
+                      ) : (
+                        <span key={point.day} />
+                      )
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Fulfillment & Channels ── */}
+          <SectionDivider label={copy.sectionFulfillment} />
+          <div className="grid grid-cols-1 gap-6 px-6 pb-4 xl:grid-cols-[1.1fr_1.8fr]">
+            {/* Fulfillment donut */}
             <div className="rounded-md border border-ui-border-base bg-ui-bg-base p-4">
               <Text size="small" leading="compact" weight="plus">
                 {copy.fulfillmentMix}
@@ -859,155 +1080,8 @@ const AureliaDashboardPage = () => {
                 </Text>
               )}
             </div>
-          </div>
 
-          {/* ── Weekly Trend + Payment Mix ── */}
-          <div className="grid grid-cols-1 gap-6 border-t border-ui-border-base px-6 py-4 xl:grid-cols-2">
-            <div className="rounded-md border border-ui-border-base bg-ui-bg-base p-4">
-              <div className="flex items-center justify-between">
-                <Text size="small" leading="compact" weight="plus">
-                  {copy.weeklyOrders}
-                </Text>
-                <Text size="small" leading="compact" className="text-ui-fg-subtle">
-                  {copy.weeklyOrdersHint}
-                </Text>
-              </div>
-              <div className="mt-3">
-                <div className="relative h-52 w-full">
-                  <svg className="h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-                    <defs>
-                      <linearGradient id="aureliaWeeklyGradient" x1="0" x2="0" y1="0" y2="1">
-                        <stop offset="0%" stopColor="#0f172a" stopOpacity="0.18" />
-                        <stop offset="100%" stopColor="#0f172a" stopOpacity="0" />
-                      </linearGradient>
-                    </defs>
-                    {(() => {
-                      const points = buildTrendPolylinePoints(
-                        data.weeklyOrderTrend.map((point) => point.value)
-                      )
-                      if (!points) return null
-
-                      return (
-                        <>
-                          <polygon fill="url(#aureliaWeeklyGradient)" points={`0,100 ${points} 100,100`} />
-                          <polyline
-                            fill="none"
-                            stroke="#0f172a"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                            points={points}
-                          />
-                        </>
-                      )
-                    })()}
-                  </svg>
-                  <div className="absolute inset-0 flex items-end justify-between px-1">
-                    {data.weeklyOrderTrend.map((point, index) =>
-                      index % 3 === 0 ? (
-                        <Text
-                          key={`${point.week}-${index}`}
-                          size="small"
-                          leading="compact"
-                          className="text-ui-fg-subtle"
-                        >
-                          {point.week}
-                        </Text>
-                      ) : (
-                        <span key={`${point.week}-${index}`} />
-                      )
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-md border border-ui-border-base bg-ui-bg-base p-4">
-              <Text size="small" leading="compact" weight="plus">
-                {copy.paymentMix}
-              </Text>
-              {data.paymentMix.length ? (
-                <div className="mt-4 space-y-3">
-                  {data.paymentMix.map((status, index) => (
-                    <div key={status.label}>
-                      <div className="flex items-center justify-between">
-                        <Text size="small" leading="compact" weight="plus">
-                          {status.label}
-                        </Text>
-                        <Text size="small" leading="compact" className="text-ui-fg-subtle">
-                          {status.percent}%
-                        </Text>
-                      </div>
-                      <div className="mt-1 h-2 rounded-full bg-ui-bg-subtle">
-                        <div
-                          className="h-full rounded-full"
-                          style={{
-                            backgroundColor: DONUT_COLORS[index % DONUT_COLORS.length],
-                            width: `${status.percent}%`,
-                          }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <Text size="small" leading="compact" className="mt-3 text-ui-fg-subtle">
-                  {copy.noOrders}
-                </Text>
-              )}
-            </div>
-          </div>
-
-          {/* ── Daily Orders (14 days) + Sales Channel Breakdown ── */}
-          <div className="grid grid-cols-1 gap-6 border-t border-ui-border-base px-6 py-4 xl:grid-cols-2">
-            <div className="rounded-md border border-ui-border-base bg-ui-bg-base p-4">
-              <Text size="small" leading="compact" weight="plus">
-                {copy.dailyOrders}
-              </Text>
-              <div className="mt-3">
-                <div className="relative h-52 w-full">
-                  <svg className="h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-                    <defs>
-                      <linearGradient id="aureliaDailyGradient" x1="0" x2="0" y1="0" y2="1">
-                        <stop offset="0%" stopColor="#1e40af" stopOpacity="0.16" />
-                        <stop offset="100%" stopColor="#1e40af" stopOpacity="0" />
-                      </linearGradient>
-                    </defs>
-                    {(() => {
-                      const points = buildTrendPolylinePoints(
-                        data.dailyOrderTrend.map((point) => point.value)
-                      )
-                      if (!points) return null
-
-                      return (
-                        <>
-                          <polygon fill="url(#aureliaDailyGradient)" points={`0,100 ${points} 100,100`} />
-                          <polyline
-                            fill="none"
-                            stroke="#1e40af"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                            points={points}
-                          />
-                        </>
-                      )
-                    })()}
-                  </svg>
-                  <div className="absolute inset-0 flex items-end justify-between px-1">
-                    {data.dailyOrderTrend.map((point) => (
-                      <Text
-                        key={point.day}
-                        size="small"
-                        leading="compact"
-                        className="text-ui-fg-subtle"
-                      >
-                        {point.day}
-                      </Text>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-
+            {/* Sales channels horizontal bars */}
             <div className="rounded-md border border-ui-border-base bg-ui-bg-base p-4">
               <Text size="small" leading="compact" weight="plus">
                 {copy.channelBreakdown}
@@ -1063,8 +1137,10 @@ const AureliaDashboardPage = () => {
             </div>
           </div>
 
-          {/* ── Top Customers + Latest Orders ── */}
-          <div className="grid grid-cols-1 gap-6 border-t border-ui-border-base px-6 py-4 xl:grid-cols-2">
+          {/* ── Customers & Orders ── */}
+          <SectionDivider label={copy.sectionCustomers} />
+          <div className="grid grid-cols-1 gap-6 px-6 pb-6 xl:grid-cols-2">
+            {/* Top customers horizontal bars */}
             <div className="rounded-md border border-ui-border-base bg-ui-bg-base p-4">
               <Text size="small" leading="compact" weight="plus">
                 {copy.topCustomers}
@@ -1076,27 +1152,44 @@ const AureliaDashboardPage = () => {
                 <div className="mt-4 space-y-3">
                   {(() => {
                     const peak = Math.max(...data.topCustomers.map((entry) => entry.revenue), 1)
-                    return data.topCustomers.map((entry) => {
+                    return data.topCustomers.map((entry, index) => {
                       const width = Math.round((entry.revenue / peak) * 100)
+                      // Show rank number + truncated email for readability
+                      const emailDisplay =
+                        entry.email.length > 28
+                          ? `${entry.email.slice(0, 14)}…${entry.email.slice(entry.email.lastIndexOf("@"))}`
+                          : entry.email
                       return (
                         <div key={entry.email} className="rounded-md border border-ui-border-base p-3">
                           <div className="flex items-center justify-between">
-                            <Text
-                              size="small"
-                              leading="compact"
-                              weight="plus"
-                              className="truncate"
-                            >
-                              {entry.email}
-                            </Text>
-                            <Text size="small" leading="compact" className="text-ui-fg-subtle">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span
+                                className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-ui-fg-on-inverted"
+                                style={{ backgroundColor: CHANNEL_COLORS[index % CHANNEL_COLORS.length], fontSize: "0.65rem", fontWeight: 700 }}
+                              >
+                                {index + 1}
+                              </span>
+                              <Text
+                                size="small"
+                                leading="compact"
+                                weight="plus"
+                                className="truncate"
+                              >
+                                {emailDisplay}
+                              </Text>
+                            </div>
+                            <Text size="small" leading="compact" className="ml-2 shrink-0 text-ui-fg-subtle">
                               {formatCurrency(entry.revenue, data.currencyCode, locale)}
                             </Text>
                           </div>
-                          <div className="mt-2 h-2 rounded-full bg-ui-bg-subtle">
+                          <div className="mt-2 h-1.5 rounded-full bg-ui-bg-subtle">
                             <div
-                              className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-200"
-                              style={{ width: `${Math.max(width, 4)}%` }}
+                              className="h-full rounded-full"
+                              style={{
+                                backgroundColor: CHANNEL_COLORS[index % CHANNEL_COLORS.length],
+                                width: `${Math.max(width, 4)}%`,
+                                opacity: 0.7,
+                              }}
                             />
                           </div>
                         </div>
@@ -1111,6 +1204,7 @@ const AureliaDashboardPage = () => {
               )}
             </div>
 
+            {/* Latest orders list */}
             <div className="rounded-md border border-ui-border-base bg-ui-bg-base p-4">
               <Text size="small" leading="compact" weight="plus">
                 {copy.latestOrders}
@@ -1122,9 +1216,12 @@ const AureliaDashboardPage = () => {
                       key={order.id}
                       className="flex items-center justify-between rounded-md border border-ui-border-base bg-ui-bg-base px-4 py-3"
                     >
-                      <div className="flex flex-col">
+                      <div className="flex flex-col min-w-0">
                         <Text size="small" leading="compact" weight="plus">
                           #{order.display_id ?? order.id.slice(0, 8)}
+                        </Text>
+                        <Text size="small" leading="compact" className="truncate text-ui-fg-subtle">
+                          {order.email ?? copy.unknown}
                         </Text>
                         <Text size="small" leading="compact" className="text-ui-fg-subtle">
                           {order.created_at
@@ -1132,7 +1229,7 @@ const AureliaDashboardPage = () => {
                             : copy.unknown}
                         </Text>
                       </div>
-                      <div className="text-right">
+                      <div className="ml-3 shrink-0 text-right">
                         <Text size="small" leading="compact" weight="plus">
                           {formatCurrency(
                             Number(order.total) || 0,
@@ -1153,45 +1250,6 @@ const AureliaDashboardPage = () => {
                 </Text>
               )}
             </div>
-          </div>
-
-          {/* ── Status Leaderboard ── */}
-          <div className="border-t border-ui-border-base px-6 py-4">
-            <Text size="small" leading="compact" weight="plus">
-              {copy.statusLeaderboard}
-            </Text>
-            {data.workflowMix.length ? (
-              <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
-                {data.workflowMix.map((status, index) => (
-                  <div
-                    key={status.label}
-                    className="rounded-md border border-ui-border-base bg-ui-bg-base px-4 py-3"
-                  >
-                    <div className="flex items-center justify-between">
-                      <Text size="small" leading="compact" weight="plus">
-                        {status.label}
-                      </Text>
-                      <Text size="small" leading="compact" className="text-ui-fg-subtle">
-                        {status.percent}%
-                      </Text>
-                    </div>
-                    <div className="mt-2 h-2 rounded-full bg-ui-bg-subtle">
-                      <div
-                        className="h-full rounded-full"
-                        style={{
-                          backgroundColor: DONUT_COLORS[index % DONUT_COLORS.length],
-                          width: `${status.percent}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <Text size="small" leading="compact" className="mt-2 text-ui-fg-subtle">
-                {copy.noOrders}
-              </Text>
-            )}
           </div>
         </div>
       ) : null}

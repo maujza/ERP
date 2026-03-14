@@ -5,6 +5,9 @@ loadEnv(process.env.NODE_ENV || 'development', process.cwd())
 const forceInsecureCookies = process.env.MEDUSA_FORCE_INSECURE_COOKIES === "true"
 
 module.exports = defineConfig({
+  modules: [
+    { resolve: "./src/modules/purchaseDepartment" },
+  ],
   projectConfig: {
     databaseUrl: process.env.DATABASE_URL,
     http: {
