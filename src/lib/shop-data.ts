@@ -31,7 +31,7 @@ export const sortOptions = [
   { id: "price_desc" as SortOption, label: "Precio: mayor" },
 ];
 
-export const jewelryCategories = ["Aros", "Collares", "Pulseras", "Sets", "Kits", "Anillos", "Perlas"];
+const jewelryCategories = ["Aros", "Collares", "Pulseras", "Sets", "Kits", "Anillos", "Perlas"];
 export const navCategories = ["Novedades", "Best Sellers", ...jewelryCategories];
 
 export const subcategories = ["Todos", "Novedades", "Best Sellers", "Esenciales", "Fiesta", "Kits"];

@@ -5,6 +5,7 @@ import {
 } from "@medusajs/framework/http"
 import { createFindParams } from "@medusajs/medusa/api/utils/validators"
 import { z } from "zod"
+import { requireRole, ROLES } from "../lib/rbac"
 
 // --- Supplier schemas ---
 
@@ -52,11 +53,12 @@ export const GetListSchema = createFindParams()
 
 export default defineMiddlewares({
   routes: [
-    // Supplier list
+    // Supplier list — purchasing only
     {
       matcher: "/admin/purchase/suppliers",
       method: "GET",
       middlewares: [
+        requireRole([ROLES.PURCHASING]),
         validateAndTransformQuery(GetListSchema, {
           defaults: ["id", "name", "email", "phone", "address", "notes", "created_at"],
           isList: true,
@@ -67,18 +69,29 @@ export default defineMiddlewares({
     {
       matcher: "/admin/purchase/suppliers",
       method: "POST",
-      middlewares: [validateAndTransformBody(CreateSupplierSchema)],
+      middlewares: [requireRole([ROLES.PURCHASING]), validateAndTransformBody(CreateSupplierSchema)],
     },
     {
       matcher: "/admin/purchase/suppliers/:id",
       method: "POST",
-      middlewares: [validateAndTransformBody(UpdateSupplierSchema)],
+      middlewares: [requireRole([ROLES.PURCHASING]), validateAndTransformBody(UpdateSupplierSchema)],
     },
-    // Purchase order list
+    {
+      matcher: "/admin/purchase/suppliers/:id",
+      method: "GET",
+      middlewares: [requireRole([ROLES.PURCHASING])],
+    },
+    {
+      matcher: "/admin/purchase/suppliers/:id",
+      method: "DELETE",
+      middlewares: [requireRole([ROLES.PURCHASING])],
+    },
+    // Purchase order list — purchasing + inventory (read)
     {
       matcher: "/admin/purchase/orders",
       method: "GET",
       middlewares: [
+        requireRole([ROLES.PURCHASING, ROLES.INVENTORY]),
         validateAndTransformQuery(GetListSchema, {
           defaults: [
             "id",
@@ -97,13 +110,28 @@ export default defineMiddlewares({
     {
       matcher: "/admin/purchase/orders",
       method: "POST",
-      middlewares: [validateAndTransformBody(CreatePurchaseOrderSchema)],
+      middlewares: [requireRole([ROLES.PURCHASING]), validateAndTransformBody(CreatePurchaseOrderSchema)],
     },
-    // Receive a PO
+    {
+      matcher: "/admin/purchase/orders/:id",
+      method: "GET",
+      middlewares: [requireRole([ROLES.PURCHASING, ROLES.INVENTORY])],
+    },
+    {
+      matcher: "/admin/purchase/orders/:id/submit",
+      method: "POST",
+      middlewares: [requireRole([ROLES.PURCHASING])],
+    },
+    {
+      matcher: "/admin/purchase/orders/:id/cancel",
+      method: "POST",
+      middlewares: [requireRole([ROLES.PURCHASING])],
+    },
+    // Receive a PO — inventory + purchasing
     {
       matcher: "/admin/purchase/orders/:id/receive",
       method: "POST",
-      middlewares: [validateAndTransformBody(ReceivePurchaseOrderSchema)],
+      middlewares: [requireRole([ROLES.INVENTORY, ROLES.PURCHASING]), validateAndTransformBody(ReceivePurchaseOrderSchema)],
     },
   ],
 })

@@ -104,13 +104,13 @@ describe("when WHATSAPP_NOTIFICATION_ROLES is set", () => {
     process.env.WHATSAPP_NOTIFICATION_ROLES = "admin,manager"
   })
 
-  it("allows a user whose notification_roles array contains a matching role", async () => {
+  it("allows a user whose metadata.role matches", async () => {
     const res = makeRes()
-    await GET(makeReq({ email: "u@x.com", metadata: { notification_roles: ["admin", "viewer"] } }), res)
+    await GET(makeReq({ email: "u@x.com", metadata: { role: "admin" } }), res)
     expect(lastJsonArg(res).can_receive).toBe(true)
   })
 
-  it("allows a user whose `role` string metadata matches", async () => {
+  it("allows a user whose metadata.role matches another allowed role", async () => {
     const res = makeRes()
     await GET(makeReq({ email: "u@x.com", metadata: { role: "manager" } }), res)
     expect(lastJsonArg(res).can_receive).toBe(true)
@@ -134,15 +134,15 @@ describe("when WHATSAPP_NOTIFICATION_ROLES is set", () => {
     expect(lastJsonArg(res).can_receive).toBe(true)
   })
 
-  it("handles notification_roles with mixed case values", async () => {
+  it("handles metadata.role with mixed case values", async () => {
     const res = makeRes()
-    await GET(makeReq({ email: "u@x.com", metadata: { notification_roles: ["MANAGER"] } }), res)
+    await GET(makeReq({ email: "u@x.com", metadata: { role: "MANAGER" } }), res)
     expect(lastJsonArg(res).can_receive).toBe(true)
   })
 
-  it("ignores notification_roles when the value is an unexpected type (number)", async () => {
+  it("ignores metadata.role when the value is an unexpected type (number)", async () => {
     const res = makeRes()
-    await GET(makeReq({ email: "u@x.com", metadata: { notification_roles: 42 } }), res)
+    await GET(makeReq({ email: "u@x.com", metadata: { role: 42 } }), res)
     expect(lastJsonArg(res).can_receive).toBe(false)
   })
 })

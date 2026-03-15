@@ -9,7 +9,7 @@ import {
   useSyncExternalStore,
 } from "react";
 
-export type Language = "es" | "ko";
+type Language = "es" | "ko";
 
 export const SUPPORTED_LANGUAGES: { code: Language; label: string }[] = [
   { code: "es", label: "Español" },

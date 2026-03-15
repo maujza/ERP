@@ -80,6 +80,21 @@ Auth uses `emailpass` for both customers and admin users. CORS origins are confi
 - Backend unit tests use the naming pattern `*.unit.spec.ts` inside `__tests__/` directories.
 - Frontend tests use Vitest with jsdom; setup file at `src/test/setup.ts` clears localStorage before each test.
 
+## gstack
+
+Use the `/browse` skill from gstack for **all web browsing**. Never use `mcp__claude-in-chrome__*` tools.
+
+Available gstack skills:
+
+- `/plan-ceo-review` — review a plan from a CEO/product perspective
+- `/plan-eng-review` — review a plan from an engineering perspective
+- `/review` — code review
+- `/ship` — ship a feature end-to-end
+- `/browse` — browse the web with a real browser
+- `/qa` — QA a feature
+- `/setup-browser-cookies` — configure browser session cookies
+- `/retro` — run a retrospective
+
 ## Environment Variables
 
 **Frontend** (`.env.local`):
