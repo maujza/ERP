@@ -10,6 +10,7 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "test:admin": "vitest run --config vitest.admin.config.ts",
     "compose:up": "./scripts/compose-up.sh",
     "medusa:sync-env": "./scripts/sync-medusa-env.sh"
   },
