@@ -1,15 +1,20 @@
 import type {
   AuthenticatedMedusaRequest,
   MedusaNextFunction,
+  MedusaRequest,
   MedusaResponse,
 } from "@medusajs/framework/http"
 
-// ─── Role constants ───────────────────────────────────────────────────────────
+// Role constants live in admin/lib/roles.ts so they are importable by both
+// the backend (here) and the admin UI Vite bundle (widgets).
+export { ROLES, type Role } from "../admin/lib/roles"
+import { ROLES, type Role } from "../admin/lib/roles"
+
+// ─── Route permission matrix ──────────────────────────────────────────────────
 //
 //  Role is stored as user.metadata.role (single string, lowercase).
 //  Setting a role: PATCH /admin/users/:id  { metadata: { role: "purchasing" } }
 //
-//  Route permission matrix:
 //  ┌──────────────────┬───────────────────────────────────────────────────┐
 //  │ Role             │ Permitted routes                                  │
 //  ├──────────────────┼───────────────────────────────────────────────────┤
@@ -22,16 +27,6 @@ import type {
 //
 //  "admin" role bypasses every requireRole check regardless of allowedRoles.
 //  Users with no metadata.role set → 403 (explicit fail, not pass-through).
-
-export const ROLES = {
-  ADMIN: "admin",
-  INVENTORY: "inventory",
-  PURCHASING: "purchasing",
-  MARKETING: "marketing",
-  CUSTOMER_SERVICE: "customer_service",
-} as const
-
-export type Role = (typeof ROLES)[keyof typeof ROLES]
 
 // ─── Pure helpers ─────────────────────────────────────────────────────────────
 
@@ -99,13 +94,10 @@ export async function getUserRole(
  */
 export function requireRole(
   allowedRoles: Role[]
-): (
-  req: AuthenticatedMedusaRequest,
-  res: MedusaResponse,
-  next: MedusaNextFunction
-) => Promise<void> {
+): (req: MedusaRequest, res: MedusaResponse, next: MedusaNextFunction) => Promise<void> {
   return async (req, res, next) => {
-    const role = await getUserRole(req.auth_context.actor_id, req.scope as MedusaScope)
+    const authReq = req as AuthenticatedMedusaRequest
+    const role = await getUserRole(authReq.auth_context.actor_id, req.scope as MedusaScope)
 
     if (role === ROLES.ADMIN || (role !== null && allowedRoles.includes(role))) {
       return next()
