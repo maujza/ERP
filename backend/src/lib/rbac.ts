@@ -105,6 +105,10 @@ export function requireRole(
 ): (req: MedusaRequest, res: MedusaResponse, next: MedusaNextFunction) => Promise<void> {
   return async (req, res, next) => {
     const authReq = req as AuthenticatedMedusaRequest
+    if (!authReq.auth_context?.actor_id) {
+      res.status(401).json({ message: "Unauthorized" })
+      return
+    }
     const role = await getUserRole(authReq.auth_context.actor_id, req.scope as MedusaScope)
 
     if (role === ROLES.ADMIN || (role !== null && allowedRoles.includes(role))) {
@@ -112,5 +116,6 @@ export function requireRole(
     }
 
     res.status(403).json({ message: "Forbidden" })
+    return
   }
 }

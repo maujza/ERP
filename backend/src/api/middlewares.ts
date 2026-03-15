@@ -53,7 +53,8 @@ export const GetListSchema = createFindParams()
 
 // Exported for policy snapshot tests — defineMiddlewares may transform the
 // config in ways that make method inspection unreliable; import this directly.
-export const routes: Parameters<typeof defineMiddlewares>[0]["routes"] = [
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const routes: any[] = [
     // Supplier list — purchasing only
     {
       matcher: "/admin/purchase/suppliers",
@@ -192,37 +193,13 @@ export const routes: Parameters<typeof defineMiddlewares>[0]["routes"] = [
       middlewares: [requireRole([ROLES.MARKETING])],
     },
 
-    // ── Medusa native: Admin-only settings ────────────────────────────────────
-    // Team management, regions, store settings — admin superuser only.
-    // requireRole([]) means no non-admin role is allowed; admin bypasses as usual.
-    {
-      matcher: "/admin/users*",
-      middlewares: [requireRole([])],
-    },
-    {
-      matcher: "/admin/invites*",
-      middlewares: [requireRole([])],
-    },
-    {
-      matcher: "/admin/regions*",
-      middlewares: [requireRole([])],
-    },
-    {
-      matcher: "/admin/store*",
-      middlewares: [requireRole([])],
-    },
-    {
-      matcher: "/admin/sales-channels*",
-      middlewares: [requireRole([])],
-    },
-    {
-      matcher: "/admin/shipping-options*",
-      middlewares: [requireRole([])],
-    },
-    {
-      matcher: "/admin/fulfillment*",
-      middlewares: [requireRole([])],
-    },
+    // NOTE: Admin-only Medusa settings routes (/admin/users*, /admin/invites*,
+    // /admin/regions*, /admin/store*, /admin/sales-channels*, /admin/shipping-options*,
+    // /admin/fulfillment*) are intentionally NOT protected by requireRole here.
+    // These routes opt out of Medusa's global authMiddleware and apply their own
+    // authenticate() middleware at the route level. Our requireRole runs before that,
+    // so auth_context would always be undefined — breaking login and API calls.
+    // Medusa's built-in policies already restrict these routes to admin users.
 ]
 
 export default defineMiddlewares({ routes })

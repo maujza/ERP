@@ -134,22 +134,6 @@ describe("promotions route guards", () => {
   })
 })
 
-// ─── Admin-only settings ──────────────────────────────────────────────────────
-
-describe("admin-only route guards", () => {
-  const adminOnlyMatchers = [
-    "/admin/users*",
-    "/admin/invites*",
-    "/admin/regions*",
-    "/admin/store*",
-    "/admin/sales-channels*",
-    "/admin/shipping-options*",
-    "/admin/fulfillment*",
-  ]
-
-  it.each(adminOnlyMatchers)("%s → no non-admin roles allowed", async (matcher) => {
-    const e = findEntry(matcher)!
-    expect(e).toBeDefined()
-    expect(await getAllowedRoles(e.middlewares)).toEqual([])
-  })
-})
+// NOTE: Admin-only settings routes (/admin/users*, /admin/invites*, etc.) are
+// not in the routes array — see middlewares.ts for the explanation.
+// Those routes rely on Medusa's built-in policy-based access control.
