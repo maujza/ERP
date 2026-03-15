@@ -818,6 +818,27 @@ export default async function seedAureliaData({ container }: ExecArgs) {
     logger.info(`Dummy orders already satisfy target (${existingSeededOrders.length}/${ORDER_TARGET}).`);
   }
 
+  // ── Ensure the initial admin user has the "admin" role ───────────────────────
+  // npx medusa user creates the user with no metadata.role, which causes 403 on
+  // all RBAC-protected routes. Find the user by MEDUSA_ADMIN_EMAIL and set role.
+  const adminEmail = process.env.MEDUSA_ADMIN_EMAIL || "admin@aurelia.com"
+  try {
+    const userModule: any = container.resolve(Modules.USER)
+    const [adminUser] = await userModule.listUsers({ email: adminEmail })
+    if (adminUser) {
+      if (adminUser.metadata?.role !== "admin") {
+        await userModule.updateUsers([{ id: adminUser.id, metadata: { role: "admin" } }])
+        logger.info(`Set metadata.role=admin on ${adminEmail}`)
+      } else {
+        logger.info(`${adminEmail} already has role=admin`)
+      }
+    } else {
+      logger.warn(`Admin user ${adminEmail} not found — skipping role assignment`)
+    }
+  } catch (err: any) {
+    logger.warn(`Could not set admin role: ${err?.message}`)
+  }
+
   // ── Done ──────────────────────────────────────────────────────────────────────
   logger.info("═".repeat(60));
   logger.info("Aurelia seed complete! ✓");
