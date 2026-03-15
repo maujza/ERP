@@ -35,7 +35,11 @@ async function sendInviteEmail(
   })
 
   const invite = data[0] as InviteRecord | undefined
-  if (!invite) return
+  if (!invite) {
+    const logger = container.resolve("logger") as { warn: (msg: string) => void }
+    logger.warn(`invite-created: invite ${inviteId} not found, skipping email`)
+    return
+  }
 
   const adminUrl =
     process.env.MEDUSA_ADMIN_URL?.replace(/\/$/, "") ||
