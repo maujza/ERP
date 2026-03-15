@@ -51,6 +51,20 @@ Deferred work, vision items, and known gaps. Created from plan-ceo-review sessio
 
 ---
 
+### [P3] [S] Cache current admin user identity in a React context
+
+**What:** Share the result of `sdk.admin.user.me()` via a React context (or React Query global) across all admin widgets, instead of each widget calling it independently.
+
+**Why:** The role assignment widget calls `me()` to guard against self-demotion. As more widgets need the current user's identity (e.g., showing "you" labels, permission hints), each will add an extra HTTP call on page load.
+
+**How to apply:** Create `backend/src/admin/lib/use-current-user.ts` — a React Query hook that caches the result of `sdk.admin.user.me()` with a stale-time of a few minutes. All widgets use this hook. Single deduped request.
+
+**Trigger condition:** 3+ widgets need `me()`, or performance profiling shows repeated identical requests in the network tab.
+
+**Effort:** S | **Priority:** P3 | **Depends on:** Role assignment widget (above).
+
+---
+
 ### [P3] [M] JWT role caching (future optimization)
 
 **What:** Embed the user's role in the JWT payload at login time so `requireRole` middleware doesn't need an extra DB query per request.
