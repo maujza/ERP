@@ -37,18 +37,17 @@ services:
     environment:
       NODE_ENV: production
       DATABASE_URL: postgres://medusa:medusa@db:5432/medusa?sslmode=disable
-      STORE_CORS: http://localhost:7358,http://127.0.0.1:7358,http://localhost:8081,http://127.0.0.1:8081,http://localhost:9000,http://127.0.0.1:9000,http://pione:7358,http://pione:8081,http://pione:9000,https://pos.aurelia.gleeze.com
-      ADMIN_CORS: http://localhost:8081,http://127.0.0.1:8081,http://localhost:9000,http://127.0.0.1:9000,http://pione:8081,http://pione:9000,https://pos.aurelia.gleeze.com
-      AUTH_CORS: http://localhost:7358,http://127.0.0.1:7358,http://localhost:8081,http://127.0.0.1:8081,http://localhost:9000,http://127.0.0.1:9000,http://pione:7358,http://pione:8081,http://pione:9000,https://pos.aurelia.gleeze.com
-      JWT_SECRET: supersecret
-      COOKIE_SECRET: supersecret
-      MEDUSA_FORCE_INSECURE_COOKIES: "true"
-      MEDUSA_ADMIN_EMAIL: admin@aurelia.com
-      MEDUSA_ADMIN_PASSWORD: supersecret
-      # SendGrid — invite emails (fill in before deploying)
-      SENDGRID_API_KEY: ""
-      SENDGRID_FROM: "no-reply@aurelia.com"
-      MEDUSA_ADMIN_URL: "https://pos.aurelia.gleeze.com"
+      STORE_CORS: ${STORE_CORS:-http://localhost:7358,http://127.0.0.1:7358,http://localhost:8081,http://127.0.0.1:8081,http://localhost:9000,http://127.0.0.1:9000,http://pione:7358,http://pione:8081,http://pione:9000}
+      ADMIN_CORS: ${ADMIN_CORS:-http://localhost:8081,http://127.0.0.1:8081,http://localhost:9000,http://127.0.0.1:9000,http://pione:8081,http://pione:9000}
+      AUTH_CORS: ${AUTH_CORS:-http://localhost:7358,http://127.0.0.1:7358,http://localhost:8081,http://127.0.0.1:8081,http://localhost:9000,http://127.0.0.1:9000,http://pione:7358,http://pione:8081,http://pione:9000}
+      JWT_SECRET: ${JWT_SECRET:-supersecret}
+      COOKIE_SECRET: ${COOKIE_SECRET:-supersecret}
+      MEDUSA_FORCE_INSECURE_COOKIES: ${MEDUSA_FORCE_INSECURE_COOKIES:-true}
+      MEDUSA_ADMIN_EMAIL: ${MEDUSA_ADMIN_EMAIL:-admin@aurelia.com}
+      MEDUSA_ADMIN_PASSWORD: ${MEDUSA_ADMIN_PASSWORD:-supersecret}
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY:-}
+      SENDGRID_FROM: ${SENDGRID_FROM:-no-reply@aurelia.com}
+      MEDUSA_ADMIN_URL: ${MEDUSA_ADMIN_URL:-http://localhost:9000}
     depends_on:
       db:
         condition: service_healthy
