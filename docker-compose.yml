@@ -45,6 +45,10 @@ services:
       MEDUSA_FORCE_INSECURE_COOKIES: "true"
       MEDUSA_ADMIN_EMAIL: admin@aurelia.com
       MEDUSA_ADMIN_PASSWORD: supersecret
+      # SendGrid — invite emails (fill in before deploying)
+      SENDGRID_API_KEY: ""
+      SENDGRID_FROM: "no-reply@aurelia.com"
+      MEDUSA_ADMIN_URL: "https://pos.aurelia.gleeze.com"
     depends_on:
       db:
         condition: service_healthy

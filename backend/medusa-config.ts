@@ -7,6 +7,22 @@ const forceInsecureCookies = process.env.MEDUSA_FORCE_INSECURE_COOKIES === "true
 module.exports = defineConfig({
   modules: [
     { resolve: "./src/modules/purchaseDepartment" },
+    {
+      resolve: "@medusajs/medusa/notification",
+      options: {
+        providers: [
+          {
+            resolve: "@medusajs/notification-sendgrid",
+            id: "sendgrid",
+            options: {
+              channels: ["email"],
+              api_key: process.env.SENDGRID_API_KEY,
+              from: process.env.SENDGRID_FROM,
+            },
+          },
+        ],
+      },
+    },
   ],
   projectConfig: {
     databaseUrl: process.env.DATABASE_URL,
