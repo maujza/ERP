@@ -701,6 +701,19 @@ export default async function seedAureliaData({ container }: ExecArgs) {
   const orderSeedSource = "aurelia_dummy_v1";
   logger.info("Ensuring dummy orders for dashboard analytics...");
 
+  // Build email → customer_id map for linking orders to customers
+  const { data: allCustomersForOrders } = await query.graph({
+    entity: "customer",
+    fields: ["id", "email"],
+  });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const customerIdByEmail = new Map<string, string>(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (allCustomersForOrders as any[])
+      .filter((c) => c.email)
+      .map((c) => [String(c.email).toLowerCase(), String(c.id)])
+  );
+
   const { data: existingOrders } = await query.graph({
     entity: "order",
     fields: ["id", "email", "metadata"],
@@ -726,6 +739,7 @@ export default async function seedAureliaData({ container }: ExecArgs) {
     for (let i = 0; i < ordersMissing; i += 1) {
       const orderIndex = existingSeededOrders.length + i + 1;
       const email = `cliente+${String((orderIndex % CUSTOMER_TARGET) + 1).padStart(4, "0")}@${customerDomain}`;
+      const customerId = customerIdByEmail.get(email.toLowerCase());
       const itemCount = getRandomInt(1, 4);
 
       const items = Array.from({ length: itemCount }).map((_, itemIdx) => {
@@ -753,6 +767,7 @@ export default async function seedAureliaData({ container }: ExecArgs) {
         sales_channel_id: defaultSalesChannel.id,
         status: isCompleted ? "completed" : "pending",
         email,
+        ...(customerId && { customer_id: customerId }),
         currency_code: "ars",
         shipping_address: {
           first_name: "Aurelia",

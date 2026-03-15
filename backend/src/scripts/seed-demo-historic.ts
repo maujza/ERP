@@ -423,6 +423,7 @@ export default async function seedDemoHistoricData({ container }: ExecArgs) {
         ? allCustomers[globalIdx % allCustomers.length]
         : null
       const email = (customer as any)?.email ?? `demo+${globalIdx}@aurelia-demo.local`
+      const customerId: string | undefined = (customer as any)?.id
 
       const sc = salesChannelList[globalIdx % salesChannelList.length]
       const address = addresses[globalIdx % addresses.length]
@@ -452,6 +453,7 @@ export default async function seedDemoHistoricData({ container }: ExecArgs) {
           sales_channel_id: sc.id,
           status,
           email,
+          ...(customerId && { customer_id: customerId }),
           currency_code: "ars",
           shipping_address: { ...address },
           billing_address:  { ...address },
