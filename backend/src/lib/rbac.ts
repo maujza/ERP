@@ -13,17 +13,25 @@ import { ROLES, type Role } from "../admin/lib/roles"
 // ─── Route permission matrix ──────────────────────────────────────────────────
 //
 //  Role is stored as user.metadata.role (single string, lowercase).
-//  Setting a role: PATCH /admin/users/:id  { metadata: { role: "purchasing" } }
+//  Set via: PATCH /admin/users/:id  { metadata: { role: "purchasing" } }
 //
-//  ┌──────────────────┬───────────────────────────────────────────────────┐
-//  │ Role             │ Permitted routes                                  │
-//  ├──────────────────┼───────────────────────────────────────────────────┤
-//  │ admin            │ all routes (superuser — always passes)            │
-//  │ purchasing       │ /admin/purchase/suppliers, /admin/purchase/orders  │
-//  │ inventory        │ /admin/purchase/orders/:id/receive                │
-//  │ marketing        │ /admin/aurelia-dashboard (no cost_price)          │
-//  │ customer_service │ future: /admin/customer-service/*                 │
-//  └──────────────────┴───────────────────────────────────────────────────┘
+//  Legend: ✓ = allowed  r = read-only (GET)  – = denied
+//
+//  ┌──────────────────────────┬───────┬───────────┬───────────┬──────────┬──────────────┐
+//  │ Route group              │ admin │ purchasing│ inventory │ marketing│ customer_svc │
+//  ├──────────────────────────┼───────┼───────────┼───────────┼──────────┼──────────────┤
+//  │ /admin/purchase/suppliers│   ✓   │     ✓     │     –     │    –     │      –       │
+//  │ /admin/purchase/orders   │   ✓   │     ✓     │  r+receive│    –     │      –       │
+//  │ /admin/orders            │   ✓   │     –     │     –     │    –     │      ✓       │
+//  │ /admin/products          │   ✓   │     r     │     r     │    ✓     │      –       │
+//  │ /admin/customers         │   ✓   │     –     │     –     │    –     │      ✓       │
+//  │ /admin/inventory         │   ✓   │     –     │     ✓     │    –     │      –       │
+//  │ /admin/price-lists       │   ✓   │     ✓     │     –     │    –     │      –       │
+//  │ /admin/promotions        │   ✓   │     –     │     –     │    ✓     │      –       │
+//  │ /admin/users + invites   │   ✓   │     –     │     –     │    –     │      –       │
+//  │ /admin/regions + store   │   ✓   │     –     │     –     │    –     │      –       │
+//  │ /admin/sales-channels    │   ✓   │     –     │     –     │    –     │      –       │
+//  └──────────────────────────┴───────┴───────────┴───────────┴──────────┴──────────────┘
 //
 //  "admin" role bypasses every requireRole check regardless of allowedRoles.
 //  Users with no metadata.role set → 403 (explicit fail, not pass-through).

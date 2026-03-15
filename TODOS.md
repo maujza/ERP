@@ -79,6 +79,34 @@ Deferred work, vision items, and known gaps. Created from plan-ceo-review sessio
 
 ---
 
+### [P3] [S] In-process role lookup cache in requireRole
+
+**What:** Cache the result of `query.graph(user)` in `getUserRole()` using a `Map<actorId, {role, expiresAt}>` with a 60-second TTL.
+
+**Why:** With RBAC extended to all Medusa admin routes, every API call (product list, order view, etc.) now triggers a DB query to fetch the user's role. A typical admin page load issues 3–6 API calls = 3–6 sequential `query.graph` calls for the same actor. An in-process cache eliminates 90%+ of these under normal backoffice use with no visible tradeoff (role changes take effect within 60s).
+
+**How to apply:** Add a module-level `roleCache = new Map<string, { role: Role | null; expiresAt: number }>()` in `backend/src/lib/rbac.ts`. In `getUserRole()`, check the cache first; on miss, fetch from DB and store. Invalidation is time-based only (60s). This is simpler and faster to implement than the JWT embedding approach (see "JWT role caching" above), with the tradeoff that it doesn't survive process restarts and isn't shared across Node workers.
+
+**Trigger condition:** Any observable slowness in the admin panel, or before adding more admin widgets that make multiple API calls on load.
+
+**Effort:** S | **Priority:** P3 | **Depends on:** RBAC middleware with full route coverage (this sprint).
+
+---
+
+### [P3] [S] Graceful 403 handling in the Medusa admin SPA
+
+**What:** When a non-admin user navigates to a section they don't have access to (e.g., inventory user going to `/app/regions`), they currently see a blank page or a raw API error. Add a friendly "Access denied" experience.
+
+**Why:** Non-technical staff who accidentally click the wrong nav item will be confused by a blank page. A clear message ("You don't have permission to access this section") is important for usability.
+
+**How to apply:** Medusa admin UI is a compiled SPA — we can't modify its built-in pages. However, we can add a global error boundary or a custom admin widget injected at a top-level zone that detects 403 responses from the SDK and shows a toast/banner. Alternatively, document the issue for users and rely on training until Medusa exposes a hook for this.
+
+**Trigger condition:** Staff report confusion about blank pages when navigating to sections they're not allowed to access.
+
+**Effort:** S | **Priority:** P3 | **Depends on:** RBAC full route coverage (this sprint).
+
+---
+
 ## Sprint 2 — Inventory & Stock Intelligence
 
 ### [P1] [M] Integration test: PO receipt → Medusa stock update

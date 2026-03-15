@@ -120,21 +120,30 @@ The user will get 403 on all purchase routes immediately after the next request.
 
 ## Route permission matrix
 
-| Route | Method | Allowed roles |
-|---|---|---|
-| `/admin/purchase/suppliers` | GET | purchasing |
-| `/admin/purchase/suppliers` | POST | purchasing |
-| `/admin/purchase/suppliers/:id` | GET | purchasing |
-| `/admin/purchase/suppliers/:id` | POST (update) | purchasing |
-| `/admin/purchase/suppliers/:id` | DELETE | purchasing |
-| `/admin/purchase/orders` | GET | purchasing, inventory |
-| `/admin/purchase/orders` | POST | purchasing |
-| `/admin/purchase/orders/:id` | GET | purchasing, inventory |
-| `/admin/purchase/orders/:id/submit` | POST | purchasing |
-| `/admin/purchase/orders/:id/cancel` | POST | purchasing |
-| `/admin/purchase/orders/:id/receive` | POST | purchasing, inventory |
+Legend: ✓ = all methods · r = GET only · — = denied · **admin always passes**
 
-> `admin` role always passes on all routes above.
+| Route group | purchasing | inventory | marketing | customer_service |
+|---|---|---|---|---|
+| `/admin/purchase/suppliers*` | ✓ | — | — | — |
+| `/admin/purchase/orders*` | ✓ | r + receive | — | — |
+| `/admin/orders*` | — | — | — | ✓ |
+| `/admin/products*` (read) | r | r | r | — |
+| `/admin/products*` (write) | — | — | ✓ | — |
+| `/admin/customers*` | — | — | — | ✓ |
+| `/admin/inventory*` | — | ✓ | — | — |
+| `/admin/stock-locations*` | — | ✓ | — | — |
+| `/admin/price-lists*` | ✓ | — | — | — |
+| `/admin/promotions*` | — | — | ✓ | — |
+| `/admin/campaigns*` | — | — | ✓ | — |
+| `/admin/users*` | — | — | — | — |
+| `/admin/invites*` | — | — | — | — |
+| `/admin/regions*` | — | — | — | — |
+| `/admin/store*` | — | — | — | — |
+| `/admin/sales-channels*` | — | — | — | — |
+| `/admin/shipping-options*` | — | — | — | — |
+| `/admin/fulfillment*` | — | — | — | — |
+
+> Routes marked `—` for all non-admin roles are **admin-only** (team settings, regions, store config).
 
 ---
 

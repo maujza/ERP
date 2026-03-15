@@ -51,8 +51,9 @@ export type ReceivePurchaseOrderSchema = z.infer<typeof ReceivePurchaseOrderSche
 
 export const GetListSchema = createFindParams()
 
-export default defineMiddlewares({
-  routes: [
+// Exported for policy snapshot tests — defineMiddlewares may transform the
+// config in ways that make method inspection unreliable; import this directly.
+export const routes: Parameters<typeof defineMiddlewares>[0]["routes"] = [
     // Supplier list — purchasing only
     {
       matcher: "/admin/purchase/suppliers",
@@ -133,5 +134,95 @@ export default defineMiddlewares({
       method: "POST",
       middlewares: [requireRole([ROLES.INVENTORY, ROLES.PURCHASING]), validateAndTransformBody(ReceivePurchaseOrderSchema)],
     },
-  ],
-})
+
+    // ── Medusa native: Orders ─────────────────────────────────────────────────
+    // Customer service manages orders; no other non-admin role needs access.
+    {
+      matcher: "/admin/orders*",
+      middlewares: [requireRole([ROLES.CUSTOMER_SERVICE])],
+    },
+
+    // ── Medusa native: Products ───────────────────────────────────────────────
+    // Purchasing + inventory: read-only (GET) to check stock/variants.
+    // Marketing: full CRUD for catalog management.
+    {
+      matcher: "/admin/products*",
+      method: "GET",
+      middlewares: [requireRole([ROLES.PURCHASING, ROLES.INVENTORY, ROLES.MARKETING])],
+    },
+    {
+      matcher: "/admin/products*",
+      method: ["POST", "DELETE"],
+      middlewares: [requireRole([ROLES.MARKETING])],
+    },
+
+    // ── Medusa native: Customers ──────────────────────────────────────────────
+    {
+      matcher: "/admin/customers*",
+      middlewares: [requireRole([ROLES.CUSTOMER_SERVICE])],
+    },
+
+    // ── Medusa native: Inventory / stock locations ────────────────────────────
+    {
+      matcher: "/admin/inventory*",
+      middlewares: [requireRole([ROLES.INVENTORY])],
+    },
+    {
+      matcher: "/admin/stock-locations*",
+      middlewares: [requireRole([ROLES.INVENTORY])],
+    },
+    {
+      matcher: "/admin/reservations*",
+      middlewares: [requireRole([ROLES.INVENTORY])],
+    },
+
+    // ── Medusa native: Pricing ────────────────────────────────────────────────
+    {
+      matcher: "/admin/price-lists*",
+      middlewares: [requireRole([ROLES.PURCHASING])],
+    },
+
+    // ── Medusa native: Promotions / discounts ─────────────────────────────────
+    {
+      matcher: "/admin/promotions*",
+      middlewares: [requireRole([ROLES.MARKETING])],
+    },
+    {
+      matcher: "/admin/campaigns*",
+      middlewares: [requireRole([ROLES.MARKETING])],
+    },
+
+    // ── Medusa native: Admin-only settings ────────────────────────────────────
+    // Team management, regions, store settings — admin superuser only.
+    // requireRole([]) means no non-admin role is allowed; admin bypasses as usual.
+    {
+      matcher: "/admin/users*",
+      middlewares: [requireRole([])],
+    },
+    {
+      matcher: "/admin/invites*",
+      middlewares: [requireRole([])],
+    },
+    {
+      matcher: "/admin/regions*",
+      middlewares: [requireRole([])],
+    },
+    {
+      matcher: "/admin/store*",
+      middlewares: [requireRole([])],
+    },
+    {
+      matcher: "/admin/sales-channels*",
+      middlewares: [requireRole([])],
+    },
+    {
+      matcher: "/admin/shipping-options*",
+      middlewares: [requireRole([])],
+    },
+    {
+      matcher: "/admin/fulfillment*",
+      middlewares: [requireRole([])],
+    },
+]
+
+export default defineMiddlewares({ routes })
