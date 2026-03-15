@@ -135,15 +135,15 @@ Legend: ✓ = all methods · r = GET only · — = denied · **admin always pass
 | `/admin/price-lists*` | ✓ | — | — | — |
 | `/admin/promotions*` | — | — | ✓ | — |
 | `/admin/campaigns*` | — | — | ✓ | — |
-| `/admin/users*` | — | — | — | — |
-| `/admin/invites*` | — | — | — | — |
-| `/admin/regions*` | — | — | — | — |
-| `/admin/store*` | — | — | — | — |
-| `/admin/sales-channels*` | — | — | — | — |
-| `/admin/shipping-options*` | — | — | — | — |
-| `/admin/fulfillment*` | — | — | — | — |
+| `/admin/users*` | Medusa native | Medusa native | Medusa native | Medusa native |
+| `/admin/invites*` | Medusa native | Medusa native | Medusa native | Medusa native |
+| `/admin/regions*` | Medusa native | Medusa native | Medusa native | Medusa native |
+| `/admin/store*` | Medusa native | Medusa native | Medusa native | Medusa native |
+| `/admin/sales-channels*` | Medusa native | Medusa native | Medusa native | Medusa native |
+| `/admin/shipping-options*` | Medusa native | Medusa native | Medusa native | Medusa native |
+| `/admin/fulfillment*` | Medusa native | Medusa native | Medusa native | Medusa native |
 
-> Routes marked `—` for all non-admin roles are **admin-only** (team settings, regions, store config).
+> Routes marked "Medusa native" use Medusa's own policy-based access control and are NOT covered by `requireRole`. These routes opt out of Medusa's global authMiddleware, so our custom middleware would run before auth is established — breaking the login flow. Medusa's built-in policies already restrict them to admin users.
 
 ---
 
