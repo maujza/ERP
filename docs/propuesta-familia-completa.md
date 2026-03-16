@@ -89,7 +89,6 @@ Antes de detallar las etapas, conviene fijar cuatro principios:
 | Cliente nuevo mayorista | ARS 1.000.000 | ARS 500.000 | ARS 435.000 | ARS 65.000 | 13% del margen; ingreso incremental |
 | Retail consumidor final | ARS 12.000 | ARS 2.500 | ARS 2.500 sobre pieza + regalía potencial | ARS 7.000 bruto | Supone que Roberto vende al canal retail con markup 100% sobre costo |
 
-> **Nota sobre las tablas de proyección:** los ejemplos de referencia arriba usan markup 100% (margen 50% sobre venta). El modelo de proyección mensual asume un markup promedio mayor para clientes nuevos (~65%), consistente con que el mix de productos en ese canal tiende a tener mayor margen unitario. Si el markup real es 100% homogéneo, la comisión sobre crecimiento cae aproximadamente un 24% (de 13% sobre ~65% de margen a 13% sobre 50%). Conviene unificar el supuesto de markup en la tabla detallada.
 
 ---
 
@@ -215,7 +214,7 @@ La propuesta no requiere reorganizar ni ceder el negocio actual. Propone constru
 |---|---:|---:|---:|---:|---:|
 | Conservador | 8,2M | 15,0M | 8,2M | 111,4M | 5,2M |
 | Base | 10,0M | 23,0M | 10,5M | 123,5M | 8,9M |
-| Objetivo | 13,8M | 35,8M | 14,0M | 143,6M | 15,1M |
+| Objetivo | 13,8M | 35,8M | 14,0M | 143,6M | 15,0M |
 
 Lectura correcta:
 
@@ -343,10 +342,10 @@ En números, con una migración realista y usando el caso objetivo de 18 meses:
 
 | Escenario | Base de ventas | Comisión existente | Comisión crecimiento mayoreo | Resultado retail plataforma | Resultado segundo local | Total plataforma | Costos operativos + reserva | Disponible para compensación |
 |---|---|---:|---:|---:|---:|---:|---:|---:|
-| Mes 3 | 11,2M migrados + 0,7M crecimiento | 280.000 | 58.453 | 0 | 0 | 338.453 | 170.290 | 168.163 |
-| Mes 6 | 20,8M migrados + 1,3M crecimiento | 520.000 | 99.875 | 0 | 0 | 619.875 | 241.208 | 378.666 |
-| Mes 12 | 40M migrados + 4,1M crecimiento + 9,4M retail | 1.000.000 | 305.485 | 2.631.247 | 0 | 3.936.732 | 413.982 | 3.522.749 |
-| Mes 18 | 40M migrados + 13,8M crecimiento + 35,8M retail + 14,0M local | 1.000.000 | 990.677 | 11.163.289 | 2.519.424 | 15.673.390 | 586.650 | 15.086.739 |
+| Mes 3 | 11,2M migrados + 0,7M crecimiento | 280.000 | 45.500 | 0 | 0 | 325.500 | 170.290 | 155.210 |
+| Mes 6 | 20,8M migrados + 1,3M crecimiento | 520.000 | 84.500 | 0 | 0 | 604.500 | 241.208 | 363.292 |
+| Mes 12 | 40M migrados + 4,1M crecimiento + 9,4M retail | 1.000.000 | 266.500 | 2.631.247 | 0 | 3.897.747 | 413.982 | 3.483.765 |
+| Mes 18 | 40M migrados + 13,8M crecimiento + 35,8M retail + 14,0M local | 1.000.000 | 897.000 | 11.163.289 | 2.519.424 | 15.579.713 | 586.650 | 14.993.063 |
 
 El piloto empieza en escala reducida. El objetivo es medir si el canal deja resultado neto positivo después de operar.
 
