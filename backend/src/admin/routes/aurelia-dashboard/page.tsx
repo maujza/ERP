@@ -82,6 +82,8 @@ type DashboardData = {
   revenueTrend: RevenuePoint[]
   sampleSize: number
   canReceiveWhatsappAlerts: boolean
+  avgLeadTimeMinutes: number | null
+  stuckInPickingCount: number
   thisMonthRevenue: number
   topCustomers: TopCustomerPoint[]
   whatsappPendingOrders: DashboardOrder[]
@@ -494,6 +496,10 @@ const AureliaDashboardPage = () => {
         topCustomers: "Top clientes por revenue",
         topCustomersHint: "Concentración de facturación en muestra",
         unknown: "Desconocido",
+        avgLeadTime: "Lead time despacho",
+        avgLeadTimeHint: "Tiempo promedio desde picking hasta despacho (últimos 30 días)",
+        stuckInPicking: "Órdenes atascadas en picking",
+        stuckInPickingHint: "Órdenes en estado picking hace más de 24h",
         whatsappAlertHint: "Pedidos que requieren contacto manual por WhatsApp",
         whatsappAlertTitle: "Pendientes WhatsApp",
         whatsappOnlyForAllowed: "No tenés permiso para recibir estas alertas.",
@@ -547,6 +553,10 @@ const AureliaDashboardPage = () => {
         topCustomers: "Top Customers by Revenue",
         topCustomersHint: "Revenue concentration in sample",
         unknown: "Unknown",
+        avgLeadTime: "Dispatch Lead Time",
+        avgLeadTimeHint: "Avg time from picking to dispatch (last 30 days)",
+        stuckInPicking: "Orders Stuck in Picking",
+        stuckInPickingHint: "Orders in picking status for >24h",
         whatsappAlertHint: "Orders requiring manual follow-up over WhatsApp",
         whatsappAlertTitle: "WhatsApp Pending",
         whatsappOnlyForAllowed: "You do not have permission to receive these alerts.",
@@ -557,7 +567,7 @@ const AureliaDashboardPage = () => {
   const { data, error, isError, isLoading } = useQuery<DashboardData>({
     queryKey: ["aurelia-backoffice-metrics-v4", locale],
     queryFn: async () => {
-      const [ordersResult, productsResult, customersResult, ordersSampleResult, channelsResult, visibilityResult] =
+      const [ordersResult, productsResult, customersResult, ordersSampleResult, channelsResult, visibilityResult, fulfillmentKpis] =
         await Promise.all([
           sdk.admin.order.list({ limit: 1 }),
           sdk.admin.product.list({ limit: 1 }),
@@ -570,6 +580,10 @@ const AureliaDashboardPage = () => {
           }),
           sdk.admin.salesChannel.list({ limit: 50 }),
           sdk.client.fetch("/admin/whatsapp-notifications").catch(() => ({ can_receive: true })),
+          sdk.client.fetch("/admin/fulfillment/kpis").catch(() => ({
+            avg_lead_time_minutes: null,
+            stuck_in_picking_count: 0,
+          })),
         ])
 
       const sampleOrders = (ordersSampleResult.orders ?? []) as DashboardOrder[]
@@ -652,6 +666,8 @@ const AureliaDashboardPage = () => {
         whatsappPendingOrders,
         weeklyOrderTrend: buildWeeklyOrderTrend(sampleOrders, locale),
         workflowMix,
+        avgLeadTimeMinutes: (fulfillmentKpis as any)?.avg_lead_time_minutes ?? null,
+        stuckInPickingCount: (fulfillmentKpis as any)?.stuck_in_picking_count ?? 0,
       }
     },
   })
@@ -803,6 +819,37 @@ const AureliaDashboardPage = () => {
               label={copy.paidOrders}
               value={data.paidCount.toLocaleString(locale)}
               hint={copy.paidOrdersHint}
+            />
+          </div>
+
+          {/* ── Fulfillment KPIs ── */}
+          <SectionDivider label={copy.sectionFulfillment} />
+          <div className="grid grid-cols-2 gap-3 px-6 pb-4">
+            <MetricCard
+              label={copy.avgLeadTime}
+              value={
+                data.avgLeadTimeMinutes === null
+                  ? "—"
+                  : data.avgLeadTimeMinutes < 60
+                  ? `${data.avgLeadTimeMinutes}min`
+                  : `${Math.round(data.avgLeadTimeMinutes / 60)}h`
+              }
+              hint={copy.avgLeadTimeHint}
+              accent={
+                data.avgLeadTimeMinutes === null
+                  ? undefined
+                  : data.avgLeadTimeMinutes <= 60
+                  ? "#16a34a"
+                  : data.avgLeadTimeMinutes <= 240
+                  ? "#ca8a04"
+                  : "#dc2626"
+              }
+            />
+            <MetricCard
+              label={copy.stuckInPicking}
+              value={data.stuckInPickingCount.toLocaleString(locale)}
+              hint={copy.stuckInPickingHint}
+              accent={data.stuckInPickingCount > 0 ? "#dc2626" : undefined}
             />
           </div>
 

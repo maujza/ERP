@@ -44,10 +44,30 @@ export const CreatePurchaseOrderSchema = z.object({
 })
 export type CreatePurchaseOrderSchema = z.infer<typeof CreatePurchaseOrderSchema>
 
+const ReceivePurchaseOrderItemSchema = z.object({
+  id: z.string().min(1),
+  received_quantity: z.number().int().nonnegative(),
+})
+
 export const ReceivePurchaseOrderSchema = z.object({
   location_id: z.string().min(1),
+  // Per-item received quantities. Omit for full receipt (received = ordered).
+  items: z.array(ReceivePurchaseOrderItemSchema).optional(),
 })
 export type ReceivePurchaseOrderSchema = z.infer<typeof ReceivePurchaseOrderSchema>
+
+// --- Fulfillment schemas ---
+
+export const ConfirmPackSchema = z.object({
+  packed_weight: z.number().positive(),
+  packed_dimensions: z.string().min(1).optional(),
+})
+export type ConfirmPackSchema = z.infer<typeof ConfirmPackSchema>
+
+export const DispatchOrderSchema = z.object({
+  tracking_number: z.string().min(1),
+})
+export type DispatchOrderSchema = z.infer<typeof DispatchOrderSchema>
 
 export const GetListSchema = createFindParams()
 
@@ -102,6 +122,7 @@ export const routes: any[] = [
             "status",
             "notes",
             "expected_delivery_date",
+            "discrepancy_count",
             "created_at",
           ],
           isList: true,
@@ -134,6 +155,40 @@ export const routes: any[] = [
       matcher: "/admin/purchase/orders/:id/receive",
       method: "POST",
       middlewares: [requireRole([ROLES.INVENTORY, ROLES.PURCHASING]), validateAndTransformBody(ReceivePurchaseOrderSchema)],
+    },
+
+    // ── Fulfillment lifecycle ─────────────────────────────────────────────────
+    // Inventory role: full CRUD (pick, pack, dispatch).
+    // Customer service: read-only (GET).
+    {
+      matcher: "/admin/fulfillment/kpis",
+      method: "GET",
+      middlewares: [requireRole([ROLES.INVENTORY, ROLES.CUSTOMER_SERVICE])],
+    },
+    {
+      matcher: "/admin/fulfillment/orders",
+      method: "GET",
+      middlewares: [requireRole([ROLES.INVENTORY, ROLES.CUSTOMER_SERVICE])],
+    },
+    {
+      matcher: "/admin/fulfillment/orders/:id",
+      method: "GET",
+      middlewares: [requireRole([ROLES.INVENTORY, ROLES.CUSTOMER_SERVICE])],
+    },
+    {
+      matcher: "/admin/fulfillment/orders/:id/pick",
+      method: "POST",
+      middlewares: [requireRole([ROLES.INVENTORY])],
+    },
+    {
+      matcher: "/admin/fulfillment/orders/:id/pack",
+      method: "POST",
+      middlewares: [requireRole([ROLES.INVENTORY]), validateAndTransformBody(ConfirmPackSchema)],
+    },
+    {
+      matcher: "/admin/fulfillment/orders/:id/dispatch",
+      method: "POST",
+      middlewares: [requireRole([ROLES.INVENTORY]), validateAndTransformBody(DispatchOrderSchema)],
     },
 
     // ── Medusa native: Orders ─────────────────────────────────────────────────

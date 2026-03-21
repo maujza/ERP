@@ -45,6 +45,7 @@ type PurchaseOrder = {
   status: "draft" | "submitted" | "received" | "cancelled"
   notes: string | null
   expected_delivery_date: string | null
+  discrepancy_count: number
   created_at: string
 }
 
@@ -525,12 +526,20 @@ const PurchaseOrdersPage = () => {
     }),
     columnHelper.accessor("status", {
       header: "Status",
-      cell: ({ getValue }) => {
+      cell: ({ getValue, row }) => {
         const s = getValue()
+        const discrepancy = row.original.discrepancy_count ?? 0
         return (
-          <Badge size="2xsmall" color={STATUS_COLORS[s] || "grey"}>
-            {STATUS_LABELS[s] || s}
-          </Badge>
+          <div className="flex items-center gap-1.5">
+            <Badge size="2xsmall" color={STATUS_COLORS[s] || "grey"}>
+              {STATUS_LABELS[s] || s}
+            </Badge>
+            {s === "received" && discrepancy > 0 && (
+              <Badge size="2xsmall" color="red" title={`${discrepancy} item(s) received short`}>
+                {discrepancy} discrepancy
+              </Badge>
+            )}
+          </div>
         )
       },
     }),

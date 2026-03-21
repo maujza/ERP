@@ -10,6 +10,7 @@ export async function POST(
     input: {
       order_id: req.params.id,
       location_id: req.validatedBody.location_id,
+      items: req.validatedBody.items,
     },
   })
 

@@ -495,4 +495,30 @@ Unit tests: happy path, not-found, error propagation.
 
 ---
 
-*Last updated: 2026-03-20 — plan-eng-review (UI redesign architecture)*
+---
+
+### ⏳ [P2] [S] IFulfillmentService error guard in dispatch-order step
+
+**What:** Wrap the Medusa `IFulfillmentService` call in the `dispatch-order` step with a try/catch that converts unknown service errors to `MedusaError` 503 with an actionable message.
+
+**Why:** If Medusa's fulfillment service is unavailable, the dispatch step currently propagates a raw internal error. `FulfillmentRecord` stays in `packed` (correct), but the caller sees a cryptic 500. Identified as a critical gap in plan-eng-review 2026-03-20.
+
+**How to apply:** 3-line try/catch in `backend/src/workflows/steps/dispatch-order.ts`. Catch any error from `IFulfillmentService`, rethrow as `new MedusaError(MedusaError.Types.UNEXPECTED_STATE, 'Fulfillment service unavailable — order remains packed')`.
+
+**Effort:** S | **Priority:** P2 | **Depends on:** `fulfill-order` workflow (Sprint 2).
+
+---
+
+### ⏳ [P3] [S] packed-not-shipped: last_notified_at write failure
+
+**What:** If the `last_notified_at` update fails after a notification is sent in the `packed-not-shipped` job, the cooldown doesn't engage and the job re-notifies on the next hourly run.
+
+**Why:** Low probability but causes minor alert fatigue if DB writes are flaky. The `withSuppressedErrors` wrapper covers the full job body — the update call needs its own inner guard.
+
+**How to apply:** In `backend/src/jobs/packed-not-shipped.ts`, after each `notify()` call, wrap the `fulfillmentService.update(order.id, { last_notified_at: now })` in a separate try/catch with `logger.warn` on failure.
+
+**Effort:** S | **Priority:** P3 | **Depends on:** `packed-not-shipped` job (Sprint 2).
+
+---
+
+*Last updated: 2026-03-20 — plan-eng-review (Sprint 2 fulfillment loop)*
