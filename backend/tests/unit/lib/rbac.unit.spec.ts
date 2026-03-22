@@ -1,4 +1,4 @@
-import { ROLES, getRoleFromMetadata, getUserRole, requireRole } from "../../../src/lib/rbac"
+import { ROLES, getRoleFromMetadata, getUserRole, requireRole, clearRoleCache } from "../../../src/lib/rbac"
 
 // ─── getRoleFromMetadata ──────────────────────────────────────────────────────
 
@@ -70,6 +70,9 @@ function makeThrowingScope() {
 }
 
 describe("getUserRole", () => {
+  beforeEach(() => {
+    clearRoleCache()
+  })
   it("returns the role when user has valid metadata.role", async () => {
     const scope = makeScope({ metadata: { role: "purchasing" } })
     expect(await getUserRole("user_01", scope)).toBe("purchasing")
@@ -109,6 +112,9 @@ function makeRes() {
 }
 
 describe("requireRole", () => {
+  beforeEach(() => {
+    clearRoleCache()
+  })
   it("calls next() when user has an allowed role", async () => {
     const middleware = requireRole([ROLES.PURCHASING])
     const next = jest.fn()

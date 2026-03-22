@@ -9,6 +9,7 @@ type OrderRecord = {
   id: string
   display_id?: number
   email?: string
+  customer_id?: string | null
 }
 
 type UserRecord = {
@@ -18,19 +19,37 @@ type UserRecord = {
 
 const CUSTOMER_SERVICE_ROLE = "customer_service"
 
-function readRoles(metadata: Record<string, unknown> | undefined): string[] {
-  if (!metadata) return []
-  const candidate = metadata.notification_roles ?? metadata.role
-  if (Array.isArray(candidate)) return candidate.map((r) => String(r).trim().toLowerCase()).filter(Boolean)
-  if (typeof candidate === "string") return [candidate.trim().toLowerCase()].filter(Boolean)
-  return []
+// Simple in-memory rate limiter: max 3 requests per order_id per hour
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
+const RATE_LIMIT_MAX = 3
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000
+
+/** Clear the rate limit state. Intended for use in tests only. */
+export function clearRateLimitForTesting(): void {
+  rateLimitMap.clear()
+}
+
+function checkRateLimit(key: string): boolean {
+  const now = Date.now()
+  const entry = rateLimitMap.get(key)
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS })
+    return true
+  }
+  if (entry.count >= RATE_LIMIT_MAX) return false
+  entry.count++
+  return true
 }
 
 export async function POST(req: MedusaRequest, res: MedusaResponse) {
   const { order_id } = req.body as NotifyAgentBody
 
-  if (!order_id) {
+  if (!order_id || typeof order_id !== "string") {
     return res.status(400).json({ error: "order_id is required" })
+  }
+
+  if (!checkRateLimit(order_id)) {
+    return res.status(429).json({ error: "Too many requests. Try again later." })
   }
 
   const query = req.scope.resolve("query") as {
@@ -39,13 +58,19 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
 
   const { data: orders } = await query.graph({
     entity: "order",
-    fields: ["id", "display_id", "email"],
+    fields: ["id", "display_id", "email", "customer_id"],
     filters: { id: order_id },
   })
 
   const order = orders[0] as OrderRecord | undefined
   if (!order) {
     return res.status(404).json({ error: "Order not found" })
+  }
+
+  // Verify order ownership: if a customer is authenticated, ensure the order belongs to them
+  const customerId = (req as MedusaRequest & { auth_context?: { actor_id?: string } }).auth_context?.actor_id
+  if (customerId && order.customer_id && order.customer_id !== customerId) {
+    return res.status(403).json({ error: "Forbidden" })
   }
 
   const description =
@@ -63,13 +88,19 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     }) => Promise<unknown>
   }
 
+  // Fetch users with customer_service role (reads only metadata.role, consistent with admin routes)
   const { data: allUsers } = await query.graph({
     entity: "user",
     fields: ["id", "metadata"],
   })
 
   const csUserIds = (allUsers as UserRecord[])
-    .filter((u) => readRoles(u.metadata).includes(CUSTOMER_SERVICE_ROLE))
+    .filter((u) => {
+      const role = u.metadata?.role
+      if (typeof role === "string") return role.trim().toLowerCase() === CUSTOMER_SERVICE_ROLE
+      if (Array.isArray(role)) return role.map((r) => String(r).trim().toLowerCase()).includes(CUSTOMER_SERVICE_ROLE)
+      return false
+    })
     .map((u) => u.id)
 
   const recipients = csUserIds.length > 0 ? csUserIds : [""]

@@ -1,5 +1,6 @@
 import { SubscriberArgs, SubscriberConfig } from "@medusajs/framework"
 import { Modules } from "@medusajs/framework/utils"
+import { getRecipientsByRole } from "../lib/notification-recipients"
 
 // Default threshold (units). Override via LOW_STOCK_THRESHOLD env var.
 // Per-variant thresholds are a Sprint 3 enhancement.
@@ -11,18 +12,7 @@ type InventoryLevelRecord = {
   stocked_quantity: number
 }
 
-type UserRecord = {
-  id: string
-  metadata?: Record<string, unknown>
-}
-
 const NOTIFY_ROLES = ["purchasing", "inventory"]
-
-function readRole(metadata: Record<string, unknown> | undefined): string | null {
-  const candidate = metadata?.role
-  if (typeof candidate === "string") return candidate.trim().toLowerCase()
-  return null
-}
 
 // Suppresses all errors — a missed low-stock alert must never crash an inventory update.
 export async function lowStockCheckHandler({
@@ -32,8 +22,8 @@ export async function lowStockCheckHandler({
   try {
     const inventoryService = container.resolve(Modules.INVENTORY) as {
       listInventoryLevels: (
-        filter: Record<string, any>,
-        config?: Record<string, any>
+        filter: Record<string, unknown>,
+        config?: Record<string, unknown>
       ) => Promise<InventoryLevelRecord[]>
     }
 
@@ -46,23 +36,10 @@ export async function lowStockCheckHandler({
     if (!level) return
     if (level.stocked_quantity > DEFAULT_THRESHOLD) return
 
-    // Find users with purchasing or inventory roles to notify
-    const query = container.resolve("query") as {
-      graph: (input: {
-        entity: string
-        fields: string[]
-        filters?: Record<string, unknown>
-      }) => Promise<{ data: unknown[] }>
-    }
-
-    const { data: allUsers } = await query.graph({
-      entity: "user",
-      fields: ["id", "metadata"],
-    })
-
-    const recipientIds = (allUsers as UserRecord[])
-      .filter((u) => NOTIFY_ROLES.includes(readRole(u.metadata) ?? ""))
-      .map((u) => u.id)
+    const recipientIds = await getRecipientsByRole(
+      container as Parameters<typeof getRecipientsByRole>[0],
+      NOTIFY_ROLES
+    )
 
     const notificationModule = container.resolve(Modules.NOTIFICATION) as {
       createNotifications: (input: {
@@ -92,11 +69,12 @@ export async function lowStockCheckHandler({
         })
       )
     )
-  } catch (err: any) {
-    const logger = container.resolve("logger") as { warn: (msg: string, meta?: any) => void }
+  } catch (err: unknown) {
+    const error = err instanceof Error ? err.message : String(err)
+    const logger = container.resolve("logger") as { warn: (msg: string, meta?: Record<string, unknown>) => void }
     logger.warn("[low-stock-check] Failed to process inventory.updated event", {
       inventory_item_id: data.inventory_item_id,
-      error: err?.message ?? String(err),
+      error,
     })
   }
 }

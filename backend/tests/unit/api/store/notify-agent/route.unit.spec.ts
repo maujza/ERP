@@ -1,5 +1,5 @@
 import { Modules } from "@medusajs/framework/utils"
-import { POST } from "../../../../../src/api/store/notify-agent/route"
+import { POST, clearRateLimitForTesting } from "../../../../../src/api/store/notify-agent/route"
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -52,6 +52,10 @@ function makeRes() {
   return res as any
 }
 
+beforeEach(() => {
+  clearRateLimitForTesting()
+})
+
 // ─── validation ───────────────────────────────────────────────────────────────
 
 describe("validation", () => {
@@ -103,7 +107,7 @@ describe("recipient resolution", () => {
     const createNotifications = jest.fn().mockResolvedValue({})
     const users = [
       makeUser("cs_1", { role: "customer_service" }),
-      makeUser("cs_2", { notification_roles: ["customer_service"] }),
+      makeUser("cs_2", { role: "customer_service" }),
     ]
     await POST(
       makeReq({ body: { order_id: "order_01" }, orders: [makeOrder()], users, createNotifications }),
@@ -136,9 +140,9 @@ describe("recipient resolution", () => {
     expect(createNotifications).toHaveBeenCalledWith(expect.objectContaining({ to: "cs_1" }))
   })
 
-  it("matches CS role case-insensitively via notification_roles array", async () => {
+  it("matches CS role case-insensitively via role string (uppercase)", async () => {
     const createNotifications = jest.fn().mockResolvedValue({})
-    const users = [makeUser("cs_upper", { notification_roles: ["CUSTOMER_SERVICE"] })]
+    const users = [makeUser("cs_upper", { role: "CUSTOMER_SERVICE" })]
     await POST(
       makeReq({ body: { order_id: "order_01" }, orders: [makeOrder()], users, createNotifications }),
       makeRes()

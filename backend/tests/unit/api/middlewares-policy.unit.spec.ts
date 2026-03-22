@@ -10,24 +10,28 @@
  */
 
 import { routes } from "../../../src/api/middlewares"
+import { clearRoleCache } from "../../../src/lib/rbac"
 
 type RouteEntry = (typeof routes)[number]
 
 // Probe which non-admin roles a middleware array allows by calling it with
 // each role and checking whether next() is invoked.
+// Each role gets its own unique actor_id to prevent roleCache cross-contamination.
 async function getAllowedRoles(
   middlewares: RouteEntry["middlewares"]
 ): Promise<string[]> {
   const candidates = ["purchasing", "inventory", "marketing", "customer_service"]
   const allowed: string[] = []
 
-  for (const role of candidates) {
+  for (let i = 0; i < candidates.length; i++) {
+    const role = candidates[i]
+    clearRoleCache() // Ensure no stale cache entry from a previous iteration
     const fakeScope = {
       resolve: () => ({
         graph: async () => ({ data: [{ metadata: { role } }] }),
       }),
     }
-    const req = { auth_context: { actor_id: "user_01" }, scope: fakeScope }
+    const req = { auth_context: { actor_id: `user_${i}` }, scope: fakeScope }
     const res = { status: jest.fn().mockReturnThis(), json: jest.fn() }
     let nextCalled = false
 

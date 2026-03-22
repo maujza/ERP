@@ -1,4 +1,5 @@
 import orderPlacedHandler from "../../../src/subscribers/order-placed"
+import { clearRecipientsCache } from "../../../src/lib/notification-recipients"
 import { Modules } from "@medusajs/framework/utils"
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
@@ -59,6 +60,10 @@ async function run(container: ReturnType<typeof makeContainer>["container"], ord
 // ─── tests ───────────────────────────────────────────────────────────────────
 
 describe("orderPlacedHandler", () => {
+  beforeEach(() => {
+    clearRecipientsCache()
+  })
+
   describe("when order has whatsapp_required: true", () => {
     const waOrder: OrderRecord = {
       id: "order_01",
@@ -87,7 +92,7 @@ describe("orderPlacedHandler", () => {
 
     it("calls createNotifications once per CS user when CS users exist", async () => {
       const csUsers: UserRecord[] = [
-        { id: "user_cs_1", metadata: { notification_roles: ["customer_service"] } },
+        { id: "user_cs_1", metadata: { role: "customer_service" } },
         { id: "user_cs_2", metadata: { role: "customer_service" } },
       ]
       const { container, createNotifications } = makeContainer({ order: waOrder, users: csUsers })
@@ -97,7 +102,7 @@ describe("orderPlacedHandler", () => {
 
     it("targets each CS user's id in 'to'", async () => {
       const csUsers: UserRecord[] = [
-        { id: "user_cs_1", metadata: { notification_roles: ["customer_service"] } },
+        { id: "user_cs_1", metadata: { role: "customer_service" } },
       ]
       const { container, createNotifications } = makeContainer({ order: waOrder, users: csUsers })
       await run(container)
@@ -170,9 +175,9 @@ describe("orderPlacedHandler", () => {
       expect(call.data.description.length).toBeGreaterThan(0)
     })
 
-    it("matches CS users with notification_roles array (case-insensitive)", async () => {
+    it("matches CS users with role string (canonical format)", async () => {
       const users: UserRecord[] = [
-        { id: "user_1", metadata: { notification_roles: ["CUSTOMER_SERVICE"] } },
+        { id: "user_1", metadata: { role: "customer_service" } },
       ]
       const { container, createNotifications } = makeContainer({ order: waOrder, users })
       await run(container)

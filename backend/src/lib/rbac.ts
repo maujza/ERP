@@ -54,7 +54,7 @@ export function getRoleFromMetadata(
   return valid.includes(normalized) ? (normalized as Role) : null
 }
 
-// ─── DB helper ────────────────────────────────────────────────────────────────
+// ─── DB helper with TTL cache ─────────────────────────────────────────────────
 
 type MedusaScope = {
   resolve: (key: string) => {
@@ -66,14 +66,29 @@ type MedusaScope = {
   }
 }
 
+// Cache role lookups for 60 seconds to avoid a DB query on every admin request.
+// Role changes take effect within 60s. Acceptable for an admin panel.
+const roleCache = new Map<string, { role: Role | null; expiresAt: number }>()
+const ROLE_CACHE_TTL_MS = 60 * 1000
+
+/** Clear the role cache. Intended for use in tests to ensure test isolation. */
+export function clearRoleCache(): void {
+  roleCache.clear()
+}
+
 /**
  * Fetch the role for a user by actor_id.
+ * Results are cached per actor_id for 60 seconds.
  * Returns null on any error so the middleware can safely 403 instead of 500.
  */
 export async function getUserRole(
   actorId: string,
   scope: MedusaScope
 ): Promise<Role | null> {
+  const now = Date.now()
+  const cached = roleCache.get(actorId)
+  if (cached && now < cached.expiresAt) return cached.role
+
   try {
     const query = scope.resolve("query")
     const { data } = await query.graph({
@@ -81,9 +96,11 @@ export async function getUserRole(
       fields: ["id", "metadata"],
       filters: { id: actorId },
     })
-    return getRoleFromMetadata(data[0]?.metadata)
+    const role = getRoleFromMetadata(data[0]?.metadata)
+    roleCache.set(actorId, { role, expiresAt: now + ROLE_CACHE_TTL_MS })
+    return role
   } catch {
-    // Fail safe: any DB/resolution error → deny access
+    // Fail safe: any DB/resolution error → deny access (do not cache failures)
     return null
   }
 }

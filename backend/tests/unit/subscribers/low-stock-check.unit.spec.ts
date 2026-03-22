@@ -1,4 +1,5 @@
 import { lowStockCheckHandler } from "../../../src/subscribers/low-stock-check"
+import { clearRecipientsCache } from "../../../src/lib/notification-recipients"
 import { Modules } from "@medusajs/framework/utils"
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
@@ -66,6 +67,8 @@ describe("lowStockCheckHandler", () => {
   beforeEach(() => {
     // Reset the env threshold to default for each test
     delete process.env.LOW_STOCK_THRESHOLD
+    // Clear the notification-recipients cache so each test uses its own container's data
+    clearRecipientsCache()
   })
 
   it("sends notification when stock is at or below threshold", async () => {
