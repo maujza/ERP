@@ -666,8 +666,8 @@ const AureliaDashboardPage = () => {
         whatsappPendingOrders,
         weeklyOrderTrend: buildWeeklyOrderTrend(sampleOrders, locale),
         workflowMix,
-        avgLeadTimeMinutes: (fulfillmentKpis as any)?.avg_lead_time_minutes ?? null,
-        stuckInPickingCount: (fulfillmentKpis as any)?.stuck_in_picking_count ?? 0,
+        avgLeadTimeMinutes: (fulfillmentKpis as { avg_lead_time_minutes?: number | null })?.avg_lead_time_minutes ?? null,
+        stuckInPickingCount: (fulfillmentKpis as { stuck_in_picking_count?: number })?.stuck_in_picking_count ?? 0,
       }
     },
   })

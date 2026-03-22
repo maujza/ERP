@@ -5,6 +5,14 @@ import PurchaseDepartmentModuleService from "../../../../modules/purchaseDepartm
 const LEAD_TIME_WINDOW_DAYS = 30
 const STUCK_THRESHOLD_MS = 24 * 60 * 60 * 1000
 
+type FulfillmentRecordRow = {
+  id: string
+  order_id: string
+  status: string
+  created_at: string | Date
+  updated_at: string | Date
+}
+
 export async function GET(
   req: AuthenticatedMedusaRequest,
   res: MedusaResponse
@@ -16,37 +24,40 @@ export async function GET(
   const windowStart = new Date(Date.now() - LEAD_TIME_WINDOW_DAYS * 24 * 60 * 60 * 1000)
   const stuckCutoff = new Date(Date.now() - STUCK_THRESHOLD_MS)
 
-  // Fetch all fulfillment records (small dataset for a jewelry store)
-  const allRecords = await fulfillmentService.listFulfillmentRecords({})
+  // Two targeted queries instead of fetching all records
+  const [recentDispatched, stuckInPicking] = await Promise.all([
+    fulfillmentService.listFulfillmentRecords({
+      status: "dispatched",
+    }) as Promise<FulfillmentRecordRow[]>,
+    fulfillmentService.listFulfillmentRecords({
+      status: "picking",
+    }) as Promise<FulfillmentRecordRow[]>,
+  ])
 
-  // Avg lead time: dispatched records created within the last 30 days
-  const recentDispatched = allRecords.filter(
-    (r: any) =>
-      r.status === "dispatched" &&
-      new Date(r.created_at) >= windowStart
+  // Filter dispatched records to the last 30 days in JS (MikroORM filter syntax varies by version)
+  const recentDispatchedInWindow = recentDispatched.filter(
+    (r) => new Date(r.created_at) >= windowStart
+  )
+
+  // Filter picking records stuck beyond the threshold
+  const stuck = stuckInPicking.filter(
+    (r) => new Date(r.updated_at) < stuckCutoff
   )
 
   let avgLeadTimeMinutes: number | null = null
-  if (recentDispatched.length > 0) {
-    const totalMs = recentDispatched.reduce((sum: number, r: any) => {
+  if (recentDispatchedInWindow.length > 0) {
+    const totalMs = recentDispatchedInWindow.reduce((sum, r) => {
       const createdAt = new Date(r.created_at).getTime()
       const updatedAt = new Date(r.updated_at).getTime()
       return sum + (updatedAt - createdAt)
     }, 0)
-    avgLeadTimeMinutes = Math.round(totalMs / recentDispatched.length / (60 * 1000))
+    avgLeadTimeMinutes = Math.round(totalMs / recentDispatchedInWindow.length / (60 * 1000))
   }
-
-  // Orders stuck in picking >24h
-  const stuckInPicking = allRecords.filter(
-    (r: any) =>
-      r.status === "picking" &&
-      new Date(r.updated_at) < stuckCutoff
-  )
 
   res.json({
     avg_lead_time_minutes: avgLeadTimeMinutes,
-    stuck_in_picking_count: stuckInPicking.length,
-    stuck_in_picking_orders: stuckInPicking.map((r: any) => r.order_id),
-    dispatched_count_30d: recentDispatched.length,
+    stuck_in_picking_count: stuck.length,
+    stuck_in_picking_orders: stuck.map((r) => r.order_id),
+    dispatched_count_30d: recentDispatchedInWindow.length,
   })
 }

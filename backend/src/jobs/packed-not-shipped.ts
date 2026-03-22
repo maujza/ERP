@@ -2,12 +2,21 @@ import { MedusaContainer } from "@medusajs/framework/types"
 import { Modules } from "@medusajs/framework/utils"
 import { PURCHASE_DEPARTMENT_MODULE } from "../modules/purchaseDepartment"
 import PurchaseDepartmentModuleService from "../modules/purchaseDepartment/service"
+import { getRecipientsByRole } from "../lib/notification-recipients"
 
 // Alert threshold: orders packed longer than this many hours trigger a notification.
 const ALERT_AFTER_HOURS = 24
 
 // Cooldown: don't re-notify the same order within this many hours.
 const COOLDOWN_HOURS = 4
+
+type FulfillmentRecordRow = {
+  id: string
+  order_id: string
+  status: "pending" | "picking" | "packed" | "dispatched" | "cancelled"
+  updated_at: string | Date
+  last_notified_at: string | Date | null
+}
 
 // Wraps an async fn so errors are logged + suppressed rather than crashing the job.
 async function withSuppressedErrors(
@@ -17,9 +26,10 @@ async function withSuppressedErrors(
 ): Promise<void> {
   try {
     await fn()
-  } catch (err: any) {
-    const logger = container.resolve("logger") as { warn: (msg: string, meta?: any) => void }
-    logger.warn(`[packed-not-shipped] ${label}`, { error: err?.message ?? String(err) })
+  } catch (err: unknown) {
+    const error = err instanceof Error ? err.message : String(err)
+    const logger = container.resolve("logger") as { warn: (msg: string, meta?: Record<string, unknown>) => void }
+    logger.warn(`[packed-not-shipped] ${label}`, { error })
   }
 }
 
@@ -29,14 +39,10 @@ export default async function packedNotShippedJob(container: MedusaContainer) {
       PURCHASE_DEPARTMENT_MODULE
     ) as PurchaseDepartmentModuleService
 
-    const logger = container.resolve("logger") as { warn: (msg: string, meta?: any) => void }
-
-    const query = container.resolve("query") as {
-      graph: (input: { entity: string; fields: string[]; filters?: Record<string, unknown> }) => Promise<{ data: unknown[] }>
-    }
+    const logger = container.resolve("logger") as { warn: (msg: string, meta?: Record<string, unknown>) => void }
 
     // Query fulfillment records in 'packed' status
-    const records = await fulfillmentService.listFulfillmentRecords({ status: "packed" })
+    const records = (await fulfillmentService.listFulfillmentRecords({ status: "packed" })) as FulfillmentRecordRow[]
 
     const alertCutoff = new Date(Date.now() - ALERT_AFTER_HOURS * 60 * 60 * 1000)
     const cooldownCutoff = new Date(Date.now() - COOLDOWN_HOURS * 60 * 60 * 1000)
@@ -50,33 +56,26 @@ export default async function packedNotShippedJob(container: MedusaContainer) {
       }) => Promise<unknown>
     }
 
-    // Find inventory role users to notify
-    const { data: allUsers } = await query.graph({
-      entity: "user",
-      fields: ["id", "metadata"],
-    })
-
-    const inventoryUserIds = (allUsers as { id: string; metadata?: any }[])
-      .filter((u) => {
-        const role = u.metadata?.role
-        return typeof role === "string" && role.trim().toLowerCase() === "inventory"
-      })
-      .map((u) => u.id)
+    // Find inventory role users to notify using shared cached helper
+    const inventoryUserIds = await getRecipientsByRole(
+      container as Parameters<typeof getRecipientsByRole>[0],
+      ["inventory"]
+    )
 
     const recipients = inventoryUserIds.length > 0 ? inventoryUserIds : ["system"]
 
     for (const record of records) {
-      const updatedAt = new Date((record as any).updated_at)
+      const updatedAt = new Date(record.updated_at)
       if (updatedAt > alertCutoff) continue // not stale yet
 
-      const lastNotified: Date | null = (record as any).last_notified_at
-        ? new Date((record as any).last_notified_at)
+      const lastNotified: Date | null = record.last_notified_at
+        ? new Date(record.last_notified_at)
         : null
 
       if (lastNotified && lastNotified > cooldownCutoff) continue // within cooldown
 
       await withSuppressedErrors(
-        `Failed to notify for order ${(record as any).order_id}`,
+        `Failed to notify for order ${record.order_id}`,
         container,
         async () => {
           await Promise.all(
@@ -87,9 +86,9 @@ export default async function packedNotShippedJob(container: MedusaContainer) {
                 template: "admin-ui",
                 data: {
                   title: "Orden empaquetada sin despachar",
-                  description: `La orden ${(record as any).order_id} lleva más de ${ALERT_AFTER_HOURS}h en estado "empaquetada".`,
-                  order_id: (record as any).order_id,
-                  fulfillment_record_id: (record as any).id,
+                  description: `La orden ${record.order_id} lleva más de ${ALERT_AFTER_HOURS}h en estado "empaquetada".`,
+                  order_id: record.order_id,
+                  fulfillment_record_id: record.id,
                 },
               })
             )
@@ -99,13 +98,14 @@ export default async function packedNotShippedJob(container: MedusaContainer) {
           // so cooldown doesn't fail to engage on the next run.
           try {
             await fulfillmentService.updateFulfillmentRecords({
-              id: (record as any).id,
+              id: record.id,
               last_notified_at: new Date(),
             })
-          } catch (writeErr: any) {
+          } catch (writeErr: unknown) {
+            const error = writeErr instanceof Error ? writeErr.message : String(writeErr)
             logger.warn(
-              `[packed-not-shipped] last_notified_at write failed for ${(record as any).id}`,
-              { error: writeErr?.message }
+              `[packed-not-shipped] last_notified_at write failed for ${record.id}`,
+              { error }
             )
           }
         }

@@ -13,7 +13,7 @@ type Input = {
 }
 
 type PickListItem = {
-  variant_id: string
+  variant_id: string | null
   title: string
   sku: string | null
   quantity: number
@@ -27,15 +27,50 @@ type CompensationData = {
   created_native_fulfillment_id: string | null
 }
 
+type OrderLineItem = {
+  id: string
+  variant_id?: string | null
+  title?: string | null
+  variant_title?: string | null
+  quantity: number
+}
+
+type VariantRow = {
+  id: string
+  sku?: string | null
+  product?: { images?: { url: string }[] } | null
+}
+
+type FulfillmentRow = {
+  id: string
+  canceled_at?: string | Date | null
+}
+
+type OrderFulfillmentRow = {
+  id: string
+  fulfillments?: FulfillmentRow[]
+}
+
+type FulfillmentRecordRow = {
+  id: string
+  status: string
+  order_id: string
+}
+
 export async function generatePickListHandler(
   input: Input,
-  { container }: { container: any }
+  { container }: { container: unknown }
 ) {
-  const fulfillmentService = container.resolve(
+  const cont = container as { resolve: (key: string) => unknown }
+  const fulfillmentService = cont.resolve(
     PURCHASE_DEPARTMENT_MODULE
   ) as PurchaseDepartmentModuleService
-  const orderService = container.resolve(Modules.ORDER)
-  const query = container.resolve(ContainerRegistrationKeys.QUERY)
+  const orderService = cont.resolve(Modules.ORDER) as {
+    retrieveOrder: (id: string, opts: { relations: string[] }) => Promise<{ items?: OrderLineItem[] }>
+  }
+  const query = cont.resolve(ContainerRegistrationKeys.QUERY) as {
+    graph: (input: { entity: string; fields: string[]; filters?: Record<string, unknown> }) => Promise<{ data: unknown[] }>
+  }
 
   const order = await orderService.retrieveOrder(input.order_id, {
     relations: ["items"],
@@ -49,9 +84,9 @@ export async function generatePickListHandler(
   }
 
   // Batch-fetch all variants in one query instead of N individual calls.
-  const variantIds = (order.items as any[])
+  const variantIds = order.items
     .map((i) => i.variant_id)
-    .filter(Boolean) as string[]
+    .filter((id): id is string => Boolean(id))
 
   const variantMap = new Map<string, { sku: string | null; image_url: string | null }>()
 
@@ -61,7 +96,7 @@ export async function generatePickListHandler(
       fields: ["id", "sku", "product.images.url"],
       filters: { id: variantIds },
     })
-    for (const v of variants as any[]) {
+    for (const v of variants as VariantRow[]) {
       variantMap.set(v.id, {
         sku: v.sku ?? null,
         image_url: v.product?.images?.[0]?.url ?? null,
@@ -69,10 +104,10 @@ export async function generatePickListHandler(
     }
   }
 
-  const pickListItems: PickListItem[] = (order.items as any[]).map((item) => {
+  const pickListItems: PickListItem[] = order.items.map((item) => {
     const variantData = item.variant_id ? variantMap.get(item.variant_id) : undefined
     return {
-      variant_id: item.variant_id,
+      variant_id: item.variant_id ?? null,
       title: item.title ?? item.variant_title ?? "Unknown",
       sku: variantData?.sku ?? null,
       quantity: item.quantity,
@@ -80,9 +115,9 @@ export async function generatePickListHandler(
     }
   })
 
-  const existing = (await fulfillmentService.listFulfillmentRecords({
+  const existing = ((await fulfillmentService.listFulfillmentRecords({
     order_id: input.order_id,
-  }))[0] ?? null
+  })) as FulfillmentRecordRow[])[0] ?? null
 
   if (existing && existing.status !== "pending") {
     throw new MedusaError(
@@ -98,47 +133,45 @@ export async function generatePickListHandler(
   })
 
   const existingActiveNativeFulfillment =
-    (orders[0]?.fulfillments ?? []).find(
-      (fulfillment: any) => !fulfillment?.canceled_at
+    ((orders[0] as OrderFulfillmentRow | undefined)?.fulfillments ?? []).find(
+      (fulfillment) => !fulfillment.canceled_at
     ) ?? null
 
   let nativeFulfillmentId = existingActiveNativeFulfillment?.id ?? null
   let createdNativeFulfillmentId: string | null = null
 
   if (!nativeFulfillmentId) {
-    const { result } = await createOrderFulfillmentWorkflow(container).run({
+    const { result } = await createOrderFulfillmentWorkflow(cont).run({
       input: {
         order_id: input.order_id,
-        items: (order.items as any[]).map((item) => ({
+        items: order.items.map((item) => ({
           id: item.id,
           quantity: item.quantity,
         })),
       },
     })
 
-    nativeFulfillmentId = result.id
-    createdNativeFulfillmentId = result.id
+    nativeFulfillmentId = (result as { id: string }).id
+    createdNativeFulfillmentId = (result as { id: string }).id
   }
 
-  let record: any
+  const record = existing
+    ? await fulfillmentService.updateFulfillmentRecords({
+        id: existing.id,
+        status: "picking",
+        pick_list: pickListItems,
+      })
+    : await fulfillmentService.createFulfillmentRecords({
+        order_id: input.order_id,
+        status: "picking",
+        pick_list: pickListItems,
+      })
 
-  if (!existing) {
-    record = await (fulfillmentService as any).createFulfillmentRecords({
-      order_id: input.order_id,
-      status: "picking",
-      pick_list: pickListItems as any,
-    })
-  } else {
-    record = await (fulfillmentService as any).updateFulfillmentRecords({
-      id: existing.id,
-      status: "picking",
-      pick_list: pickListItems as any,
-    })
-  }
+  const recordRow = record as { id: string }
 
   return new StepResponse(record, {
     order_id: input.order_id,
-    record_id: record.id,
+    record_id: recordRow.id,
     was_existing: !!existing,
     created_native_fulfillment_id: createdNativeFulfillmentId,
   } as CompensationData)
@@ -146,25 +179,26 @@ export async function generatePickListHandler(
 
 async function compensateGeneratePickList(
   data: CompensationData | undefined,
-  { container }: { container: any }
+  { container }: { container: unknown }
 ) {
   if (!data) return
-  const fulfillmentService = container.resolve(
+  const cont = container as { resolve: (key: string) => unknown }
+  const fulfillmentService = cont.resolve(
     PURCHASE_DEPARTMENT_MODULE
   ) as PurchaseDepartmentModuleService
 
   if (data.was_existing) {
-    await (fulfillmentService as any).updateFulfillmentRecords({
+    await fulfillmentService.updateFulfillmentRecords({
       id: data.record_id,
       status: "pending",
       pick_list: null,
     })
   } else {
-    await (fulfillmentService as any).deleteFulfillmentRecords(data.record_id)
+    await fulfillmentService.deleteFulfillmentRecords(data.record_id)
   }
 
   if (data.created_native_fulfillment_id) {
-    await cancelOrderFulfillmentWorkflow(container).run({
+    await cancelOrderFulfillmentWorkflow(cont).run({
       input: {
         order_id: data.order_id,
         fulfillment_id: data.created_native_fulfillment_id,
