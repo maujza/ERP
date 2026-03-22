@@ -41,15 +41,23 @@ type CompensationData = {
   log_ids: string[]
 }
 
+type VariantInventoryLink = { inventory_item_id: string }
+type VariantRow = { id: string; inventory_items?: VariantInventoryLink[] }
+
 export async function receiveOrderHandler(
   input: Input,
-  { container }: { container: any }
+  { container }: { container: unknown }
 ) {
-  const purchaseService = container.resolve(
+  const cont = container as { resolve: (key: string) => unknown }
+  const purchaseService = cont.resolve(
     PURCHASE_DEPARTMENT_MODULE
   ) as PurchaseDepartmentModuleService
-  const inventoryService = container.resolve(Modules.INVENTORY)
-  const query = container.resolve(ContainerRegistrationKeys.QUERY)
+  const inventoryService = cont.resolve(Modules.INVENTORY) as {
+    adjustInventory: (itemId: string, locationId: string, qty: number) => Promise<unknown>
+  }
+  const query = cont.resolve(ContainerRegistrationKeys.QUERY) as {
+    graph: (input: { entity: string; fields: string[]; filters?: Record<string, unknown> }) => Promise<{ data: unknown[] }>
+  }
 
   const order = await purchaseService.retrievePurchaseOrder(input.order_id, {
     relations: ["items"],
@@ -80,6 +88,17 @@ export async function receiveOrderHandler(
     (input.items ?? []).map((o) => [o.id, o.received_quantity])
   )
 
+  // Batch-fetch all variant → inventory_item links in a single query (avoids N+1)
+  const allVariantIds = order.items.map((item) => item.variant_id)
+  const { data: variantRows } = await query.graph({
+    entity: "product_variant",
+    fields: ["id", "inventory_items.inventory_item_id"],
+    filters: { id: allVariantIds },
+  })
+  const variantMap = new Map<string, VariantRow>(
+    (variantRows as VariantRow[]).map((v) => [v.id, v])
+  )
+
   const adjustments: AdjustmentRecord[] = []
   const itemQuantities: ItemQuantityRecord[] = []
   const logIds: string[] = []
@@ -105,21 +124,13 @@ export async function receiveOrderHandler(
       discrepancyCount++
     }
 
-    // Skip variants with no linked inventory items
-    const { data: variants } = await query.graph({
-      entity: "product_variant",
-      fields: ["id", "inventory_items.inventory_item_id"],
-      filters: { id: item.variant_id },
-    })
-
-    const variant = variants[0]
-    if (!variant || !variant.inventory_items?.length) {
+    // Look up variant from the pre-fetched batch map
+    const variant = variantMap.get(item.variant_id)
+    if (!variant?.inventory_items?.length) {
       continue
     }
 
-    for (const link of variant.inventory_items as unknown as {
-      inventory_item_id: string
-    }[]) {
+    for (const link of variant.inventory_items) {
       await inventoryService.adjustInventory(
         link.inventory_item_id,
         input.location_id,
@@ -153,6 +164,33 @@ export async function receiveOrderHandler(
     discrepancy_count: discrepancyCount,
   })
 
+  // Recompute and cache fill rate on the supplier (write-time caching).
+  // The current order is now "received" so it's included in this query.
+  try {
+    const receivedOrders = await purchaseService.listPurchaseOrders({
+      supplier_id: order.supplier_id,
+      status: "received",
+    })
+    let totalOrdered = 0
+    let totalReceived = 0
+    if (receivedOrders.length > 0) {
+      const allItems = await purchaseService.listPurchaseOrderItems({
+        purchase_order_id: (receivedOrders as { id: string }[]).map((o) => o.id),
+      })
+      for (const item of allItems as { quantity?: number; received_quantity?: number }[]) {
+        totalOrdered += item.quantity ?? 0
+        totalReceived += item.received_quantity ?? 0
+      }
+    }
+    const newFillRate = totalOrdered > 0
+      ? Math.round((totalReceived / totalOrdered) * 100)
+      : null
+    await purchaseService.updateSuppliers({ id: order.supplier_id, fill_rate: newFillRate })
+  } catch (err: unknown) {
+    // Non-critical — fill rate cache update failure should not roll back the receipt
+    console.error("[receive-purchase-order] Failed to update supplier fill_rate cache", err)
+  }
+
   return new StepResponse(updatedOrder, {
     order_id: input.order_id,
     previous_status: order.status,
@@ -164,14 +202,17 @@ export async function receiveOrderHandler(
 
 async function compensateReceiveOrder(
   data: CompensationData | undefined,
-  { container }: { container: any }
+  { container }: { container: unknown }
 ) {
   if (!data) return
 
-  const purchaseService = container.resolve(
+  const cont = container as { resolve: (key: string) => unknown }
+  const purchaseService = cont.resolve(
     PURCHASE_DEPARTMENT_MODULE
   ) as PurchaseDepartmentModuleService
-  const inventoryService = container.resolve(Modules.INVENTORY)
+  const inventoryService = cont.resolve(Modules.INVENTORY) as {
+    adjustInventory: (itemId: string, locationId: string, qty: number) => Promise<unknown>
+  }
 
   // Delete audit log entries created by this step
   if (data.log_ids?.length) {
