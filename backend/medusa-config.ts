@@ -34,8 +34,8 @@ module.exports = defineConfig({
         customer: ["emailpass"],
         user: ["emailpass"],
       },
-      jwtSecret: process.env.JWT_SECRET || "supersecret",
-      cookieSecret: process.env.COOKIE_SECRET || "supersecret",
+      jwtSecret: process.env.JWT_SECRET ?? (() => { throw new Error("JWT_SECRET env var is required") })(),
+      cookieSecret: process.env.COOKIE_SECRET ?? (() => { throw new Error("COOKIE_SECRET env var is required") })(),
     },
     cookieOptions: forceInsecureCookies
       ? {

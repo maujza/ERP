@@ -4,13 +4,12 @@ import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
-import { SafeImage } from "@/components/safe-image";
 import { useLanguage } from "@/components/language-provider";
-import { ProductQuickView } from "@/components/product-quick-view";
+import { ProductCard } from "@/components/product-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { formatArs, getProductName, hasPurchasablePrice, isJewelryProduct, mapMedusaProduct, type Product } from "@/lib/shop-data";
+import { hasPurchasablePrice, isJewelryProduct, mapMedusaProduct, type Product } from "@/lib/shop-data";
 import { sdk, withStorePricingContext } from "@/lib/medusa";
 
 function SearchContent() {
@@ -46,10 +45,12 @@ function SearchContent() {
       };
 
   const [results, setResults] = useState<Product[]>([]);
+  const [searchError, setSearchError] = useState(false);
 
   useEffect(() => {
     if (!query) {
       setResults([]);
+      setSearchError(false);
       return;
     }
     sdk.store.product.list(withStorePricingContext({
@@ -58,7 +59,11 @@ function SearchContent() {
       fields: "+variants.calculated_price,+variants.inventory_quantity,+metadata,+categories",
     })).then(({ products }) => {
       setResults(products.map(mapMedusaProduct).filter(hasPurchasablePrice).filter(isJewelryProduct));
-    }).catch(() => {});
+      setSearchError(false);
+    }).catch((err: unknown) => {
+      console.error("[SearchPage] Failed to fetch search results", err);
+      setSearchError(true);
+    });
   }, [query, rawQuery]);
 
   return (
@@ -79,7 +84,14 @@ function SearchContent() {
         <p className="mt-2 text-sm text-[#555555]">{results.length} {t.productsFound}</p>
       </section>
 
-      {results.length === 0 ? (
+      {searchError && (
+        <Card className="p-6">
+          <p className="text-sm text-[#b00020]">
+            {language === "ko" ? "검색 중 오류가 발생했습니다." : "Ocurrió un error al buscar. Intenta de nuevo."}
+          </p>
+        </Card>
+      )}
+      {!searchError && results.length === 0 ? (
         <Card className="p-6">
           <p className="text-sm text-[#555555]">{t.noResults}</p>
           <Button asChild className="mt-4 w-full md:w-auto">
@@ -88,35 +100,15 @@ function SearchContent() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2 md:grid-cols-4">
-          {results.map((product) => {
-            const outOfStock = product.stock <= 0;
-            return (
-              <article key={product.id} className="relative overflow-hidden rounded-2xl border border-black/10 bg-white">
-                <Link href={`/product/${product.id}`} className="block">
-                  <div className="relative h-40 w-full">
-                    <SafeImage src={product.image} alt={getProductName(product, language)} fill className="object-cover" />
-                  </div>
-                  <div className="space-y-2 p-3">
-                    <p className="line-clamp-2 text-sm font-semibold">{getProductName(product, language)}</p>
-                    <p className="text-sm font-semibold text-[#111111]">{formatArs(product.price, language)}</p>
-                    {outOfStock && <Badge variant="glow">{t.soldOut}</Badge>}
-                  </div>
-                </Link>
-                <div className="flex flex-col gap-2 px-3 pb-3 sm:flex-row sm:items-center">
-                  <ProductQuickView productId={product.id} className="h-10 w-full px-3 sm:w-auto sm:shrink-0" />
-                  {outOfStock ? (
-                    <Button className="min-h-10 h-auto w-full px-3 py-2 text-xs !whitespace-normal leading-tight sm:h-10 sm:py-0 sm:text-sm sm:!whitespace-nowrap" disabled>
-                      {t.soldOut}
-                    </Button>
-                  ) : (
-                    <Button asChild className="min-h-10 h-auto w-full px-3 py-2 text-xs !whitespace-normal leading-tight sm:h-10 sm:py-0 sm:text-sm sm:!whitespace-nowrap">
-                      <Link href={`/product/${product.id}`}>{t.add}</Link>
-                    </Button>
-                  )}
-                </div>
-              </article>
-            );
-          })}
+          {results.map((product) => (
+            <ProductCard
+              key={product.id}
+              product={product}
+              language={language}
+              soldOutLabel={t.soldOut}
+              addToCartLabel={t.add}
+            />
+          ))}
         </div>
       )}
     </main>

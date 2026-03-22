@@ -80,13 +80,8 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
 export function useLanguage() {
   const context = useContext(LanguageContext);
-  if (context) {
-    return context;
+  if (!context) {
+    throw new Error("useLanguage must be used within a <LanguageProvider>");
   }
-
-  return {
-    language: "es" as const,
-    setLanguage: () => {},
-    toggleLanguage: () => {},
-  };
+  return context;
 }

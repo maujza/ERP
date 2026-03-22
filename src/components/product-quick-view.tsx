@@ -6,11 +6,12 @@ import { createPortal } from "react-dom";
 
 import { useCart } from "@/components/cart-provider";
 import { useLanguage } from "@/components/language-provider";
+import { QuantitySelector } from "@/components/quantity-selector";
 import { SafeImage } from "@/components/safe-image";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { sdk, withStorePricingContext } from "@/lib/medusa";
-import { formatArs, mapMedusaProduct, type Product } from "@/lib/shop-data";
+import { calculateDiscountPercent, formatArs, mapMedusaProduct, type Product } from "@/lib/shop-data";
 
 type ProductDetailState = {
   product: Product;
@@ -224,11 +225,7 @@ export function ProductQuickView({ productId, className }: { productId: string; 
                       {formatArs(detail.product.originalPrice, language)}
                     </p>
                     <span className="rounded-full border border-black/15 px-2 py-0.5 text-xs font-semibold text-[#111111]">
-                      -
-                      {Math.round(
-                        ((detail.product.originalPrice - detail.product.price) / detail.product.originalPrice) * 100,
-                      )}
-                      %
+                      -{calculateDiscountPercent(detail.product.price, detail.product.originalPrice)}%
                     </span>
                   </>
                 )}
@@ -270,37 +267,13 @@ export function ProductQuickView({ productId, className }: { productId: string; 
               {canAdd && (
                 <div className="flex items-center gap-3">
                   <span className="text-sm font-medium text-[#555555]">{t.qty}:</span>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setQty((current) => Math.max(1, current - 1))}
-                      className="h-9 w-9 rounded-full border border-black/20 text-lg font-semibold leading-none"
-                      aria-label={t.decreaseQty}
-                    >
-                      −
-                    </button>
-                    <input
-                      type="number"
-                      min={1}
-                      max={maxQty}
-                      value={qty}
-                      onChange={(e) => {
-                        const v = Number.parseInt(e.target.value, 10);
-                        if (!Number.isNaN(v)) setQty(Math.min(maxQty, Math.max(1, v)));
-                      }}
-                      onBlur={(e) => {
-                        const v = Number.parseInt(e.target.value, 10);
-                        if (Number.isNaN(v) || v < 1) setQty(1);
-                      }}
-                      className="h-9 w-14 rounded-xl border border-black/20 px-2 text-center text-sm font-semibold outline-none focus:border-black/40"
-                    />
-                    <button
-                      onClick={() => setQty((current) => Math.min(maxQty, current + 1))}
-                      className="h-9 w-9 rounded-full border border-black/20 text-lg font-semibold leading-none"
-                      aria-label={t.increaseQty}
-                    >
-                      +
-                    </button>
-                  </div>
+                  <QuantitySelector
+                    qty={qty}
+                    max={maxQty}
+                    decreaseLabel={t.decreaseQty}
+                    increaseLabel={t.increaseQty}
+                    onChange={setQty}
+                  />
                 </div>
               )}
             </div>

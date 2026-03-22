@@ -11,8 +11,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   brands,
-  formatArs,
-  getProductName,
   hasPurchasablePrice,
   isJewelryProduct,
   mapMedusaProduct,
@@ -20,6 +18,7 @@ import {
   Product,
   translateLabel,
 } from "@/lib/shop-data";
+import { ProductCard } from "@/components/product-card";
 import { sdk, withStorePricingContext } from "@/lib/medusa";
 
 const lookDotPositions = [
@@ -32,20 +31,23 @@ export default function HomePage() {
   const { language } = useLanguage();
   const [slideIndex, setSlideIndex] = useState(0);
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+  const [featuredLoadError, setFeaturedLoadError] = useState(false);
 
   useEffect(() => {
     sdk.store.product.list(withStorePricingContext({
-      limit: 100,
+      limit: 6,
       fields: "+variants.calculated_price,+variants.inventory_quantity,+metadata,+categories",
     })).then(({ products }) => {
       setFeaturedProducts(
         products
           .map(mapMedusaProduct)
           .filter(hasPurchasablePrice)
-          .filter(isJewelryProduct)
-          .slice(0, 6),
+          .filter(isJewelryProduct),
       );
-    }).catch(() => {});
+    }).catch((err: unknown) => {
+      console.error("[HomePage] Failed to load featured products", err);
+      setFeaturedLoadError(true);
+    });
   }, []);
 
   const t = language === "ko"
@@ -269,54 +271,21 @@ export default function HomePage() {
               {t.ctaMore}
             </Link>
           </div>
+          {featuredLoadError && (
+            <p className="text-sm text-[#b00020]">
+              {language === "ko" ? "상품을 불러올 수 없습니다." : "No pudimos cargar los productos."}
+            </p>
+          )}
           <div className="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2 md:grid-cols-3">
-            {featuredProducts.map((product) => {
-              const isDiscounted = Boolean(product.originalPrice && product.originalPrice > product.price);
-              const outOfStock = product.stock <= 0;
-
-              return (
-                <article key={product.id} className="relative overflow-hidden rounded-2xl border border-black/10 bg-white">
-                  <Link href={`/product/${product.id}`} className="block">
-                    <div className="relative h-40 w-full">
-                      <SafeImage src={product.image} alt={getProductName(product, language)} fill className="object-cover" />
-                    </div>
-                    <div className="space-y-2 p-3">
-                      <p className="line-clamp-2 text-sm font-semibold text-[#111111]">
-                        {getProductName(product, language)}
-                      </p>
-                      <div className="flex flex-wrap items-center gap-2 text-sm">
-                        {isDiscounted ? (
-                          <>
-                            <span className="font-semibold text-[#111111]">{formatArs(product.price, language)}</span>
-                            <span className="text-xs text-[#777777] line-through">
-                              {formatArs(product.originalPrice ?? product.price, language)}
-                            </span>
-                            <span className="rounded-full bg-[#111111] px-2 py-0.5 text-[10px] text-white">
-                              -
-                              {Math.round(
-                                (((product.originalPrice ?? product.price) - product.price) /
-                                  (product.originalPrice ?? product.price)) *
-                                  100,
-                              )}
-                              %
-                            </span>
-                          </>
-                        ) : (
-                          <span className="font-semibold text-[#111111]">{formatArs(product.price, language)}</span>
-                        )}
-                      </div>
-                      {outOfStock && <Badge variant="outline">{t.soldOut}</Badge>}
-                    </div>
-                  </Link>
-                  <div className="flex flex-col gap-2 px-3 pb-3 sm:flex-row sm:items-center">
-                    <ProductQuickView productId={product.id} className="h-10 w-full px-3 sm:w-auto sm:shrink-0" />
-                    <Button asChild className="min-h-10 h-auto w-full px-3 py-2 text-xs !whitespace-normal leading-tight sm:h-10 sm:py-0 sm:text-sm sm:!whitespace-nowrap" disabled={outOfStock}>
-                      <Link href={`/product/${product.id}`}>{outOfStock ? t.soldOut : t.addToCart}</Link>
-                    </Button>
-                  </div>
-                </article>
-              );
-            })}
+            {featuredProducts.map((product) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                language={language}
+                soldOutLabel={t.soldOut}
+                addToCartLabel={t.addToCart}
+              />
+            ))}
           </div>
         </section>
 
