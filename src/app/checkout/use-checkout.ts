@@ -137,7 +137,7 @@ export function useCheckout() {
   // ── Validation ────────────────────────────────────────────────────────────
   const validateEmail = useCallback((value: string) => {
     if (!value.trim()) return t.enterEmail;
-    if (!/^\S+@\S+\.\S+$/.test(value)) return t.invalidEmail;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return t.invalidEmail;
     return "";
   }, [t]);
 
@@ -204,8 +204,10 @@ export function useCheckout() {
       setSelectedShippingMethod(methods[0]?.id ?? "");
     }).catch((err: unknown) => {
       console.error("[checkout] Failed to load shipping methods", err);
-      const standardAmount = Number(process.env.NEXT_PUBLIC_SHIPPING_STANDARD_ARS ?? 3900);
-      const expressAmount = Number(process.env.NEXT_PUBLIC_SHIPPING_EXPRESS_ARS ?? 7200);
+      const rawStandard = Number(process.env.NEXT_PUBLIC_SHIPPING_STANDARD_ARS);
+      const rawExpress = Number(process.env.NEXT_PUBLIC_SHIPPING_EXPRESS_ARS);
+      const standardAmount = Number.isFinite(rawStandard) && rawStandard > 0 ? rawStandard : 3900;
+      const expressAmount = Number.isFinite(rawExpress) && rawExpress > 0 ? rawExpress : 7200;
       const estimateLabel = language === "ko" ? " (예상)" : " (est.)";
       const methods: ShippingMethod[] = [
         { id: "standard", label: (language === "ko" ? "일반 배송" : "Envio estandar") + estimateLabel, amount: standardAmount, eta: "48/72h" },
@@ -402,7 +404,7 @@ export function useCheckout() {
           `${t.email}: ${email}`,
           phone.trim() ? `${t.phone}: ${phone.trim()}` : null,
           `${t.paymentVia}: ${resolvePaymentLabel(paymentMethod)}`,
-          orderId ? `N° pedido: ${orderId}` : null,
+          orderId ? `${t.orderNumber}: ${orderId}` : null,
         ].filter(Boolean).join("\n");
 
         const draft: WhatsAppDraft = {

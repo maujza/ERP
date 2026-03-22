@@ -8,19 +8,9 @@ import { X } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
 import { SafeImage } from "@/components/safe-image";
 import { Button } from "@/components/ui/button";
-import { useCart } from "@/components/cart-provider";
+import { useCart, type CartLineItem } from "@/components/cart-provider";
 import { formatArs } from "@/lib/shop-data";
 import { sdk } from "@/lib/medusa";
-
-type CartLineItem = {
-  id: string;
-  variantId: string;
-  title: string;
-  variantTitle: string;
-  thumbnail: string | null;
-  quantity: number;
-  unitPrice: number;
-};
 
 function QuantityInput({
   lineId,

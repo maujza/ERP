@@ -24,14 +24,19 @@ export async function GET(
   const windowStart = new Date(Date.now() - LEAD_TIME_WINDOW_DAYS * 24 * 60 * 60 * 1000)
   const stuckCutoff = new Date(Date.now() - STUCK_THRESHOLD_MS)
 
-  // Two targeted queries instead of fetching all records
+  // Cap at 500 records per status to bound memory usage.
+  // At production scale, push the date filter to the DB layer once MikroORM
+  // filter syntax for date comparisons is confirmed.
+  const QUERY_CAP = 500
   const [recentDispatched, stuckInPicking] = await Promise.all([
-    fulfillmentService.listFulfillmentRecords({
-      status: "dispatched",
-    }) as Promise<FulfillmentRecordRow[]>,
-    fulfillmentService.listFulfillmentRecords({
-      status: "picking",
-    }) as Promise<FulfillmentRecordRow[]>,
+    fulfillmentService.listFulfillmentRecords(
+      { status: "dispatched" },
+      { take: QUERY_CAP, order: { created_at: "DESC" } }
+    ) as Promise<FulfillmentRecordRow[]>,
+    fulfillmentService.listFulfillmentRecords(
+      { status: "picking" },
+      { take: QUERY_CAP, order: { updated_at: "ASC" } }
+    ) as Promise<FulfillmentRecordRow[]>,
   ])
 
   // Filter dispatched records to the last 30 days in JS (MikroORM filter syntax varies by version)

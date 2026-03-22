@@ -188,7 +188,10 @@ export async function receiveOrderHandler(
     await purchaseService.updateSuppliers({ id: order.supplier_id, fill_rate: newFillRate })
   } catch (err: unknown) {
     // Non-critical — fill rate cache update failure should not roll back the receipt
-    console.error("[receive-purchase-order] Failed to update supplier fill_rate cache", err)
+    const logger = cont.resolve("logger") as { warn: (msg: string, meta?: Record<string, unknown>) => void }
+    logger.warn("[receive-purchase-order] Failed to update supplier fill_rate cache", {
+      error: err instanceof Error ? err.message : String(err),
+    })
   }
 
   return new StepResponse(updatedOrder, {

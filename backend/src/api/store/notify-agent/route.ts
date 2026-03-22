@@ -1,5 +1,6 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { Modules } from "@medusajs/framework/utils"
+import { getRecipientsByRole } from "../../../lib/notification-recipients"
 
 type NotifyAgentBody = {
   order_id?: string
@@ -10,11 +11,6 @@ type OrderRecord = {
   display_id?: number
   email?: string
   customer_id?: string | null
-}
-
-type UserRecord = {
-  id: string
-  metadata?: Record<string, unknown>
 }
 
 const CUSTOMER_SERVICE_ROLE = "customer_service"
@@ -88,22 +84,12 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     }) => Promise<unknown>
   }
 
-  // Fetch users with customer_service role (reads only metadata.role, consistent with admin routes)
-  const { data: allUsers } = await query.graph({
-    entity: "user",
-    fields: ["id", "metadata"],
-  })
+  const csUserIds = await getRecipientsByRole(
+    req.scope as Parameters<typeof getRecipientsByRole>[0],
+    [CUSTOMER_SERVICE_ROLE]
+  )
 
-  const csUserIds = (allUsers as UserRecord[])
-    .filter((u) => {
-      const role = u.metadata?.role
-      if (typeof role === "string") return role.trim().toLowerCase() === CUSTOMER_SERVICE_ROLE
-      if (Array.isArray(role)) return role.map((r) => String(r).trim().toLowerCase()).includes(CUSTOMER_SERVICE_ROLE)
-      return false
-    })
-    .map((u) => u.id)
-
-  const recipients = csUserIds.length > 0 ? csUserIds : [""]
+  const recipients = csUserIds.length > 0 ? csUserIds : ["system"]
 
   await Promise.all(
     recipients.map((to) =>

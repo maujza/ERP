@@ -1,5 +1,6 @@
 import { Modules } from "@medusajs/framework/utils"
 import { POST, clearRateLimitForTesting } from "../../../../../src/api/store/notify-agent/route"
+import { clearRecipientsCache } from "../../../../../src/lib/notification-recipients"
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -54,6 +55,7 @@ function makeRes() {
 
 beforeEach(() => {
   clearRateLimitForTesting()
+  clearRecipientsCache()
 })
 
 // ─── validation ───────────────────────────────────────────────────────────────
@@ -93,14 +95,14 @@ describe("successful notification", () => {
 // ─── recipient resolution ─────────────────────────────────────────────────────
 
 describe("recipient resolution", () => {
-  it("broadcasts (to: '') as fallback when no CS users exist", async () => {
+  it("broadcasts to 'system' as fallback when no CS users exist", async () => {
     const createNotifications = jest.fn().mockResolvedValue({})
     await POST(
       makeReq({ body: { order_id: "order_01" }, orders: [makeOrder()], users: [], createNotifications }),
       makeRes()
     )
     expect(createNotifications).toHaveBeenCalledTimes(1)
-    expect(createNotifications).toHaveBeenCalledWith(expect.objectContaining({ to: "" }))
+    expect(createNotifications).toHaveBeenCalledWith(expect.objectContaining({ to: "system" }))
   })
 
   it("sends one notification per CS user", async () => {

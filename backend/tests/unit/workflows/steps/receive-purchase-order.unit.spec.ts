@@ -43,13 +43,16 @@ function makeContainer(
   inventoryService: ReturnType<typeof makeInventoryService>,
   query: ReturnType<typeof makeQuery>
 ) {
+  const logger = { warn: jest.fn() }
   return {
     resolve: jest.fn((key: string) => {
       if (key === "purchaseDepartment") return purchaseService
       if (key === "inventory") return inventoryService
       if (key === "query") return query
+      if (key === "logger") return logger
       return {}
     }),
+    _logger: logger,
   }
 }
 

@@ -50,7 +50,7 @@ export default async function orderPlacedHandler({
     }) => Promise<unknown>
   }
 
-  const recipients = csUserIds.length > 0 ? csUserIds : [""]
+  const recipients = csUserIds.length > 0 ? csUserIds : ["system"]
 
   await Promise.all(
     recipients.map((to) =>

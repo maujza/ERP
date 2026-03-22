@@ -82,11 +82,11 @@ describe("orderPlacedHandler", () => {
       expect(createNotifications).toHaveBeenCalledTimes(1)
     })
 
-    it("uses broadcast (to: '') as fallback when no CS users are found", async () => {
+    it("uses system broadcast (to: 'system') as fallback when no CS users are found", async () => {
       const { container, createNotifications } = makeContainer({ order: waOrder, users: [] })
       await run(container)
       expect(createNotifications).toHaveBeenCalledWith(
-        expect.objectContaining({ to: "" })
+        expect.objectContaining({ to: "system" })
       )
     })
 

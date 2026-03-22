@@ -199,10 +199,10 @@ export default function CatalogPage() {
     return list;
   }, [allProducts, activeSubcategory, language, priceFilter, search, selectedBrands, selectedCategories, sortBy]);
 
-  const pageSize = 8;
-  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / pageSize));
+  const UI_PAGE_SIZE = 8;
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / UI_PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
-  const paginated = filteredProducts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const paginated = filteredProducts.slice((currentPage - 1) * UI_PAGE_SIZE, currentPage * UI_PAGE_SIZE);
 
   const activeFilterCount =
     selectedCategories.length +

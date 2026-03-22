@@ -69,6 +69,7 @@ export type CheckoutTranslations = {
   checkoutChoiceGuest: string;
   checkoutChoiceLogin: string;
   checkoutChoiceCancel: string;
+  orderNumber: string;
 };
 
 export function getCheckoutTranslations(language: string): CheckoutTranslations {
@@ -144,6 +145,7 @@ export function getCheckoutTranslations(language: string): CheckoutTranslations 
       checkoutChoiceGuest: "비회원으로 계속",
       checkoutChoiceLogin: "계정으로 계속",
       checkoutChoiceCancel: "닫기",
+      orderNumber: "N° 주문",
     };
   }
 
@@ -218,5 +220,6 @@ export function getCheckoutTranslations(language: string): CheckoutTranslations 
     checkoutChoiceGuest: "Continuar sin cuenta",
     checkoutChoiceLogin: "Entrar con mi cuenta",
     checkoutChoiceCancel: "Cancelar",
+    orderNumber: "N° pedido",
   };
 }
