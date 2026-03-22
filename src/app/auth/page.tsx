@@ -4,12 +4,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
+import { useLanguage } from "@/components/language-provider";
 import { sdk } from "@/lib/medusa";
 
 type Mode = "login" | "signup";
 
 export default function AuthPage() {
   const router = useRouter();
+  const { language } = useLanguage();
   const [mode, setMode] = useState<Mode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,7 +27,47 @@ export default function AuthPage() {
     setNextPath(nextPathParam.startsWith("/") ? nextPathParam : "/account");
   }, []);
 
-  const title = useMemo(() => (mode === "login" ? "Iniciar sesión" : "Crear cuenta"), [mode]);
+  const t = useMemo(
+    () =>
+      language === "ko"
+        ? {
+            titleLogin: "로그인",
+            titleSignup: "회원 가입",
+            subtitle: "주문 추적, 내역, 프로모션을 보려면 로그인하세요.",
+            tabLogin: "로그인",
+            tabSignup: "회원 가입",
+            firstName: "이름",
+            lastName: "성",
+            email: "이메일",
+            password: "비밀번호",
+            loading: "처리 중...",
+            submitLogin: "로그인",
+            submitSignup: "회원 가입",
+            errorFallback: "인증을 완료할 수 없습니다.",
+            footerText: "카탈로그로 돌아가시겠어요?",
+            footerLink: "쇼핑하러 가기",
+          }
+        : {
+            titleLogin: "Iniciar sesión",
+            titleSignup: "Crear cuenta",
+            subtitle: "Accede para ver seguimiento de pedidos, historial y promociones aplicadas.",
+            tabLogin: "Ingresar",
+            tabSignup: "Registrarme",
+            firstName: "Nombre",
+            lastName: "Apellido",
+            email: "Email",
+            password: "Contraseña",
+            loading: "Procesando...",
+            submitLogin: "Ingresar",
+            submitSignup: "Crear cuenta",
+            errorFallback: "No se pudo completar la autenticación.",
+            footerText: "¿Querés volver al catálogo?",
+            footerLink: "Ir a tienda",
+          },
+    [language],
+  );
+
+  const title = useMemo(() => (mode === "login" ? t.titleLogin : t.titleSignup), [mode, t]);
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -61,7 +103,7 @@ export default function AuthPage() {
       router.push(nextPath);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo completar la autenticación.");
+      setError(err instanceof Error ? err.message : t.errorFallback);
     } finally {
       setLoading(false);
     }
@@ -71,9 +113,7 @@ export default function AuthPage() {
     <main className="mx-auto w-full max-w-xl px-4 py-10">
       <section className="rounded-3xl border border-black/10 bg-white p-6 shadow-sm md:p-8">
         <h1 className="text-2xl font-bold text-black">{title}</h1>
-        <p className="mt-2 text-sm text-slate-600">
-          Accede para ver seguimiento de pedidos, historial y promociones aplicadas.
-        </p>
+        <p className="mt-2 text-sm text-slate-600">{t.subtitle}</p>
 
         <div className="mt-5 inline-flex rounded-full border border-black/10 p-1">
           <button
@@ -83,7 +123,7 @@ export default function AuthPage() {
               mode === "login" ? "bg-black text-white" : "text-slate-700"
             }`}
           >
-            Ingresar
+            {t.tabLogin}
           </button>
           <button
             type="button"
@@ -92,7 +132,7 @@ export default function AuthPage() {
               mode === "signup" ? "bg-black text-white" : "text-slate-700"
             }`}
           >
-            Registrarme
+            {t.tabSignup}
           </button>
         </div>
 
@@ -100,7 +140,7 @@ export default function AuthPage() {
           {mode === "signup" && (
             <div className="grid gap-4 md:grid-cols-2">
               <label className="block text-sm">
-                <span className="mb-1 block text-slate-700">Nombre</span>
+                <span className="mb-1 block text-slate-700">{t.firstName}</span>
                 <input
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
@@ -109,7 +149,7 @@ export default function AuthPage() {
                 />
               </label>
               <label className="block text-sm">
-                <span className="mb-1 block text-slate-700">Apellido</span>
+                <span className="mb-1 block text-slate-700">{t.lastName}</span>
                 <input
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
@@ -121,7 +161,7 @@ export default function AuthPage() {
           )}
 
           <label className="block text-sm">
-            <span className="mb-1 block text-slate-700">Email</span>
+            <span className="mb-1 block text-slate-700">{t.email}</span>
             <input
               type="email"
               required
@@ -133,7 +173,7 @@ export default function AuthPage() {
           </label>
 
           <label className="block text-sm">
-            <span className="mb-1 block text-slate-700">Contraseña</span>
+            <span className="mb-1 block text-slate-700">{t.password}</span>
             <input
               type="password"
               required
@@ -154,14 +194,14 @@ export default function AuthPage() {
             disabled={loading}
             className="w-full rounded-xl bg-black px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {loading ? "Procesando..." : mode === "login" ? "Ingresar" : "Crear cuenta"}
+            {loading ? t.loading : mode === "login" ? t.submitLogin : t.submitSignup}
           </button>
         </form>
 
         <p className="mt-5 text-sm text-slate-600">
-          ¿Querés volver al catálogo?{" "}
+          {t.footerText}{" "}
           <Link href="/catalog" className="font-medium text-black underline">
-            Ir a tienda
+            {t.footerLink}
           </Link>
         </p>
       </section>

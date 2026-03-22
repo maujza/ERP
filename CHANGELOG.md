@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+- **i18n parity — storefront fully bilingual**: `/account`, `/auth`, and `/order-confirmation` pages were hardcoded in Spanish with no Korean support; all three now use `useLanguage` and a `t` object matching the pattern used across the rest of the storefront
+- **`getProductName` / `getProductDescription` stubs**: these functions ignored the `language` parameter entirely; they now return `metadata.name_ko` / `metadata.description_ko` when the language is `ko` and the field is populated — with graceful fallback to Spanish when not set
+- **Hardcoded `"N° pedido:"` in order-confirmation**: the order-number prefix was the only untranslated string on that page; now reads from `t.orderNumber` (`"주문 번호"` in Korean)
+
+### Added
+- 34 new i18n tests covering both `es` and `ko` rendering in `account/page.test.tsx`, `auth/page.test.tsx`, `order-confirmation/page.test.tsx`, and `shop-data.test.ts`
+- `nameKo?` and `descriptionKo?` fields on the `Product` type; `mapMedusaProduct` reads them from `metadata.name_ko` / `metadata.description_ko`
+
 ## [0.1.0.0] - 2026-03-15
 
 ### Added

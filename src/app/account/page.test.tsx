@@ -3,6 +3,23 @@ import { render, screen, waitFor } from "@testing-library/react";
 
 import AccountPage from "./page";
 
+// ---------------------------------------------------------------------------
+// Mutable language mock
+// ---------------------------------------------------------------------------
+const { mockLanguage } = vi.hoisted(() => ({ mockLanguage: { current: "es" as "es" | "ko" } }));
+
+vi.mock("@/components/language-provider", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/components/language-provider")>();
+  return {
+    ...actual,
+    useLanguage: () => ({
+      language: mockLanguage.current,
+      setLanguage: vi.fn(),
+      toggleLanguage: vi.fn(),
+    }),
+  };
+});
+
 const mockCustomerRetrieve = vi.fn();
 const mockOrderList = vi.fn();
 
@@ -50,6 +67,7 @@ vi.mock("@/lib/medusa", async (importOriginal) => {
 describe("AccountPage unauthenticated state", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockLanguage.current = "es";
     mockCustomerRetrieve.mockRejectedValue(new Error("Unauthorized"));
     mockOrderList.mockResolvedValue({ orders: [], count: 0 });
   });
@@ -70,6 +88,7 @@ describe("AccountPage unauthenticated state", () => {
 describe("AccountPage authenticated state", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockLanguage.current = "es";
     mockCustomerRetrieve.mockResolvedValue({
       customer: {
         first_name: "Mauro",
@@ -124,5 +143,119 @@ describe("AccountPage authenticated state", () => {
     expect(screen.getByText("Pago validado")).toBeInTheDocument();
     expect(screen.getByText("Preparando / enviando")).toBeInTheDocument();
     expect(screen.getByText("Entrega pendiente")).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// i18n — Korean (ko)
+// ---------------------------------------------------------------------------
+describe("AccountPage – i18n Korean, unauthenticated", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockLanguage.current = "ko";
+    mockCustomerRetrieve.mockRejectedValue(new Error("Unauthorized"));
+    mockOrderList.mockResolvedValue({ orders: [], count: 0 });
+  });
+
+  it("shows Korean login CTA", async () => {
+    render(<AccountPage />);
+    expect(await screen.findByRole("link", { name: "로그인" })).toBeInTheDocument();
+  });
+
+  it("shows Korean shop CTA", async () => {
+    render(<AccountPage />);
+    expect(await screen.findByRole("link", { name: "쇼핑하러 가기" })).toBeInTheDocument();
+  });
+
+  it("shows Korean needs-login message", async () => {
+    render(<AccountPage />);
+    expect(await screen.findByText("주문 내역을 보려면 로그인이 필요합니다.")).toBeInTheDocument();
+  });
+});
+
+describe("AccountPage – i18n Korean, authenticated", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockLanguage.current = "ko";
+    mockCustomerRetrieve.mockResolvedValue({
+      customer: {
+        first_name: "지수",
+        last_name: "김",
+        email: "jisoo@example.com",
+        groups: [{ name: "VIP" }],
+      },
+    });
+    mockOrderList.mockResolvedValue({
+      orders: [
+        {
+          id: "order_ko_1",
+          display_id: 77,
+          status: "pending",
+          payment_status: "authorized",
+          fulfillment_status: "not_fulfilled",
+          total: 50000,
+          currency_code: "ars",
+          created_at: "2026-03-01T10:00:00Z",
+          promotions: [],
+        },
+      ],
+      count: 1,
+    });
+  });
+
+  it("shows Korean greeting", async () => {
+    render(<AccountPage />);
+    expect(await screen.findByText("안녕하세요, 지수 김")).toBeInTheDocument();
+  });
+
+  it("shows Korean logout button", async () => {
+    render(<AccountPage />);
+    expect(await screen.findByRole("button", { name: "로그아웃" })).toBeInTheDocument();
+  });
+
+  it("shows Korean orders heading", async () => {
+    render(<AccountPage />);
+    expect(await screen.findByText("내 주문")).toBeInTheDocument();
+  });
+
+  it("shows Korean promos label", async () => {
+    render(<AccountPage />);
+    expect(await screen.findByText("사용 가능한 프로모션")).toBeInTheDocument();
+  });
+
+  it("shows Korean price list label", async () => {
+    render(<AccountPage />);
+    expect(await screen.findByText("가격 등급")).toBeInTheDocument();
+  });
+
+  it("shows Korean copy label on promo button", async () => {
+    render(<AccountPage />);
+    await screen.findByText("내 주문");
+    expect(screen.getByRole("button", { name: /AURELIA10 복사/ })).toBeInTheDocument();
+  });
+
+  it("shows Korean order prefix", async () => {
+    render(<AccountPage />);
+    await screen.findByText("내 주문");
+    expect(screen.getByText(/주문 #77/)).toBeInTheDocument();
+  });
+
+  it("shows Korean status label (pending)", async () => {
+    render(<AccountPage />);
+    await screen.findByText("내 주문");
+    expect(screen.getByText(/상태:.*대기 중/)).toBeInTheDocument();
+  });
+
+  it("shows Korean payment label (authorized)", async () => {
+    render(<AccountPage />);
+    await screen.findByText("내 주문");
+    expect(screen.getByText(/결제:.*승인됨/)).toBeInTheDocument();
+  });
+
+  it("shows Korean tracking step labels", async () => {
+    render(<AccountPage />);
+    await screen.findByText("내 주문");
+    expect(screen.getByText("주문 확인")).toBeInTheDocument();
+    expect(screen.getByText("결제 확인됨")).toBeInTheDocument();
   });
 });

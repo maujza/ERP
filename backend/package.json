@@ -17,6 +17,8 @@
     "seed": "medusa exec ./src/scripts/seed.ts",
     "seed:aurelia": "medusa exec ./src/scripts/seed-aurelia.ts",
     "seed:demo": "medusa exec ./src/scripts/seed-demo-historic.ts",
+    "seed:cleanup-orders": "medusa exec ./src/scripts/cleanup-seeded-orders.ts",
+    "seed:reset-demo": "medusa exec ./src/scripts/reset-demo-data.ts",
     "start": "medusa start",
     "dev": "medusa develop",
     "test:integration:http": "TEST_TYPE=integration:http NODE_OPTIONS=--experimental-vm-modules jest --silent=false --runInBand --forceExit",

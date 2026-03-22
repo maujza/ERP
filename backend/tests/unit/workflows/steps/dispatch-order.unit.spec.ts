@@ -1,4 +1,9 @@
+jest.mock("@medusajs/core-flows", () => ({
+  createShipmentWorkflow: jest.fn(),
+}))
+
 import { MedusaError } from "@medusajs/framework/utils"
+import { createShipmentWorkflow } from "@medusajs/core-flows"
 import { dispatchOrderHandler } from "../../../../src/workflows/steps/dispatch-order"
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -16,21 +21,31 @@ function makeFulfillmentService(record: any) {
   }
 }
 
-function makeMedusaFulfillmentService(fulfillments: any[] = []) {
+function makeShipmentRun() {
   return {
-    listFulfillments: jest.fn().mockResolvedValue(fulfillments),
-    createShipment: jest.fn().mockResolvedValue({}),
+    run: jest.fn().mockResolvedValue({}),
   }
 }
 
+function makeQuery(fulfillments: any[] = []) {
+  return {
+    graph: jest.fn().mockResolvedValue({
+      data: [{ id: "order_1", fulfillments }],
+    }),
+  }
+}
+
+const mockLogger = { warn: jest.fn(), info: jest.fn(), error: jest.fn() }
+
 function makeContainer(
   fulfillmentService: any,
-  medusaFulfillmentService: any = makeMedusaFulfillmentService()
+  query: any = makeQuery()
 ) {
   return {
     resolve: jest.fn((key: string) => {
       if (key === "purchaseDepartment") return fulfillmentService
-      if (key === "fulfillment") return medusaFulfillmentService
+      if (key === "query") return query
+      if (key === "logger") return mockLogger
       return {}
     }),
   }
@@ -39,6 +54,11 @@ function makeContainer(
 // ─── tests ────────────────────────────────────────────────────────────────────
 
 describe("dispatchOrderHandler", () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+    ;(createShipmentWorkflow as jest.Mock).mockReturnValue(makeShipmentRun())
+  })
+
   it("transitions a packed order to dispatched with tracking number", async () => {
     const record = makeRecord("packed")
     const fulfillmentService = makeFulfillmentService(record)
@@ -91,39 +111,101 @@ describe("dispatchOrderHandler", () => {
     ).rejects.toThrow(/expected 'packed'/i)
   })
 
-  it("throws 503-style error when Medusa fulfillment service is unavailable", async () => {
-    const fulfillmentService = makeFulfillmentService(makeRecord("packed"))
-    const brokenMedusaFulfillmentService = {
-      listFulfillments: jest.fn().mockRejectedValue(new Error("Service unavailable")),
-      createShipment: jest.fn(),
-    }
-    const container = makeContainer(fulfillmentService, brokenMedusaFulfillmentService)
+  it("calls createShipment when Medusa native fulfillment exists for the order", async () => {
+    const record = makeRecord("packed")
+    const fulfillmentService = makeFulfillmentService(record)
+    const query = makeQuery([{ id: "fulfillment_123" }])
+    const container = makeContainer(fulfillmentService, query)
 
-    await expect(
-      dispatchOrderHandler(
-        { order_id: "order_1", tracking_number: "TRK-12345" },
-        { container }
-      )
-    ).rejects.toThrow(/fulfillment service unavailable/i)
+    await dispatchOrderHandler(
+      { order_id: "order_1", tracking_number: "TRK-12345" },
+      { container }
+    )
+
+    expect(createShipmentWorkflow).toHaveBeenCalledWith(container)
+    const workflow = (createShipmentWorkflow as jest.Mock).mock.results[0].value
+    expect(workflow.run).toHaveBeenCalledWith({
+      input: {
+        id: "fulfillment_123",
+        labels: [
+          {
+            tracking_number: "TRK-12345",
+            tracking_url: "#",
+            label_url: "#",
+          },
+        ],
+      },
+    })
   })
 
-  it("does NOT update FulfillmentRecord when Medusa fulfillment service fails", async () => {
-    const fulfillmentService = makeFulfillmentService(makeRecord("packed"))
-    const brokenMedusaFulfillmentService = {
-      listFulfillments: jest.fn().mockRejectedValue(new Error("Service unavailable")),
-      createShipment: jest.fn(),
+  it("skips createShipment when no native Medusa fulfillment exists (best-effort)", async () => {
+    const record = makeRecord("packed")
+    const fulfillmentService = makeFulfillmentService(record)
+    const query = makeQuery([])
+    const container = makeContainer(fulfillmentService, query)
+
+    await dispatchOrderHandler(
+      { order_id: "order_1", tracking_number: "TRK-12345" },
+      { container }
+    )
+
+    // FulfillmentRecord should still be updated to dispatched
+    expect(fulfillmentService.updateFulfillmentRecords).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "dispatched" })
+    )
+    expect(createShipmentWorkflow).not.toHaveBeenCalled()
+  })
+
+  it("logs warning but still dispatches when Medusa order service throws (best-effort)", async () => {
+    const record = makeRecord("packed")
+    const fulfillmentService = makeFulfillmentService(record)
+    const brokenQuery = {
+      graph: jest.fn().mockRejectedValue(new Error("Query service down")),
     }
-    const container = makeContainer(fulfillmentService, brokenMedusaFulfillmentService)
+    const container = makeContainer(fulfillmentService, brokenQuery)
+
+    // Should NOT throw — Medusa sync is best-effort
+    await expect(
+      dispatchOrderHandler(
+        { order_id: "order_1", tracking_number: "TRK-12345" },
+        { container }
+      )
+    ).resolves.not.toThrow()
+
+    // FulfillmentRecord MUST still be dispatched
+    expect(fulfillmentService.updateFulfillmentRecords).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "dispatched" })
+    )
+    // Warning was logged
+    expect(mockLogger.warn).toHaveBeenCalledWith(
+      expect.stringContaining("dispatch-order")
+    )
+  })
+
+  it("logs warning but still dispatches when shipment workflow fails", async () => {
+    const record = makeRecord("packed")
+    const fulfillmentService = makeFulfillmentService(record)
+    const query = makeQuery([{ id: "fulfillment_123" }])
+    const workflow = {
+      run: jest.fn().mockRejectedValue(new Error("Shipment workflow failed")),
+    }
+    ;(createShipmentWorkflow as jest.Mock).mockReturnValue(workflow)
+    const container = makeContainer(fulfillmentService, query)
 
     await expect(
       dispatchOrderHandler(
         { order_id: "order_1", tracking_number: "TRK-12345" },
         { container }
       )
-    ).rejects.toThrow()
+    ).resolves.not.toThrow()
 
-    // FulfillmentRecord must remain in 'packed' — no update was called
-    expect(fulfillmentService.updateFulfillmentRecords).not.toHaveBeenCalled()
+    expect(workflow.run).toHaveBeenCalled()
+    expect(fulfillmentService.updateFulfillmentRecords).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "dispatched" })
+    )
+    expect(mockLogger.warn).toHaveBeenCalledWith(
+      expect.stringContaining("createShipmentWorkflow failed")
+    )
   })
 
   it("throws when no fulfillment record exists", async () => {

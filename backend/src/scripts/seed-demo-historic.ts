@@ -195,7 +195,7 @@ export default async function seedDemoHistoricData({ container }: ExecArgs) {
 
   const { data: allVariants } = await query.graph({
     entity: "product_variant",
-    fields: ["id", "sku", "product.handle"],
+    fields: ["id", "title", "sku", "product.id", "product.title", "product.handle"],
   })
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -322,7 +322,7 @@ export default async function seedDemoHistoricData({ container }: ExecArgs) {
   // ── 6. Historic orders (400 over 90 days) ────────────────────────────────────
   logger.info("━━ Step 6: Historic orders (90 days)")
 
-  const ORDER_TARGET = 400
+  const ORDER_TARGET = 180
   const SEED_SOURCE = "aurelia_demo_v2"
 
   const { data: existingOrders } = await query.graph({
@@ -340,23 +340,32 @@ export default async function seedDemoHistoricData({ container }: ExecArgs) {
   } else {
     logger.info(`  Creating ${ordersToCreate} orders...`)
 
-    // Product pool
-    const productPool = [
-      { title: "Aros Siena Dorado",         price: 18900 },
-      { title: "Aros Argolla Fina Plateada", price: 12500 },
-      { title: "Aros Perla Baroque",         price: 28000 },
-      { title: "Collar Luna Minimalista",    price: 24500 },
-      { title: "Collar Capas Boho",          price: 32000 },
-      { title: "Pulsera Boreal",             price: 15800 },
-      { title: "Pulsera Eslabón Dorada",     price: 19500 },
-      { title: "Set Vitrina Mix x5",         price: 89000 },
-      { title: "Set Colección Perlas",       price: 67000 },
-      { title: "Kit Showroom Básico x8",     price: 125000 },
-      { title: "Aurelia Aros Trendy",        price: 14900 },
-      { title: "Aurelia Collar Fino",        price: 22500 },
-      { title: "Aurelia Pulsera Doble",      price: 17800 },
-      { title: "Aurelia Set Primavera",      price: 54000 },
-    ]
+    const productPool = jewelryVariants
+      .map((variant: any) => {
+        const handle = String(variant?.product?.handle ?? "")
+        const productTitle = String(variant?.product?.title ?? "Aurelia Demo Product")
+        const variantTitle = String(variant?.title ?? "")
+        const normalizedVariantTitle = variantTitle.trim().toLowerCase()
+
+        return {
+          variant_id: String(variant.id),
+          variant_title: variantTitle || null,
+          variant_sku: variant?.sku ?? null,
+          product_id: String(variant?.product?.id ?? ""),
+          product_title: productTitle,
+          product_handle: handle,
+          title: !variantTitle || normalizedVariantTitle === "única" || normalizedVariantTitle === "unica"
+            ? productTitle
+            : `${productTitle} - ${variantTitle}`,
+          price: staticPrices[handle] ?? 20000,
+        }
+      })
+      .filter((variant: any) => variant.product_id)
+
+    if (!productPool.length) {
+      logger.warn("  No linked catalog variants found. Skipping historic order creation.")
+      return
+    }
 
     const shippingOptions = [
       { name: "Correo Argentino (3-5 días hábiles)", amount: 3900 },
@@ -435,9 +444,17 @@ export default async function seedDemoHistoricData({ container }: ExecArgs) {
         const qty = rnd(1, 3)
         const jitter = rnd(-2000, 3500)
         return {
+          variant_id: product.variant_id,
+          product_id: product.product_id,
+          product_title: product.product_title,
+          product_handle: product.product_handle,
           title: product.title,
+          variant_title: product.variant_title,
+          variant_sku: product.variant_sku,
           quantity: qty,
           unit_price: Math.max(8000, product.price + jitter),
+          requires_shipping: true,
+          is_discountable: true,
         }
       })
 

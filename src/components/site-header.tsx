@@ -62,7 +62,7 @@ export function SiteHeader() {
 
   return (
     <>
-      <header className="fixed top-0 z-50 w-full border-b border-black/10 bg-white">
+      <header className="fixed top-0 z-50 w-full border-b border-black/10 bg-white/70 backdrop-blur-md">
         <div className="mx-auto flex w-full max-w-[1400px] items-center gap-2 px-2.5 py-3 min-[361px]:gap-3 min-[361px]:px-4 md:gap-6">
           <button
             className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/15 md:hidden"

@@ -71,6 +71,50 @@ describe("purchase module route guards", () => {
   })
 })
 
+// ─── Fulfillment module route guards ─────────────────────────────────────────
+
+describe("fulfillment module route guards", () => {
+  it("GET /admin/fulfillment/kpis → [inventory, customer_service]", async () => {
+    const e = findEntry("/admin/fulfillment/kpis", "GET")!
+    const roles = await getAllowedRoles(e.middlewares)
+    expect(roles).toContain("inventory")
+    expect(roles).toContain("customer_service")
+    expect(roles).not.toContain("purchasing")
+    expect(roles).not.toContain("marketing")
+  })
+
+  it("GET /admin/fulfillment/orders → [inventory, customer_service]", async () => {
+    const e = findEntry("/admin/fulfillment/orders", "GET")!
+    const roles = await getAllowedRoles(e.middlewares)
+    expect(roles).toContain("inventory")
+    expect(roles).toContain("customer_service")
+    expect(roles).not.toContain("purchasing")
+    expect(roles).not.toContain("marketing")
+  })
+
+  it("GET /admin/fulfillment/orders/:id → [inventory, customer_service]", async () => {
+    const e = findEntry("/admin/fulfillment/orders/:id", "GET")!
+    const roles = await getAllowedRoles(e.middlewares)
+    expect(roles).toContain("inventory")
+    expect(roles).toContain("customer_service")
+  })
+
+  it("POST /admin/fulfillment/orders/:id/pick → [inventory] only", async () => {
+    const e = findEntry("/admin/fulfillment/orders/:id/pick", "POST")!
+    expect(await getAllowedRoles(e.middlewares)).toEqual(["inventory"])
+  })
+
+  it("POST /admin/fulfillment/orders/:id/pack → [inventory] only", async () => {
+    const e = findEntry("/admin/fulfillment/orders/:id/pack", "POST")!
+    expect(await getAllowedRoles(e.middlewares)).toEqual(["inventory"])
+  })
+
+  it("POST /admin/fulfillment/orders/:id/dispatch → [inventory] only", async () => {
+    const e = findEntry("/admin/fulfillment/orders/:id/dispatch", "POST")!
+    expect(await getAllowedRoles(e.middlewares)).toEqual(["inventory"])
+  })
+})
+
 // ─── Medusa native: orders ────────────────────────────────────────────────────
 
 describe("orders route guards", () => {

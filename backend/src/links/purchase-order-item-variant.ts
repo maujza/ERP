@@ -3,6 +3,9 @@ import ProductModule from "@medusajs/medusa/product"
 import PurchaseDepartmentModule from "../modules/purchaseDepartment"
 
 export default defineLink(
-  PurchaseDepartmentModule.linkable.purchaseOrderItem,
+  {
+    linkable: PurchaseDepartmentModule.linkable.purchaseOrderItem,
+    isList: true,
+  },
   ProductModule.linkable.productVariant
 )

@@ -22,6 +22,14 @@ import {
 } from "@medusajs/ui"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useRef, useState } from "react"
+import { useNavigate } from "react-router-dom"
+import {
+  canCancelPurchaseOrder,
+  canCreatePurchaseOrders,
+  canReceivePurchaseOrder,
+  canSubmitPurchaseOrder,
+} from "../../../lib/purchase-order-permissions"
+import { type Role } from "../../../lib/roles"
 import { sdk } from "../../../lib/client"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -59,6 +67,12 @@ type OrderForm = {
 type ProductOption = { id: string; title: string }
 type VariantOption = { id: string; title: string; sku: string | null }
 type StockLocation = { id: string; name: string }
+type CurrentUser = {
+  id: string
+  metadata?: {
+    role?: Role
+  } | null
+}
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -231,6 +245,7 @@ const columnHelper = createDataTableColumnHelper<PurchaseOrder>()
 
 const PurchaseOrdersPage = () => {
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
 
   // ── UI state ──────────────────────────────────────────────────────────────
   const [createOpen, setCreateOpen] = useState(false)
@@ -283,6 +298,11 @@ const PurchaseOrdersPage = () => {
       }),
   })
 
+  const { data: currentUserData } = useQuery({
+    queryKey: ["current-admin-user"],
+    queryFn: () => sdk.client.fetch<{ user: CurrentUser }>("/admin/users/me"),
+  })
+
   const { data: existingProductSearchData } = useQuery({
     queryKey: ["existing-product-search", existingProductQuery],
     queryFn: () =>
@@ -312,7 +332,8 @@ const PurchaseOrdersPage = () => {
       setCreateOpen(false)
       resetForm()
     },
-    onError: () => toast.error("Failed to create purchase order"),
+    onError: (error: any) =>
+      toast.error(error?.message || "Failed to create purchase order"),
   })
 
   const submitMutation = useMutation({
@@ -322,7 +343,8 @@ const PurchaseOrdersPage = () => {
       queryClient.invalidateQueries({ queryKey: ["purchase-orders"] })
       toast.success("Purchase order submitted")
     },
-    onError: () => toast.error("Failed to submit purchase order"),
+    onError: (error: any) =>
+      toast.error(error?.message || "Failed to submit purchase order"),
   })
 
   const receiveMutation = useMutation({
@@ -337,7 +359,8 @@ const PurchaseOrdersPage = () => {
       setReceiveOrder(null)
       setLocationId("")
     },
-    onError: () => toast.error("Failed to receive purchase order"),
+    onError: (error: any) =>
+      toast.error(error?.message || "Failed to receive purchase order"),
   })
 
   const cancelMutation = useMutation({
@@ -347,8 +370,12 @@ const PurchaseOrdersPage = () => {
       queryClient.invalidateQueries({ queryKey: ["purchase-orders"] })
       toast.success("Purchase order cancelled")
     },
-    onError: () => toast.error("Failed to cancel purchase order"),
+    onError: (error: any) =>
+      toast.error(error?.message || "Failed to cancel purchase order"),
   })
+
+  const currentRole = currentUserData?.user?.metadata?.role
+  const canCreateOrders = canCreatePurchaseOrders(currentRole)
 
   const resetCreateDrawer = () => {
     setCreateProductForIdx(null)
@@ -456,6 +483,10 @@ const PurchaseOrdersPage = () => {
     setItems((prev) => prev.filter((_, i) => i !== index))
 
   const handleCreate = () => {
+    if (!canCreateOrders) {
+      toast.error("Only purchasing users can create purchase orders")
+      return
+    }
     if (!orderForm.supplier_id) {
       toast.error("Supplier is required")
       return
@@ -559,7 +590,9 @@ const PurchaseOrdersPage = () => {
       header: "",
       cell: ({ row }) => {
         const order = row.original
-        const canCancel = order.status === "draft" || order.status === "submitted"
+        const canSubmit = canSubmitPurchaseOrder(currentRole, order.status)
+        const canReceive = canReceivePurchaseOrder(currentRole, order.status)
+        const canCancel = canCancelPurchaseOrder(currentRole, order.status)
         return (
           <DropdownMenu>
             <DropdownMenu.Trigger asChild>
@@ -568,7 +601,14 @@ const PurchaseOrdersPage = () => {
               </IconButton>
             </DropdownMenu.Trigger>
             <DropdownMenu.Content>
-              {order.status === "draft" && (
+              <DropdownMenu.Item
+                className="gap-x-2"
+                onClick={() => navigate(`/purchase/orders/${order.id}`)}
+              >
+                View Details
+              </DropdownMenu.Item>
+              <DropdownMenu.Separator />
+              {canSubmit && (
                 <DropdownMenu.Item
                   className="gap-x-2"
                   onClick={() => submitMutation.mutate(order.id)}
@@ -576,7 +616,7 @@ const PurchaseOrdersPage = () => {
                   Submit Order
                 </DropdownMenu.Item>
               )}
-              {order.status === "submitted" && (
+              {canReceive && (
                 <DropdownMenu.Item
                   className="gap-x-2"
                   onClick={() => setReceiveOrder(order)}
@@ -646,9 +686,11 @@ const PurchaseOrdersPage = () => {
     <Container className="p-0">
       <div className="flex items-center justify-between px-6 py-4">
         <Heading level="h2">Purchase Orders</Heading>
-        <Button size="small" onClick={() => setCreateOpen(true)}>
-          New Order
-        </Button>
+        {canCreateOrders && (
+          <Button size="small" onClick={() => setCreateOpen(true)}>
+            New Order
+          </Button>
+        )}
       </div>
 
       <DataTable instance={table}>

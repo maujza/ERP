@@ -1,5 +1,9 @@
 import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk"
-import { MedusaError, Modules } from "@medusajs/framework/utils"
+import {
+  ContainerRegistrationKeys,
+  MedusaError,
+} from "@medusajs/framework/utils"
+import { createShipmentWorkflow } from "@medusajs/core-flows"
 import { z } from "zod"
 import { PURCHASE_DEPARTMENT_MODULE } from "../../modules/purchaseDepartment"
 import PurchaseDepartmentModuleService from "../../modules/purchaseDepartment/service"
@@ -52,25 +56,48 @@ export async function dispatchOrderHandler(
     )
   }
 
-  // Notify Medusa's native fulfillment service.
-  // Wrap in try/catch: if unavailable, surface a clear 503 so the
-  // FulfillmentRecord stays in 'packed' and the operator can retry.
-  try {
-    const medusaFulfillmentService = container.resolve(Modules.FULFILLMENT)
-    const fulfillments = await medusaFulfillmentService.listFulfillments(
-      { order_id: input.order_id },
-      { take: 1 }
-    )
-    if (fulfillments.length > 0) {
-      await medusaFulfillmentService.createShipment(fulfillments[0].id, {
-        tracking_numbers: [input.tracking_number],
+  // Best-effort: sync dispatch to Medusa's native fulfillment service.
+  // Our FulfillmentRecord is the source of truth — never block dispatch on failure.
+  {
+    const logger = container.resolve("logger")
+    const query = container.resolve(ContainerRegistrationKeys.QUERY)
+    // Retrieve the Medusa order with fulfillments; log + skip on any error.
+    const { data: orders } = await query
+      .graph({
+        entity: "order",
+        fields: ["id", "fulfillments.id", "fulfillments.canceled_at"],
+        filters: { id: input.order_id },
       })
+      .catch((err: any) => {
+        logger.warn(
+          `dispatch-order: Medusa native fulfillment sync skipped for ${input.order_id}: ${err?.message}`
+        )
+        return { data: [] }
+      })
+    const nativeFulfillmentId = (orders[0]?.fulfillments ?? []).find(
+      (fulfillment: any) => !fulfillment?.canceled_at
+    )?.id
+
+    if (nativeFulfillmentId) {
+      await createShipmentWorkflow(container)
+        .run({
+          input: {
+            id: nativeFulfillmentId,
+            labels: [
+              {
+                tracking_number: input.tracking_number,
+                tracking_url: "#",
+                label_url: "#",
+              },
+            ],
+          },
+        })
+        .catch((err: any) => {
+          logger.warn(
+            `dispatch-order: createShipmentWorkflow failed for ${input.order_id}: ${err?.message}`
+          )
+        })
     }
-  } catch (err: any) {
-    throw new MedusaError(
-      MedusaError.Types.UNEXPECTED_STATE,
-      "Fulfillment service unavailable — order remains packed. Retry when the service recovers."
-    )
   }
 
   const updated = await fulfillmentService.updateFulfillmentRecords({

@@ -1,7 +1,7 @@
 # TODOS — Aurelia ERP
 
 Deferred work, vision items, and known gaps.
-Created from plan-ceo-review session 2026-03-15. Updated after Sprint 2 plan review 2026-03-15.
+Created from plan-ceo-review session 2026-03-15. Updated after Sprint 2 plan review 2026-03-15. **Last updated: 2026-03-22 (i18n parity fix — account, auth, order-confirmation, shop-data all fully bilingual; 34 new tests).**
 
 ---
 
@@ -96,152 +96,95 @@ Unit tests: happy path, not-found, error propagation.
 
 ---
 
-## Sprint 2 — The Fulfillment Loop
+## Sprint 2 — The Fulfillment Loop ✅ COMPLETE
 
-*Scope confirmed in plan-ceo-review 2026-03-15 (EXPANSION mode). Closes the physical→ERP cycle from order-placed to order-dispatched.*
+*Scope confirmed in plan-ceo-review 2026-03-15 (EXPANSION mode). Shipped commit `4823eb5` on 2026-03-21. Two code fixes applied in eng-review 2026-03-21: (1) batch variant queries in `generate-pick-list.ts` (was N+1), (2) RBAC policy snapshot tests added for all `/admin/fulfillment/*` routes.*
 
 **ADR invariants addressed:** `goods_counted → receive_po_items`, `items_picked → set_order_picking`, `package_packed → set_order_packed`, `courier_collected → set_order_dispatched`, `low_stock → notify`, `packed_not_shipped > 24h → notify`.
 
 ---
 
-### [P1] [S] Integration test: PO receipt → Medusa stock update ← BUILD FIRST
+### ✅ [P1] [S] Integration test: PO receipt → Medusa stock update — DONE
 
-**What:** Integration test that verifies `receive-purchase-order` workflow actually increments Medusa inventory levels for the received variant.
-
-**Why:** Highest-risk silent failure in the system — the workflow could silently succeed while stock doesn't change. This test is the anchor for all Sprint 2 work.
-
-**How to apply:** `backend/src/workflows/__tests__/receive-purchase-order.integration.spec.ts`. Seed product variant, create PO, receive it, assert `InventoryLevel.stocked_quantity` delta. Build and pass this test BEFORE adding `StockAdjustmentLog`.
-
-**Effort:** S | **Priority:** P1 | **Depends on:** Nothing — run this first.
+`backend/integration-tests/http/receive-purchase-order.spec.ts`. Seeds variant + inventory item + PO, receives, asserts `InventoryLevel.stocked_quantity` delta and `StockAdjustmentLog` record.
 
 ---
 
-### [P1] [M] StockAdjustmentLog model (thin audit layer)
+### ✅ [P1] [M] StockAdjustmentLog model (thin audit layer) — DONE
 
-**What:** Append-only custom model recording every inventory level change with reason_code + actor_id + delta + timestamp. Does NOT duplicate Medusa's native `StockLocation` or `InventoryLevel` — those are used directly.
-
-**Why:** ADR invariant: "stock adjustment requires reason_code + operator + timestamp." Violations must generate incidents.
-
-**Architecture decisions (locked in plan review 2026-03-15):**
-- `StockAdjustmentLog(id, variant_id, location_id, delta, reason_code, actor_id, created_at)`
-- `reason_code` is an enum (TypeScript union + Zod + DB CHECK constraint): `po_receive | order_pick | manual_adjustment | return_restock | correction`
-- Append-only — no updates, no deletes, ever
-- The `receive-purchase-order` workflow step calls `updateInventoryLevels` AND inserts `StockAdjustmentLog` **in the same transaction**. If the log insert fails, the step compensates and rolls back the stock update (2A decision).
-- Medusa native `StockLocation` used directly — no custom `WarehouseLocation` model (1A decision)
-
-**Required tests:**
-- Unit: `StockAdjustmentLog` insert failure → workflow compensates → stock level unchanged (mock injection pattern)
-- Unit: Invalid `reason_code` → Zod 400 error
-- Integration: `receive-purchase-order` → `StockAdjustmentLog` record exists with correct reason + actor
-
-**Effort:** M | **Priority:** P1 | **Depends on:** Integration test above (run first).
+Append-only model `stock_adjustment_log` in `purchaseDepartment` module. Migration `Migration20260320000002`. Reason codes: `po_receive | order_pick | manual_adjustment | return_restock | correction`. Integrated into `receive-purchase-order` step — log insert failure triggers full compensation (stock rollback). `StockAdjustmentReasonCode` type exported for reuse in future steps.
 
 ---
 
-### [P1] [S] PO status guard (re-receive protection)
+### ✅ [P1] [S] PO status guard (re-receive protection) — DONE
 
-**What:** At the start of `receive-purchase-order`, verify `PO.status === "submitted"`. Return 400 "PO already received" if status is `received` or `cancelled`.
-
-**Why:** Without this guard, a duplicate receive call creates duplicate stock increments and duplicate `StockAdjustmentLog` records. This is a data integrity risk, not just a UX issue.
-
-**How to apply:** Add status check as the first step in `receive-purchase-order.ts`. Same pattern as the new dispatch idempotency guard (see below).
-
-**Effort:** S | **Priority:** P1 | **Depends on:** Integration test (run first).
+`receive-purchase-order.ts` guards `status === "submitted"` — throws descriptive `UNEXPECTED_STATE` errors for `received` and `cancelled`. Unit-tested.
 
 ---
 
-### [P1] [L] fulfill-order workflow (pick → pack → dispatch)
+### ✅ [P1] [L] fulfill-order workflow (pick → pack → dispatch) — DONE
 
-**What:** Custom lightweight workflow with 3 steps: `generate-pick-list`, `confirm-pack` (weight + dimensions), `dispatch-order` (tracking number). Admin routes at `/admin/fulfillment/*`. Protected by `requireRole([ROLES.INVENTORY])`.
+Three workflows: `startPickingWorkflow`, `confirmPackWorkflow`, `dispatchOrderWorkflow` in `backend/src/workflows/fulfill-order.ts`. Steps: `generate-pick-list`, `confirm-pack`, `dispatch-order` — each with full compensation. Admin UI at `backend/src/admin/routes/fulfillment/orders/page.tsx` (DataTable with Pack + Dispatch drawers). RBAC: mutations → `[ROLES.INVENTORY]`; reads → `[ROLES.INVENTORY, ROLES.CUSTOMER_SERVICE]`. 20 unit tests across 3 spec files. 163 total unit tests passing.
 
-**Architecture decisions (locked in plan review 2026-03-15):**
-- Custom workflow wrapping Medusa's native `IFulfillmentService` — does not replace it
-- Order state machine: `pending → picking → packed → dispatched | cancelled`
-- Status guard at each step: verify current state before transitioning (no skip-step transitions)
-- Dispatch is idempotent: if already dispatched, return early (no-op) — prevents double-tap on mobile (4A decision)
-- `generate-pick-list` validates order has >0 line items; returns 400 otherwise
-- Pick list includes product photos (first image from Medusa product) for visual verification
-
-**Required tests:**
-- Integration: full happy path `pending → picking → packed → dispatched`
-- Unit: dispatch idempotency (already dispatched → no-op)
-- Unit: `generatePickList` with 0 items → `WorkflowStepError`
-- Unit: `confirmPack` with weight=0 → Zod 400
-- Unit: `dispatchOrder` with empty tracking string → Zod 400
-
-**Effort:** L | **Priority:** P1 | **Depends on:** `StockAdjustmentLog` (for `order_pick` reason code on picking step).
+**Eng-review fix (2026-03-21):** `generate-pick-list.ts` now batches all variant ID lookups in one `query.graph` call (was N+1). RBAC policy snapshot tests added for all 6 fulfillment routes.
 
 ---
 
-### [P2] [S] low-stock-check subscriber
+### ✅ [P2] [S] low-stock-check subscriber — DONE
 
-**What:** Medusa subscriber on `inventory.updated` events. If updated variant's stock level falls below threshold, fire notification to purchasing + inventory roles.
-
-**Architecture decisions:**
-- Threshold: `LOW_STOCK_THRESHOLD` env var (global default: 5 units). Per-variant threshold is a Sprint 3 enhancement.
-- Error handling: `try/catch` wrapping entire subscriber. On any failure, `logger.warn` with `{ variant_id, error }`. Never propagate — a missed alert must never crash the inventory update (2B decision).
-- TODO: When bulk PO receives become common (>50 items), replace per-event subscriber with a 15-minute scheduled cron. A module-level TTL cache (`Map<variantId, lastChecked>`) is the fast path if needed sooner.
-
-**Required tests:**
-- Unit: happy path → `createNotifications` called with correct variant info
-- Unit: notification module throws → `logger.warn` called, subscriber does not throw
-- Unit: inventory query fails → `logger.warn` called, subscriber does not throw
-- Unit: stock above threshold → no notification sent
-
-**Effort:** S | **Priority:** P2 | **Depends on:** Nothing (uses Medusa notification module).
+`backend/src/subscribers/low-stock-check.ts`. Threshold from `LOW_STOCK_THRESHOLD` env var (default 5). Notifies `purchasing` + `inventory` roles. Full error suppression (`try/catch` → `logger.warn`). 4 unit tests.
 
 ---
 
-### [P2] [S] packed-not-shipped scheduled job
+### ✅ [P2] [S] packed-not-shipped scheduled job — DONE
 
-**What:** Medusa scheduled job (`backend/src/jobs/`) running hourly. Queries orders in `packed` status for >24 hours. Fires notification to inventory role.
-
-**Why:** ADR mandatory automation: `packed_not_shipped > 24h → notify inventory`. Without this, packed orders can sit forgotten before dispatch.
-
-**How to apply:** `backend/src/jobs/packed-not-shipped.ts`. Query orders where `status = 'packed' AND updated_at < NOW() - INTERVAL '24 hours'`. Fire notification per order. `try/catch` wrapping: on failure, `logger.warn` + continue (same log+suppress pattern as low-stock subscriber).
-
-**Required tests:**
-- Unit: orders found → notification called for each
-- Unit: no orders found → no notification
-- Unit: query fails → `logger.warn`, job does not throw
-
-**Effort:** S | **Priority:** P2 | **Depends on:** `fulfill-order` workflow (for `packed` status).
+`backend/src/jobs/packed-not-shipped.ts`. Runs hourly. Alerts after 24h in packed status, 4h cooldown via `last_notified_at` on `FulfillmentRecord`. Full error suppression. 3 unit tests.
 
 ---
 
-### [P3] [S] DELIGHT: PO discrepancy flag
+### ✅ [P3] [S] DELIGHT: PO discrepancy flag — DONE
 
-**What:** When `received_qty ≠ ordered_qty` on a PO receive, store a `discrepancy_count` on the PO and display a red badge on the PO detail page ("Received 47 of 50 units").
-
-**Why:** Purchasing gets immediate visibility into supplier shortfalls without running a report. Feeds the supplier fill rate metric.
-
-**How to apply:** Compare totals in the `receive-purchase-order` step. Add `discrepancy_count` field to `PurchaseOrder` model (nullable). Display in PO detail widget.
-
-**Effort:** S | **Priority:** P3 | **Depends on:** `StockAdjustmentLog` (same step touches PO receive).
+`discrepancy_count` on `PurchaseOrder` model. Computed in `receive-purchase-order` step (count of items where `received_qty ≠ ordered_qty`). Shown as warning badge on PO detail page at `/purchase/orders/[id]`.
 
 ---
 
-### [P3] [S] DELIGHT: Supplier fill rate
+### ✅ [P3] [S] DELIGHT: Supplier fill rate — DONE
 
-**What:** On the supplier detail page, show `fill_rate = Σ received_qty / Σ ordered_qty` across all POs for the supplier, as a percentage.
-
-**Why:** Purchasing can evaluate suppliers without any extra data entry. Computed in real-time from existing PO receipt data. Enriched by discrepancy flag.
-
-**How to apply:** Aggregate query in `backend/src/admin/routes/purchase/suppliers/[id]/page.tsx`. No new backend logic — all data is in existing PO + PO items.
-
-**Effort:** S | **Priority:** P3 | **Depends on:** PO discrepancy flag (above, for richer data).
+`backend/src/admin/routes/purchase/suppliers/[id]/page.tsx` computes `Σ received_qty / Σ ordered_qty` client-side from existing PO data. No new backend model.
 
 ---
 
-### [P3] [S] DELIGHT: 2 KPI tiles on Aurelia dashboard
+### ✅ [P3] [S] DELIGHT: KPI tiles on Aurelia dashboard — DONE
 
-**What:** Add two new tiles to the existing `aurelia-dashboard` admin route:
-1. **Avg fulfillment lead time** (last 30 days): time from `picking` to `dispatched`
-2. **Orders stuck in picking >24h**: count with link to fulfillment list
+`/admin/fulfillment/kpis` API route returns `avg_lead_time_minutes`, `stuck_in_picking_count`, `dispatched_count_30d`. Dashboard updated to show these tiles. Accessible to `[ROLES.INVENTORY, ROLES.CUSTOMER_SERVICE]`.
 
-**Why:** Closes ADR KPI gap. Ops lead sees fulfillment health at a glance without running a report. Data becomes available the day fulfillment workflow ships.
+---
 
-**Effort:** S | **Priority:** P3 | **Depends on:** `fulfill-order` workflow.
+## 🚀 Next Session — Where to Pick Up
+
+**Branch:** `fix/propuesta-financial-review` — ready to merge to main.
+
+**State as of 2026-03-21:**
+- Sprint 1 ✅ + Sprint 2 ✅ fully shipped and eng-reviewed. 163 unit tests green.
+- Two fixes applied this session: (1) batch variant queries in `generate-pick-list.ts`, (2) RBAC policy snapshot tests for all fulfillment routes.
+- DB migrations through `Migration20260320000003` — includes `FulfillmentRecord` + `StockAdjustmentLog`.
+
+**Recommended next steps (in order):**
+1. **Merge this branch** — eng review cleared, tests green, no open decisions.
+2. **Rebuild backend Docker** — migrations need to run (`docker compose up --build backend -d`). The `fulfillment_record` and `stock_adjustment_log` tables must exist before using the fulfillment UI.
+3. **Sprint 2.5 — Storefront redesign** — DESIGN.md is written and locked. No code has been touched. Start at step 1 of the implementation order below.
+4. **Sprint 3** — WhatsApp server-side layer (write ADR first per the TODO below).
+
+**Sprint 2.5 implementation order (from DESIGN.md):**
+1. Update `globals.css` CSS vars + import IBM Plex fonts in `layout.tsx`
+2. Full-bleed hero (`page.tsx`)
+3. Category cards with Medusa product photos
+4. Product card hover buttons (catalog + homepage)
+5. Favorites: heart button + localStorage + `/favoritos` page
+6. Pagination `?page` URL param in `catalog/page.tsx`
+7. Shop the Look dots → `ProductQuickView`
+8. Trust signals row (blocked on copy from user)
+9. WhatsApp button color (#25D366)
 
 ---
 

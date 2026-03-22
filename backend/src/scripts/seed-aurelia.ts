@@ -483,10 +483,23 @@ export default async function seedAureliaData({ container }: ExecArgs) {
     entity: "product",
     fields: ["id", "handle"],
   });
+  const { data: inventoryItemsAfterSeed } = await query.graph({
+    entity: "inventory_item",
+    fields: ["id", "sku"],
+  });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const productHandlesAfterSeed = new Set(productsAfterSeed.map((p: any) => p.handle));
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const existingBulkCount = productsAfterSeed.filter((p: any) => String(p.handle || "").startsWith(bulkHandlePrefix)).length;
+  const existingBulkSkuMax = (inventoryItemsAfterSeed as Array<{ sku?: string | null }>)
+    .reduce((max, item) => {
+      const match = String(item.sku ?? "").match(/^DUM-(\d+)-/);
+      if (!match) {
+        return max;
+      }
+
+      return Math.max(max, Number.parseInt(match[1], 10));
+    }, 0);
   const missingBulkCount = Math.max(BULK_PRODUCT_TARGET - existingBulkCount, 0);
 
   if (missingBulkCount > 0) {
@@ -495,11 +508,13 @@ export default async function seedAureliaData({ container }: ExecArgs) {
     const brandCycle = ["Aurelia Core", "Aurelia Studio", "Lumiere", "Boreal", "Aurelia Pro"];
 
     const productsToGenerate: AureliaProduct[] = [];
-    for (let i = 0; i < missingBulkCount; i += 1) {
-      const index = existingBulkCount + i + 1;
+    let candidateIndex = Math.max(existingBulkCount, existingBulkSkuMax) + 1;
+    while (productsToGenerate.length < missingBulkCount) {
+      const index = candidateIndex;
       const categoryName = categoryCycle[index % categoryCycle.length];
       const basePrice = 11500 + ((index * 1700) % 89000);
       const handle = `${bulkHandlePrefix}${String(index).padStart(3, "0")}`;
+      candidateIndex += 1;
 
       if (productHandlesAfterSeed.has(handle)) {
         continue;
@@ -697,7 +712,7 @@ export default async function seedAureliaData({ container }: ExecArgs) {
   }
 
   // ── 10. Dummy Orders (dashboard depth) ──────────────────────────────────────
-  const ORDER_TARGET = 240;
+  const ORDER_TARGET = 120;
   const orderSeedSource = "aurelia_dummy_v1";
   logger.info("Ensuring dummy orders for dashboard analytics...");
 
@@ -725,93 +740,152 @@ export default async function seedAureliaData({ container }: ExecArgs) {
   const ordersMissing = Math.max(ORDER_TARGET - existingSeededOrders.length, 0);
 
   if (ordersMissing > 0) {
-    const productPool = [
-      ...aureliaProducts.map((p) => ({ title: p.title, price: p.price })),
-      { title: "Aurelia Demo Earrings", price: 16500 },
-      { title: "Aurelia Demo Necklace", price: 24500 },
-      { title: "Aurelia Demo Bracelet", price: 20500 },
-      { title: "Aurelia Demo Set", price: 53000 },
-    ];
+    const catalogHandles = new Set(aureliaProducts.map((product) => product.handle));
+    const priceByHandle = new Map(
+      aureliaProducts.map((product) => [product.handle, product.price])
+    );
+    const { data: catalogVariants } = await query.graph({
+      entity: "product_variant",
+      fields: [
+        "id",
+        "title",
+        "sku",
+        "product.id",
+        "product.title",
+        "product.handle",
+      ],
+    });
 
-    const getRandomInt = (min: number, max: number) =>
-      Math.floor(Math.random() * (max - min + 1)) + min;
-
-    for (let i = 0; i < ordersMissing; i += 1) {
-      const orderIndex = existingSeededOrders.length + i + 1;
-      const email = `cliente+${String((orderIndex % CUSTOMER_TARGET) + 1).padStart(4, "0")}@${customerDomain}`;
-      const customerId = customerIdByEmail.get(email.toLowerCase());
-      const itemCount = getRandomInt(1, 4);
-
-      const items = Array.from({ length: itemCount }).map((_, itemIdx) => {
-        const product = productPool[(orderIndex + itemIdx) % productPool.length];
-        const quantity = getRandomInt(1, 3);
-        const priceJitter = getRandomInt(-1200, 2400);
-        const unitPrice = Math.max(7900, product.price + priceJitter);
+    const productPool = (catalogVariants as Array<{
+      id: string;
+      title?: string | null;
+      sku?: string | null;
+      product?: {
+        id?: string | null;
+        title?: string | null;
+        handle?: string | null;
+      } | null;
+    }>)
+      .filter((variant) => {
+        const handle = variant.product?.handle;
+        return !!handle && catalogHandles.has(handle);
+      })
+      .map((variant) => {
+        const handle = String(variant.product?.handle);
+        const productTitle = String(variant.product?.title ?? "Aurelia Demo Product");
+        const variantTitle = String(variant.title ?? "");
+        const normalizedVariantTitle = variantTitle.trim().toLowerCase();
+        const lineTitle =
+          !variantTitle ||
+          normalizedVariantTitle === "única" ||
+          normalizedVariantTitle === "unica"
+            ? productTitle
+            : `${productTitle} - ${variantTitle}`;
 
         return {
-          title: product.title,
-          quantity,
-          unit_price: unitPrice,
+          variant_id: variant.id,
+          variant_title: variantTitle || null,
+          variant_sku: variant.sku ?? null,
+          product_id: String(variant.product?.id ?? ""),
+          product_title: productTitle,
+          product_handle: handle,
+          title: lineTitle,
+          price: priceByHandle.get(handle) ?? 15000,
         };
-      });
+      })
+      .filter((variant) => variant.product_id);
 
-      const itemsTotal = items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0);
-      const shippingAmount = [0, 3900, 7200][orderIndex % 3];
-      const orderTotal = itemsTotal + shippingAmount;
-      const isPaid = orderIndex % 5 !== 0;
-      const isCompleted = orderIndex % 4 === 0;
+    if (!productPool.length) {
+      logger.warn("No linked catalog variants found for dummy orders. Skipping order creation.");
+    } else {
+      const getRandomInt = (min: number, max: number) =>
+        Math.floor(Math.random() * (max - min + 1)) + min;
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await orderModuleService.createOrders({
-        region_id: argentinaRegion.id,
-        sales_channel_id: defaultSalesChannel.id,
-        status: isCompleted ? "completed" : "pending",
-        email,
-        ...(customerId && { customer_id: customerId }),
-        currency_code: "ars",
-        shipping_address: {
-          first_name: "Aurelia",
-          last_name: "Demo",
-          address_1: "Av. Santa Fe 1234",
-          city: "Buenos Aires",
-          country_code: "ar",
-          province: "caba",
-          postal_code: "C1000",
-        },
-        billing_address: {
-          first_name: "Aurelia",
-          last_name: "Demo",
-          address_1: "Av. Santa Fe 1234",
-          city: "Buenos Aires",
-          country_code: "ar",
-          province: "caba",
-          postal_code: "C1000",
-        },
-        items,
-        shipping_methods: [
-          {
-            name: shippingAmount === 0 ? "Retiro showroom" : shippingAmount === 3900 ? "Correo Argentino" : "OCA Express",
-            amount: shippingAmount,
+      for (let i = 0; i < ordersMissing; i += 1) {
+        const orderIndex = existingSeededOrders.length + i + 1;
+        const email = `cliente+${String((orderIndex % CUSTOMER_TARGET) + 1).padStart(4, "0")}@${customerDomain}`;
+        const customerId = customerIdByEmail.get(email.toLowerCase());
+        const itemCount = getRandomInt(1, 4);
+
+        const items = Array.from({ length: itemCount }).map((_, itemIdx) => {
+          const product = productPool[(orderIndex + itemIdx) % productPool.length];
+          const quantity = getRandomInt(1, 3);
+          const priceJitter = getRandomInt(-1200, 2400);
+          const unitPrice = Math.max(7900, product.price + priceJitter);
+
+          return {
+            variant_id: product.variant_id,
+            product_id: product.product_id,
+            product_title: product.product_title,
+            product_handle: product.product_handle,
+            title: product.title,
+            variant_title: product.variant_title,
+            variant_sku: product.variant_sku,
+            quantity,
+            unit_price: unitPrice,
+            requires_shipping: true,
+            is_discountable: true,
+          };
+        });
+
+        const itemsTotal = items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0);
+        const shippingAmount = [0, 3900, 7200][orderIndex % 3];
+        const orderTotal = itemsTotal + shippingAmount;
+        const isPaid = orderIndex % 5 !== 0;
+        const isCompleted = orderIndex % 4 === 0;
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await orderModuleService.createOrders({
+          region_id: argentinaRegion.id,
+          sales_channel_id: defaultSalesChannel.id,
+          status: isCompleted ? "completed" : "pending",
+          email,
+          ...(customerId && { customer_id: customerId }),
+          currency_code: "ars",
+          shipping_address: {
+            first_name: "Aurelia",
+            last_name: "Demo",
+            address_1: "Av. Santa Fe 1234",
+            city: "Buenos Aires",
+            country_code: "ar",
+            province: "caba",
+            postal_code: "C1000",
           },
-        ],
-        transactions: isPaid
-          ? [
-              {
-                amount: orderTotal,
-                currency_code: "ars",
-                reference: "payment",
-                reference_id: `seed-pay-${orderIndex}`,
-              },
-            ]
-          : [],
-        metadata: {
-          seed_source: orderSeedSource,
-          seed_index: orderIndex,
-        },
-      } as any);
+          billing_address: {
+            first_name: "Aurelia",
+            last_name: "Demo",
+            address_1: "Av. Santa Fe 1234",
+            city: "Buenos Aires",
+            country_code: "ar",
+            province: "caba",
+            postal_code: "C1000",
+          },
+          items,
+          shipping_methods: [
+            {
+              name: shippingAmount === 0 ? "Retiro showroom" : shippingAmount === 3900 ? "Correo Argentino" : "OCA Express",
+              amount: shippingAmount,
+            },
+          ],
+          transactions: isPaid
+            ? [
+                {
+                  amount: orderTotal,
+                  currency_code: "ars",
+                  reference: "payment",
+                  reference_id: `seed-pay-${orderIndex}`,
+                },
+              ]
+            : [],
+          metadata: {
+            seed_source: orderSeedSource,
+            seed_index: orderIndex,
+          },
+        } as any);
 
-      if ((i + 1) % 25 === 0 || i === ordersMissing - 1) {
-        logger.info(`Created ${i + 1}/${ordersMissing} dummy orders.`);
+        if ((i + 1) % 25 === 0 || i === ordersMissing - 1) {
+          logger.info(`Created ${i + 1}/${ordersMissing} dummy orders.`);
+        }
       }
     }
   } else {

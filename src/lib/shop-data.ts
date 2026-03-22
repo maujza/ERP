@@ -10,7 +10,9 @@ export type ProductVariant = {
 export type Product = {
   id: string;
   name: string;
+  nameKo?: string;
   description: string;
+  descriptionKo?: string;
   category: string;
   subcategory: string;
   brand: string;
@@ -85,10 +87,12 @@ export function translateLabel(value: string, language: UiLanguage) {
 }
 
 export function getProductName(product: Product, language: UiLanguage) {
+  if (language === "ko" && product.nameKo) return product.nameKo;
   return product.name;
 }
 
 export function getProductDescription(product: Product, language: UiLanguage) {
+  if (language === "ko" && product.descriptionKo) return product.descriptionKo;
   return product.description;
 }
 
@@ -119,11 +123,15 @@ export function mapMedusaProduct(p: MedusaProduct): Product {
   const category = (p.metadata?.category as string) ?? p.categories?.[0]?.name ?? inferCategoryFromText(p.title ?? "", p.description ?? "")
   const subcategory = (p.metadata?.subcategory as string) ?? ""
   const brand = (p.metadata?.brand as string) ?? ""
+  const nameKo = (p.metadata?.name_ko as string) || undefined
+  const descriptionKo = (p.metadata?.description_ko as string) || undefined
 
   return {
     id: p.id,
     name: p.title,
+    nameKo,
     description: p.description ?? "",
+    descriptionKo,
     category,
     subcategory,
     brand,
