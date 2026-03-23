@@ -2,16 +2,34 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
-
-### Fixed
-- **i18n parity — storefront fully bilingual**: `/account`, `/auth`, and `/order-confirmation` pages were hardcoded in Spanish with no Korean support; all three now use `useLanguage` and a `t` object matching the pattern used across the rest of the storefront
-- **`getProductName` / `getProductDescription` stubs**: these functions ignored the `language` parameter entirely; they now return `metadata.name_ko` / `metadata.description_ko` when the language is `ko` and the field is populated — with graceful fallback to Spanish when not set
-- **Hardcoded `"N° pedido:"` in order-confirmation**: the order-number prefix was the only untranslated string on that page; now reads from `t.orderNumber` (`"주문 번호"` in Korean)
+## [0.2.0.0] - 2026-03-23
 
 ### Added
-- 34 new i18n tests covering both `es` and `ko` rendering in `account/page.test.tsx`, `auth/page.test.tsx`, `order-confirmation/page.test.tsx`, and `shop-data.test.ts`
-- `nameKo?` and `descriptionKo?` fields on the `Product` type; `mapMedusaProduct` reads them from `metadata.name_ko` / `metadata.description_ko`
+- **Warehouse fulfillment lifecycle**: pick → pack → dispatch workflow (`startPickingWorkflow`, `confirmPackWorkflow`, `dispatchOrderWorkflow`) with full audit trail via `FulfillmentRecord` and `StockAdjustmentLog`
+- **Supplier fill-rate caching**: `fill_rate` is written at PO receipt time (`Migration20260322000001`) and read back as a single column — no expensive recalculation on every GET; `backfill-supplier-fill-rate.ts` script for existing records
+- **Low-stock subscriber** (`low-stock-check.ts`): triggers after every PO receipt and flags variants below threshold
+- **Packed-not-shipped background job** (`packed-not-shipped.ts`): scheduled job that alerts on orders sitting in `packed` state too long
+- **KPI dashboard tiles** (`/admin/fulfillment/kpis`): fill rate, dispatch rate, pack accuracy aggregated from `FulfillmentRecord`
+- **WhatsApp notification eligibility** (`/api/admin/whatsapp-notifications`): RBAC-gated route returning recipients configured via `WHATSAPP_NOTIFICATION_RECIPIENTS`
+- **`/api/store/notify-agent` storefront endpoint**: initiates order-placed WhatsApp notification flow
+- **Medusa env validation** (`validateMedusaEnv()`): runs at Next.js startup and warns in logs when `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` or `NEXT_PUBLIC_MEDUSA_REGION_ID` are missing or have unexpected format — catches stale keys after DB rebuilds before the first request fails
+- **`docs/medusa-auth-keys.md`**: documents publishable key lifecycle, JWT auth flow, stale-key refresh procedure, and quick diagnostic commands
+- **`backend/src/scripts/validate-env.ts`**: `npx medusa exec` script that validates publishable key, region ID, and admin user against the live DB
+- **i18n parity**: `/account`, `/auth`, and `/order-confirmation` pages fully bilingual (es/ko); `getProductName`/`getProductDescription` now language-aware via `metadata.name_ko`/`metadata.description_ko`
+- 172+ backend unit tests; 636 frontend tests (up from 545)
+
+### Changed
+- **Header nav**: language toggle moved from desktop nav bar into the hamburger drawer (consistent across all screen sizes); "Finalizar compra" merges into the cart slot as a morphing pill on md+ — zero layout shift when cart state changes
+- **MobileStickyCheckout** bottom bar: fixed invisible text bug (`<Link>` with `flex` didn't auto-stretch; `text-white` now on child `<span>` elements, bypassing `a { color: inherit }` global override)
+- **Checkout decomposed** (`checkout/page.tsx` 1043 lines → `useCheckout` hook + 6 sub-components + `types.ts` + `translations.ts`)
+- **Frontend component library**: `ProductCard`, `QuantitySelector`, `CartDrawer` extracted; `ToastProvider`/`ToastList` added for non-blocking feedback
+- **N+1 fix** in `generate-pick-list.ts`: variant queries now batched (one query for all items, not one per item); `variant_id` typed as `string | null`
+- **Docker Compose**: removed reference to deleted `seed-demo-historic.ts` seed script
+
+### Fixed
+- **RBAC middleware** snapshot tests added for all `/admin/fulfillment/*` routes
+- **Jest test isolation**: module-level caches (`roleCache`, recipients cache, `rateLimitMap`) now export `clearX()` functions called in `beforeEach`
+- **Hardcoded `"N° pedido:"` in order-confirmation**: now reads from `t.orderNumber`
 
 ## [0.1.0.0] - 2026-03-15
 
