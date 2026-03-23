@@ -78,10 +78,9 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 }
 
+const noop = () => {};
+const defaultContext: LanguageContextValue = { language: "es", setLanguage: noop, toggleLanguage: noop };
+
 export function useLanguage() {
-  const context = useContext(LanguageContext);
-  if (!context) {
-    throw new Error("useLanguage must be used within a <LanguageProvider>");
-  }
-  return context;
+  return useContext(LanguageContext) ?? defaultContext;
 }

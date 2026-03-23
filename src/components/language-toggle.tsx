@@ -12,7 +12,11 @@ import { SUPPORTED_LANGUAGES, useLanguage } from "@/components/language-provider
  *  - 2 languages      → toggle button (current label shows the *other* language)
  *  - 3+ languages     → <select> dropdown listing all languages
  */
-export function LanguageToggle({ className = "" }: { className?: string }) {
+/**
+ * iconOnly — when "md", the text label is hidden at md and shown at lg+.
+ * Keeps the button compact on tablets where nav space is limited.
+ */
+export function LanguageToggle({ className = "", iconOnly }: { className?: string; iconOnly?: "md" }) {
   const { language, setLanguage, toggleLanguage } = useLanguage();
 
   if (SUPPORTED_LANGUAGES.length <= 1) {
@@ -25,10 +29,12 @@ export function LanguageToggle({ className = "" }: { className?: string }) {
   if (SUPPORTED_LANGUAGES.length === 2) {
     const other = SUPPORTED_LANGUAGES.find((l) => l.code !== language);
     const displayClass = className.trim().length > 0 ? className : "inline-flex";
+    // When iconOnly="md": at md show just icon (px-0, w-10), at lg show full pill
+    const compactClass = iconOnly === "md" ? "md:w-10 md:justify-center md:px-0 lg:w-auto lg:px-3" : "";
     return (
-      <button onClick={toggleLanguage} className={`${displayClass} ${baseClass}`}>
+      <button onClick={toggleLanguage} className={`${displayClass} ${baseClass} ${compactClass}`}>
         <Languages className="h-4 w-4 shrink-0" />
-        {other?.label ?? ""}
+        <span className={iconOnly === "md" ? "hidden lg:inline" : ""}>{other?.label ?? ""}</span>
       </button>
     );
   }
