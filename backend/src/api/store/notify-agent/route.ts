@@ -1,5 +1,5 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import { Modules } from "@medusajs/framework/utils"
+import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import { getRecipientsByRole } from "../../../lib/notification-recipients"
 
 type NotifyAgentBody = {
@@ -19,6 +19,11 @@ const CUSTOMER_SERVICE_ROLE = "customer_service"
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
 const RATE_LIMIT_MAX = 3
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000
+
+function isMissingFeedProviderError(error: unknown): boolean {
+  return error instanceof Error &&
+    error.message.includes("Could not find a notification provider for channel: feed")
+}
 
 /** Clear the rate limit state. Intended for use in tests only. */
 export function clearRateLimitForTesting(): void {
@@ -73,6 +78,10 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     `Orden #${order.display_id ?? order.id} · ${order.email ?? "—"} · ` +
     `El cliente solicitó atención desde la confirmación de pedido.`
 
+  const logger = req.scope.resolve(ContainerRegistrationKeys.LOGGER) as {
+    warn: (message: string) => void
+  }
+
   const notificationModule = req.scope.resolve(Modules.NOTIFICATION) as {
     createNotifications: (input: {
       to: string
@@ -91,21 +100,31 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
 
   const recipients = csUserIds.length > 0 ? csUserIds : ["system"]
 
-  await Promise.all(
-    recipients.map((to) =>
-      notificationModule.createNotifications({
-        to,
-        channel: "feed",
-        template: "admin-ui",
-        resource_id: order.id,
-        resource_type: "order",
-        data: {
-          title: "Atención solicitada por cliente",
-          description,
-        },
-      })
+  try {
+    await Promise.all(
+      recipients.map((to) =>
+        notificationModule.createNotifications({
+          to,
+          channel: "feed",
+          template: "admin-ui",
+          resource_id: order.id,
+          resource_type: "order",
+          data: {
+            title: "Atención solicitada por cliente",
+            description,
+          },
+        })
+      )
     )
-  )
+  } catch (error) {
+    if (!isMissingFeedProviderError(error)) {
+      throw error
+    }
+
+    logger.warn(
+      `Skipping /store/notify-agent feed notification for order ${order.id}: no feed notification provider is configured.`
+    )
+  }
 
   return res.json({ ok: true })
 }

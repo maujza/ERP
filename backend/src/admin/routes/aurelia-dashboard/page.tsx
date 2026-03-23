@@ -2,7 +2,6 @@ import { defineRouteConfig } from "@medusajs/admin-sdk"
 import { Spinner } from "@medusajs/icons"
 import { useQuery } from "@tanstack/react-query"
 import { Container, Heading, Text } from "@medusajs/ui"
-import { useEffect, useRef } from "react"
 import { useTranslation } from "react-i18next"
 
 import { sdk } from "../../lib/client"
@@ -20,10 +19,6 @@ type DashboardOrder = {
   total?: number
   sales_channel_id?: string
   metadata?: Record<string, unknown>
-}
-
-type WhatsappVisibilityResponse = {
-  can_receive?: boolean
 }
 
 type RevenuePoint = {
@@ -81,12 +76,10 @@ type DashboardData = {
   revenuePoints: string
   revenueTrend: RevenuePoint[]
   sampleSize: number
-  canReceiveWhatsappAlerts: boolean
   avgLeadTimeMinutes: number | null
   stuckInPickingCount: number
   thisMonthRevenue: number
   topCustomers: TopCustomerPoint[]
-  whatsappPendingOrders: DashboardOrder[]
   weeklyOrderTrend: WeeklyPoint[]
   workflowMix: StatusPoint[]
 }
@@ -124,13 +117,6 @@ const isPending = (order: DashboardOrder) => {
   if (["not_fulfilled", "partially_fulfilled", "requires_action"].includes(fulfillment)) return true
 
   return false
-}
-
-const isWhatsappPendingOrder = (order: DashboardOrder) => {
-  const metadata = (order.metadata ?? {}) as Record<string, unknown>
-  const whatsappRequired = Boolean(metadata.whatsapp_required)
-  const whatsappSent = Boolean(metadata.whatsapp_message_sent)
-  return whatsappRequired && !whatsappSent
 }
 
 const formatCurrency = (amount: number, currencyCode: string, locale: string) => {
@@ -500,9 +486,6 @@ const AureliaDashboardPage = () => {
         avgLeadTimeHint: "Tiempo promedio desde picking hasta despacho (últimos 30 días)",
         stuckInPicking: "Órdenes atascadas en picking",
         stuckInPickingHint: "Órdenes en estado picking hace más de 24h",
-        whatsappAlertHint: "Pedidos que requieren contacto manual por WhatsApp",
-        whatsappAlertTitle: "Pendientes WhatsApp",
-        whatsappOnlyForAllowed: "No tenés permiso para recibir estas alertas.",
         weeklyOrders: "Pedidos por semana — 13 semanas",
         weeklyOrdersHint: "Pedidos por semana",
       }
@@ -557,9 +540,6 @@ const AureliaDashboardPage = () => {
         avgLeadTimeHint: "Avg time from picking to dispatch (last 30 days)",
         stuckInPicking: "Orders Stuck in Picking",
         stuckInPickingHint: "Orders in picking status for >24h",
-        whatsappAlertHint: "Orders requiring manual follow-up over WhatsApp",
-        whatsappAlertTitle: "WhatsApp Pending",
-        whatsappOnlyForAllowed: "You do not have permission to receive these alerts.",
         weeklyOrders: "Orders per week — 13 weeks",
         weeklyOrdersHint: "Orders per week",
       }
@@ -567,7 +547,7 @@ const AureliaDashboardPage = () => {
   const { data, error, isError, isLoading } = useQuery<DashboardData>({
     queryKey: ["aurelia-backoffice-metrics-v4", locale],
     queryFn: async () => {
-      const [ordersResult, productsResult, customersResult, ordersSampleResult, channelsResult, visibilityResult, fulfillmentKpis] =
+      const [ordersResult, productsResult, customersResult, ordersSampleResult, channelsResult, fulfillmentKpis] =
         await Promise.all([
           sdk.admin.order.list({ limit: 1 }),
           sdk.admin.product.list({ limit: 1 }),
@@ -579,7 +559,6 @@ const AureliaDashboardPage = () => {
             order: "-created_at",
           }),
           sdk.admin.salesChannel.list({ limit: 50 }),
-          sdk.client.fetch("/admin/whatsapp-notifications").catch(() => ({ can_receive: true })),
           sdk.client.fetch("/admin/fulfillment/kpis").catch(() => ({
             avg_lead_time_minutes: null,
             stuck_in_picking_count: 0,
@@ -615,7 +594,6 @@ const AureliaDashboardPage = () => {
         isSpanish
       )
       const paymentMix = buildTopStatusBreakdown(sampleOrders, (order) => order.payment_status, isSpanish)
-      const whatsappPendingOrders = sampleOrders.filter(isWhatsappPendingOrder).slice(0, 8)
 
       let donutStart = 0
       const donutSegments = workflowMix
@@ -636,11 +614,9 @@ const AureliaDashboardPage = () => {
       const channelBreakdown = buildChannelBreakdown(sampleOrders, channelMap)
 
       const { thisMonth, lastMonth, growth: momGrowth } = buildMomRevenue(sampleOrders)
-      const visibility = visibilityResult as WhatsappVisibilityResponse
 
       return {
         avgOrderValue,
-        canReceiveWhatsappAlerts: visibility.can_receive !== false,
         channelBreakdown,
         currencyCode,
         customersCount: customersResult.count ?? 0,
@@ -663,7 +639,6 @@ const AureliaDashboardPage = () => {
         sampleSize,
         thisMonthRevenue: thisMonth,
         topCustomers: buildTopCustomers(sampleOrders),
-        whatsappPendingOrders,
         weeklyOrderTrend: buildWeeklyOrderTrend(sampleOrders, locale),
         workflowMix,
         avgLeadTimeMinutes: (fulfillmentKpis as { avg_lead_time_minutes?: number | null })?.avg_lead_time_minutes ?? null,
@@ -671,28 +646,6 @@ const AureliaDashboardPage = () => {
       }
     },
   })
-
-  const lastNotifiedOrderIdRef = useRef<string>("")
-
-  useEffect(() => {
-    if (!data?.canReceiveWhatsappAlerts) return
-    const pendingOrder = data.whatsappPendingOrders[0]
-    if (!pendingOrder) return
-
-    const candidateId = pendingOrder.id
-    if (!candidateId || lastNotifiedOrderIdRef.current === candidateId) return
-    if (typeof window === "undefined" || !("Notification" in window)) return
-    if (window.Notification.permission !== "granted") return
-
-    const orderLabel = pendingOrder.display_id ? `#${pendingOrder.display_id}` : pendingOrder.id
-    const notification = new window.Notification(copy.whatsappAlertTitle, {
-      body: `${orderLabel} · ${pendingOrder.email ?? copy.unknown}`,
-    })
-    lastNotifiedOrderIdRef.current = candidateId
-    notification.onclick = () => {
-      window.focus()
-    }
-  }, [copy.unknown, copy.whatsappAlertTitle, data])
 
   return (
     <Container className="p-0">
@@ -720,35 +673,6 @@ const AureliaDashboardPage = () => {
 
       {!isLoading && !isError && data ? (
         <div className="flex flex-col">
-
-          {/* ── WhatsApp Alert Banner (actionable, shown first) ── */}
-          {data.canReceiveWhatsappAlerts && data.whatsappPendingOrders.length ? (
-            <div className="border-b border-ui-border-base px-6 py-4">
-              <div className="rounded-md border border-ui-tag-green-border bg-ui-tag-green-bg p-4">
-                <Text size="small" leading="compact" weight="plus">
-                  {copy.whatsappAlertTitle}
-                </Text>
-                <Text size="small" leading="compact" className="mt-1 text-ui-fg-subtle">
-                  {copy.whatsappAlertHint}
-                </Text>
-                <div className="mt-3 space-y-2">
-                  {data.whatsappPendingOrders.map((order) => (
-                    <div
-                      key={order.id}
-                      className="flex items-center justify-between rounded-md border border-ui-border-base bg-ui-bg-base px-3 py-2"
-                    >
-                      <Text size="small" leading="compact" weight="plus">
-                        #{order.display_id ?? order.id}
-                      </Text>
-                      <Text size="small" leading="compact" className="text-ui-fg-subtle">
-                        {order.email ?? copy.unknown}
-                      </Text>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : null}
 
           {/* ── Hero KPIs: the 4 most actionable numbers ── */}
           <div className="grid grid-cols-2 gap-3 px-6 py-4 xl:grid-cols-4">

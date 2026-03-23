@@ -109,7 +109,7 @@ export async function dispatchOrderHandler(
   return new StepResponse(updated, { record_id: record.id } as CompensationData)
 }
 
-async function compensateDispatchOrder(
+export async function compensateDispatchOrder(
   data: CompensationData | undefined,
   { container }: { container: any }
 ) {

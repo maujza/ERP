@@ -66,7 +66,7 @@ export async function confirmPackHandler(
   } as CompensationData)
 }
 
-async function compensateConfirmPack(
+export async function compensateConfirmPack(
   data: CompensationData | undefined,
   { container }: { container: any }
 ) {

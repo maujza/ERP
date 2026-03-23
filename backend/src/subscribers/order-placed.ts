@@ -1,5 +1,5 @@
 import { SubscriberArgs, SubscriberConfig } from "@medusajs/framework"
-import { Modules } from "@medusajs/framework/utils"
+import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import { getRecipientsByRole } from "../lib/notification-recipients"
 
 type OrderRecord = {
@@ -10,6 +10,11 @@ type OrderRecord = {
 }
 
 const CUSTOMER_SERVICE_ROLE = "customer_service"
+
+function isMissingFeedProviderError(error: unknown): boolean {
+  return error instanceof Error &&
+    error.message.includes("Could not find a notification provider for channel: feed")
+}
 
 export default async function orderPlacedHandler({
   event: { data },
@@ -41,30 +46,48 @@ export default async function orderPlacedHandler({
     (phone ? ` · 📱 ${phone}` : "") +
     ` · Método: ${paymentMethod ?? "—"}`
 
+  const logger = container.resolve(ContainerRegistrationKeys.LOGGER) as {
+    warn: (message: string) => void
+  }
+
   const notificationModule = container.resolve(Modules.NOTIFICATION) as {
     createNotifications: (input: {
       to: string
       channel: string
       template: string
       data: Record<string, unknown>
+      resource_id?: string
+      resource_type?: string
     }) => Promise<unknown>
   }
 
   const recipients = csUserIds.length > 0 ? csUserIds : ["system"]
 
-  await Promise.all(
-    recipients.map((to) =>
-      notificationModule.createNotifications({
-        to,
-        channel: "feed",
-        template: "admin-ui",
-        data: {
-          title: "Nueva orden WhatsApp pendiente",
-          description,
-        },
-      })
+  try {
+    await Promise.all(
+      recipients.map((to) =>
+        notificationModule.createNotifications({
+          to,
+          channel: "feed",
+          template: "admin-ui",
+          resource_id: order.id,
+          resource_type: "order",
+          data: {
+            title: "Nueva orden WhatsApp pendiente",
+            description,
+          },
+        })
+      )
     )
-  )
+  } catch (error) {
+    if (!isMissingFeedProviderError(error)) {
+      throw error
+    }
+
+    logger.warn(
+      `Skipping WhatsApp order feed notification for order ${order.id}: no feed notification provider is configured.`
+    )
+  }
 }
 
 export const config: SubscriberConfig = {

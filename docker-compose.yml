@@ -24,7 +24,6 @@ services:
         node ./scripts/patch-dashboard-i18n.mjs &&
         npx medusa db:migrate &&
         npx medusa exec ./src/scripts/seed-aurelia.ts &&
-        npx medusa exec ./src/scripts/seed-demo-historic.ts &&
         npx medusa user -e ${MEDUSA_ADMIN_EMAIL:-admin@aurelia.com} -p ${MEDUSA_ADMIN_PASSWORD} >/dev/null 2>&1 || true &&
         npm run build &&
         mkdir -p /app/public &&

@@ -1,5 +1,8 @@
 import { MedusaError } from "@medusajs/framework/utils"
-import { receiveOrderHandler } from "../../../../src/workflows/steps/receive-purchase-order"
+import {
+  receiveOrderHandler,
+  compensateReceiveOrder,
+} from "../../../../src/workflows/steps/receive-purchase-order"
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -17,6 +20,14 @@ function makePurchaseService(order: ReturnType<typeof makeOrder>) {
     updatePurchaseOrderItems: jest.fn().mockResolvedValue({}),
     createStockAdjustmentLogs: jest.fn().mockResolvedValue([{ id: "log_1" }]),
     deleteStockAdjustmentLogs: jest.fn().mockResolvedValue(undefined),
+    // fill_rate cache support
+    listPurchaseOrders: jest.fn().mockResolvedValue([{ id: "po_1" }]),
+    listPurchaseOrderItems: jest
+      .fn()
+      .mockResolvedValue([
+        { quantity: 10, received_quantity: 10 },
+      ]),
+    updateSuppliers: jest.fn().mockResolvedValue({}),
   }
 }
 
@@ -270,5 +281,115 @@ describe("receiveOrderHandler — discrepancy flag", () => {
     expect(purchaseService.updatePurchaseOrders).toHaveBeenCalledWith(
       expect.objectContaining({ discrepancy_count: 1 })
     )
+  })
+})
+
+// ─── fill_rate write-time cache ───────────────────────────────────────────────
+
+describe("receiveOrderHandler — fill_rate cache", () => {
+  it("calls updateSuppliers with the computed fill_rate after a successful receive", async () => {
+    // Supplier has 1 received PO; items: ordered 10, received 8 → fill_rate = 80
+    const order = Object.assign(makeOrder("submitted", [
+      { id: "poi_1", variant_id: "var_1", quantity: 3, received_quantity: 0 },
+    ]), { supplier_id: "sup_1" })
+
+    const purchaseService = makePurchaseService(order)
+    purchaseService.listPurchaseOrders = jest
+      .fn()
+      .mockResolvedValue([{ id: "po_1" }])
+    purchaseService.listPurchaseOrderItems = jest
+      .fn()
+      .mockResolvedValue([{ quantity: 10, received_quantity: 8 }])
+
+    const container = makeContainer(purchaseService, makeInventoryService(), makeQuery(["inv_1"]))
+
+    await receiveOrderHandler({ order_id: "po_1", location_id: "sloc_1" }, { container })
+
+    expect(purchaseService.updateSuppliers).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "sup_1", fill_rate: 80 })
+    )
+  })
+
+  it("swallows updateSuppliers errors and does not propagate them", async () => {
+    const order = Object.assign(makeOrder("submitted", [
+      { id: "poi_1", variant_id: "var_1", quantity: 3, received_quantity: 0 },
+    ]), { supplier_id: "sup_1" })
+
+    const purchaseService = makePurchaseService(order)
+    purchaseService.updateSuppliers = jest
+      .fn()
+      .mockRejectedValue(new Error("DB timeout"))
+
+    const container = makeContainer(purchaseService, makeInventoryService(), makeQuery(["inv_1"]))
+
+    // Must NOT throw even though updateSuppliers fails
+    await expect(
+      receiveOrderHandler({ order_id: "po_1", location_id: "sloc_1" }, { container })
+    ).resolves.toBeDefined()
+  })
+})
+
+// ─── compensation ─────────────────────────────────────────────────────────────
+
+describe("compensateReceiveOrder", () => {
+  it("is a no-op when compensation data is undefined", async () => {
+    const purchaseService = makePurchaseService(
+      makeOrder("submitted", [{ id: "poi_1", variant_id: "var_1", quantity: 3, received_quantity: 0 }])
+    )
+    const container = makeContainer(purchaseService, makeInventoryService(), makeQuery([]))
+
+    // Should resolve without calling any service method
+    await compensateReceiveOrder(undefined, { container })
+
+    expect(purchaseService.updatePurchaseOrders).not.toHaveBeenCalled()
+    expect(purchaseService.updatePurchaseOrderItems).not.toHaveBeenCalled()
+    expect(purchaseService.deleteStockAdjustmentLogs).not.toHaveBeenCalled()
+  })
+
+  it("reverts item received_quantities to previous values and resets order status", async () => {
+    const purchaseService = makePurchaseService(
+      makeOrder("submitted", [{ id: "poi_1", variant_id: "var_1", quantity: 5, received_quantity: 0 }])
+    )
+    const inventoryService = makeInventoryService()
+    const container = makeContainer(purchaseService, inventoryService, makeQuery([]))
+
+    await compensateReceiveOrder(
+      {
+        order_id: "po_1",
+        previous_status: "submitted",
+        adjustments: [],
+        item_quantities: [{ id: "poi_1", previous_received_quantity: 3 }],
+        log_ids: [],
+      },
+      { container }
+    )
+
+    expect(purchaseService.updatePurchaseOrderItems).toHaveBeenCalledWith({
+      id: "poi_1",
+      received_quantity: 3,
+    })
+    expect(purchaseService.updatePurchaseOrders).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "po_1", status: "submitted" })
+    )
+  })
+
+  it("deletes stock adjustment logs by their ids during compensation", async () => {
+    const purchaseService = makePurchaseService(
+      makeOrder("submitted", [{ id: "poi_1", variant_id: "var_1", quantity: 5, received_quantity: 0 }])
+    )
+    const container = makeContainer(purchaseService, makeInventoryService(), makeQuery([]))
+
+    await compensateReceiveOrder(
+      {
+        order_id: "po_1",
+        previous_status: "submitted",
+        adjustments: [],
+        item_quantities: [],
+        log_ids: ["log_1", "log_2"],
+      },
+      { container }
+    )
+
+    expect(purchaseService.deleteStockAdjustmentLogs).toHaveBeenCalledWith(["log_1", "log_2"])
   })
 })

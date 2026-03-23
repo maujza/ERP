@@ -73,6 +73,35 @@ describe("purchase module route guards", () => {
     expect(roles).toContain("purchasing")
     expect(roles).toContain("inventory")
   })
+
+  it("POST /admin/purchase/orders → [purchasing] only", async () => {
+    const e = findEntry("/admin/purchase/orders", "POST")!
+    expect(await getAllowedRoles(e.middlewares)).toEqual(["purchasing"])
+  })
+
+  it("POST /admin/purchase/orders/:id/submit → [purchasing] only", async () => {
+    const e = findEntry("/admin/purchase/orders/:id/submit", "POST")!
+    expect(await getAllowedRoles(e.middlewares)).toEqual(["purchasing"])
+  })
+
+  it("POST /admin/purchase/orders/:id/cancel → [purchasing] only", async () => {
+    const e = findEntry("/admin/purchase/orders/:id/cancel", "POST")!
+    expect(await getAllowedRoles(e.middlewares)).toEqual(["purchasing"])
+  })
+
+  it("POST /admin/purchase/orders/:id/receive → [inventory, purchasing]", async () => {
+    const e = findEntry("/admin/purchase/orders/:id/receive", "POST")!
+    const roles = await getAllowedRoles(e.middlewares)
+    expect(roles).toContain("inventory")
+    expect(roles).toContain("purchasing")
+  })
+
+  it("GET /admin/purchase/orders/:id → [purchasing, inventory]", async () => {
+    const e = findEntry("/admin/purchase/orders/:id", "GET")!
+    const roles = await getAllowedRoles(e.middlewares)
+    expect(roles).toContain("purchasing")
+    expect(roles).toContain("inventory")
+  })
 })
 
 // ─── Fulfillment module route guards ─────────────────────────────────────────

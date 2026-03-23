@@ -53,6 +53,8 @@ export default async function packedNotShippedJob(container: MedusaContainer) {
         channel: string
         template: string
         data: Record<string, unknown>
+        resource_id?: string
+        resource_type?: string
       }) => Promise<unknown>
     }
 
@@ -84,6 +86,8 @@ export default async function packedNotShippedJob(container: MedusaContainer) {
                 to,
                 channel: "feed",
                 template: "admin-ui",
+                resource_id: record.order_id,
+                resource_type: "order",
                 data: {
                   title: "Orden empaquetada sin despachar",
                   description: `La orden ${record.order_id} lleva más de ${ALERT_AFTER_HOURS}h en estado "empaquetada".`,

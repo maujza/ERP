@@ -19,11 +19,13 @@ type UserRecord = {
 function makeContainer({
   order = {},
   users = [] as UserRecord[],
+  createNotifications = jest.fn().mockResolvedValue({}),
 }: {
   order?: OrderRecord
   users?: UserRecord[]
+  createNotifications?: jest.Mock
 } = {}) {
-  const createNotifications = jest.fn().mockResolvedValue({})
+  const logger = { warn: jest.fn() }
 
   const container = {
     resolve: jest.fn((key: string) => {
@@ -39,11 +41,14 @@ function makeContainer({
       if (key === Modules.NOTIFICATION) {
         return { createNotifications }
       }
+      if (key === "logger") {
+        return logger
+      }
       throw new Error(`Unknown service: ${key}`)
     }),
   }
 
-  return { container, createNotifications }
+  return { container, createNotifications, logger }
 }
 
 function makeEvent(orderId = "order_01") {
@@ -132,6 +137,14 @@ describe("orderPlacedHandler", () => {
       )
     })
 
+    it("includes resource_id and resource_type for order linking", async () => {
+      const { container, createNotifications } = makeContainer({ order: waOrder, users: [] })
+      await run(container)
+      expect(createNotifications).toHaveBeenCalledWith(
+        expect.objectContaining({ resource_id: "order_01", resource_type: "order" })
+      )
+    })
+
     it("notification title is 'Nueva orden WhatsApp pendiente'", async () => {
       const { container, createNotifications } = makeContainer({ order: waOrder, users: [] })
       await run(container)
@@ -195,6 +208,16 @@ describe("orderPlacedHandler", () => {
       expect(createNotifications).toHaveBeenCalledWith(
         expect.objectContaining({ to: "user_1" })
       )
+    })
+
+    it("swallows missing feed provider errors and logs a warning", async () => {
+      const createNotifications = jest.fn().mockRejectedValue(
+        new Error("Could not find a notification provider for channel: feed")
+      )
+      const { container, logger } = makeContainer({ order: waOrder, createNotifications })
+
+      await expect(run(container)).resolves.toBeUndefined()
+      expect(logger.warn).toHaveBeenCalled()
     })
   })
 

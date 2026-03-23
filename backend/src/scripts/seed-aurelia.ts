@@ -19,6 +19,7 @@ import { ContainerRegistrationKeys, Modules, ProductStatus } from "@medusajs/fra
 import {
   createCustomersWorkflow,
   createInventoryLevelsWorkflow,
+  createOrderPaymentCollectionWorkflow,
   createProductCategoriesWorkflow,
   createProductsWorkflow,
   createRegionsWorkflow,
@@ -27,6 +28,7 @@ import {
   createStockLocationsWorkflow,
   createTaxRegionsWorkflow,
   linkSalesChannelsToStockLocationWorkflow,
+  markPaymentCollectionAsPaid,
   updateStoresWorkflow,
 } from "@medusajs/medusa/core-flows";
 
@@ -452,6 +454,7 @@ export default async function seedAureliaData({ container }: ExecArgs) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             metadata: p.metadata as any,
             status: ProductStatus.PUBLISHED,
+            thumbnail: p.images[0],
             shipping_profile_id: shippingProfile?.id,
             category_ids: categoryMap[p.categoryName] ? [categoryMap[p.categoryName]] : [],
             images: p.images.map((url) => ({ url })),
@@ -560,6 +563,7 @@ export default async function seedAureliaData({ container }: ExecArgs) {
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               metadata: p.metadata as any,
               status: ProductStatus.PUBLISHED,
+              thumbnail: p.images[0],
               shipping_profile_id: shippingProfile?.id,
               category_ids: categoryMap[p.categoryName] ? [categoryMap[p.categoryName]] : [],
               images: p.images.map((url) => ({ url })),
@@ -835,7 +839,7 @@ export default async function seedAureliaData({ container }: ExecArgs) {
         const isCompleted = orderIndex % 4 === 0;
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await orderModuleService.createOrders({
+        const createdOrder = await orderModuleService.createOrders({
           region_id: argentinaRegion.id,
           sales_channel_id: defaultSalesChannel.id,
           status: isCompleted ? "completed" : "pending",
@@ -867,21 +871,26 @@ export default async function seedAureliaData({ container }: ExecArgs) {
               amount: shippingAmount,
             },
           ],
-          transactions: isPaid
-            ? [
-                {
-                  amount: orderTotal,
-                  currency_code: "ars",
-                  reference: "payment",
-                  reference_id: `seed-pay-${orderIndex}`,
-                },
-              ]
-            : [],
           metadata: {
             seed_source: orderSeedSource,
             seed_index: orderIndex,
           },
         } as any);
+
+        // Create a proper payment collection so the Admin UI can capture/mark-as-paid
+        if (isPaid && createdOrder?.id) {
+          try {
+            const { result: payColResult } = await createOrderPaymentCollectionWorkflow(container).run({
+              input: { order_id: createdOrder.id, amount: orderTotal },
+            });
+            const payCol = Array.isArray(payColResult) ? payColResult[0] : payColResult;
+            await markPaymentCollectionAsPaid(container).run({
+              input: { order_id: createdOrder.id, payment_collection_id: payCol.id },
+            });
+          } catch (e: unknown) {
+            logger.warn(`  ! Payment collection for order ${createdOrder.id} failed: ${(e as Error).message}`);
+          }
+        }
 
         if ((i + 1) % 25 === 0 || i === ordersMissing - 1) {
           logger.info(`Created ${i + 1}/${ordersMissing} dummy orders.`);

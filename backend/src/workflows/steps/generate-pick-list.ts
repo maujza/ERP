@@ -61,7 +61,8 @@ export async function generatePickListHandler(
   input: Input,
   { container }: { container: unknown }
 ) {
-  const cont = container as { resolve: (key: string) => unknown }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const cont = container as any
   const fulfillmentService = cont.resolve(
     PURCHASE_DEPARTMENT_MODULE
   ) as PurchaseDepartmentModuleService
@@ -141,31 +142,46 @@ export async function generatePickListHandler(
   let createdNativeFulfillmentId: string | null = null
 
   if (!nativeFulfillmentId) {
-    const { result } = await createOrderFulfillmentWorkflow(cont).run({
-      input: {
-        order_id: input.order_id,
-        items: order.items.map((item) => ({
-          id: item.id,
-          quantity: item.quantity,
-        })),
-      },
-    })
+    try {
+      const { result } = await createOrderFulfillmentWorkflow(cont).run({
+        input: {
+          order_id: input.order_id,
+          items: order.items.map((item) => ({
+            id: item.id,
+            quantity: item.quantity,
+          })),
+        },
+      })
 
-    nativeFulfillmentId = (result as { id: string }).id
-    createdNativeFulfillmentId = (result as { id: string }).id
+      nativeFulfillmentId = (result as { id: string }).id
+      createdNativeFulfillmentId = (result as { id: string }).id
+    } catch (err: unknown) {
+      // Native fulfillment creation can fail for orders without a fulfillment
+      // provider configured (e.g. demo/seeded orders). Our FulfillmentRecord is
+      // the source of truth for the pick→pack→dispatch workflow, so we continue.
+      const logger = cont.resolve(ContainerRegistrationKeys.LOGGER) as {
+        warn: (msg: string) => void
+      }
+      const msg = err instanceof Error ? err.message : String(err)
+      logger.warn(
+        `[generate-pick-list] Skipping native fulfillment for order ${input.order_id}: ${msg}`
+      )
+    }
   }
 
   const record = existing
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ? await fulfillmentService.updateFulfillmentRecords({
         id: existing.id,
         status: "picking",
         pick_list: pickListItems,
-      })
+      } as any)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     : await fulfillmentService.createFulfillmentRecords({
         order_id: input.order_id,
         status: "picking",
-        pick_list: pickListItems,
-      })
+        pick_list: pickListItems as unknown,
+      } as any)
 
   const recordRow = record as { id: string }
 
@@ -177,12 +193,13 @@ export async function generatePickListHandler(
   } as CompensationData)
 }
 
-async function compensateGeneratePickList(
+export async function compensateGeneratePickList(
   data: CompensationData | undefined,
   { container }: { container: unknown }
 ) {
   if (!data) return
-  const cont = container as { resolve: (key: string) => unknown }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const cont = container as any
   const fulfillmentService = cont.resolve(
     PURCHASE_DEPARTMENT_MODULE
   ) as PurchaseDepartmentModuleService
@@ -198,7 +215,8 @@ async function compensateGeneratePickList(
   }
 
   if (data.created_native_fulfillment_id) {
-    await cancelOrderFulfillmentWorkflow(cont).run({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await cancelOrderFulfillmentWorkflow(cont as any).run({
       input: {
         order_id: data.order_id,
         fulfillment_id: data.created_native_fulfillment_id,

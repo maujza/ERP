@@ -4,7 +4,10 @@ jest.mock("@medusajs/core-flows", () => ({
 
 import { MedusaError } from "@medusajs/framework/utils"
 import { createShipmentWorkflow } from "@medusajs/core-flows"
-import { dispatchOrderHandler } from "../../../../src/workflows/steps/dispatch-order"
+import {
+  dispatchOrderHandler,
+  compensateDispatchOrder,
+} from "../../../../src/workflows/steps/dispatch-order"
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -217,5 +220,30 @@ describe("dispatchOrderHandler", () => {
         { container }
       )
     ).rejects.toThrow(MedusaError)
+  })
+})
+
+describe("compensateDispatchOrder", () => {
+  it("reverts record back to packed with null tracking_number and dispatched_at cleared", async () => {
+    const record = makeRecord("dispatched", { tracking_number: "TRK-12345" })
+    const fulfillmentService = makeFulfillmentService(record)
+    const container = makeContainer(fulfillmentService)
+
+    await compensateDispatchOrder({ record_id: "fr_1" }, { container })
+
+    expect(fulfillmentService.updateFulfillmentRecords).toHaveBeenCalledWith({
+      id: "fr_1",
+      status: "packed",
+      tracking_number: null,
+    })
+  })
+
+  it("is a no-op when compensateInput is null (idempotent dispatch case)", async () => {
+    const fulfillmentService = makeFulfillmentService(makeRecord("dispatched"))
+    const container = makeContainer(fulfillmentService)
+
+    await compensateDispatchOrder(null, { container })
+
+    expect(fulfillmentService.updateFulfillmentRecords).not.toHaveBeenCalled()
   })
 })

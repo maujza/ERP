@@ -131,6 +131,11 @@ export async function receiveOrderHandler(
     }
 
     for (const link of variant.inventory_items) {
+      // `receivedQty` is the absolute quantity being received (not a delta from a
+      // previous partial receipt). This is safe because the status guard above
+      // (line ~67) enforces that a PO can only transition submitted→received once,
+      // so this step runs exactly once per PO. Re-receiving is blocked at the
+      // workflow level, preventing double-adjustment.
       await inventoryService.adjustInventory(
         link.inventory_item_id,
         input.location_id,
@@ -203,7 +208,7 @@ export async function receiveOrderHandler(
   } as CompensationData)
 }
 
-async function compensateReceiveOrder(
+export async function compensateReceiveOrder(
   data: CompensationData | undefined,
   { container }: { container: unknown }
 ) {

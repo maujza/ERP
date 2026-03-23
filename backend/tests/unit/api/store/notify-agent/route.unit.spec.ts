@@ -20,11 +20,13 @@ function makeReq({
   orders = [] as OrderRecord[],
   users = [] as UserRecord[],
   createNotifications = jest.fn().mockResolvedValue({}),
+  logger = { warn: jest.fn() },
 }: {
   body?: Record<string, unknown>
   orders?: OrderRecord[]
   users?: UserRecord[]
   createNotifications?: jest.Mock
+  logger?: { warn: jest.Mock }
 } = {}) {
   return {
     body,
@@ -41,6 +43,9 @@ function makeReq({
         }
         if (key === Modules.NOTIFICATION) {
           return { createNotifications }
+        }
+        if (key === "logger") {
+          return logger
         }
         throw new Error(`Unknown service: ${key}`)
       }),
@@ -89,6 +94,26 @@ describe("successful notification", () => {
     const res = makeRes()
     await POST(makeReq({ body: { order_id: "order_01" }, orders: [makeOrder()] }), res)
     expect(res.json).toHaveBeenCalledWith({ ok: true })
+  })
+
+  it("returns { ok: true } when the feed provider is not configured", async () => {
+    const res = makeRes()
+    const logger = { warn: jest.fn() }
+
+    await POST(
+      makeReq({
+        body: { order_id: "order_01" },
+        orders: [makeOrder()],
+        createNotifications: jest.fn().mockRejectedValue(
+          new Error("Could not find a notification provider for channel: feed")
+        ),
+        logger,
+      }),
+      res
+    )
+
+    expect(res.json).toHaveBeenCalledWith({ ok: true })
+    expect(logger.warn).toHaveBeenCalled()
   })
 })
 

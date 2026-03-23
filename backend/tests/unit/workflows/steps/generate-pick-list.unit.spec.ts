@@ -1,5 +1,8 @@
 import { MedusaError } from "@medusajs/framework/utils"
-import { generatePickListHandler } from "../../../../src/workflows/steps/generate-pick-list"
+import {
+  generatePickListHandler,
+  compensateGeneratePickList,
+} from "../../../../src/workflows/steps/generate-pick-list"
 
 const mockCreateOrderFulfillmentRun = jest.fn()
 const mockCancelOrderFulfillmentRun = jest.fn()
@@ -63,14 +66,18 @@ function makeFulfillmentService(existing: any = null) {
 }
 
 function makeContainer(fulfillmentService: any, orderService: any, query: any) {
-  return {
+  const logger = { warn: jest.fn() }
+  const container = {
     resolve: jest.fn((key: string) => {
       if (key === "purchaseDepartment") return fulfillmentService
       if (key === "order") return orderService
       if (key === "query") return query
+      if (key === "logger") return logger
       return {}
     }),
+    _logger: logger,
   }
+  return container
 }
 
 // ─── tests ────────────────────────────────────────────────────────────────────
@@ -214,5 +221,168 @@ describe("generatePickListHandler", () => {
 
     expect(mockCreateOrderFulfillmentRun).not.toHaveBeenCalled()
     expect(fulfillmentService.createFulfillmentRecords).toHaveBeenCalled()
+  })
+
+  it("continues without throwing when createOrderFulfillmentWorkflow fails (e.g. demo orders)", async () => {
+    mockCreateOrderFulfillmentRun.mockRejectedValue(new Error("No fulfillment provider configured"))
+    const order = makeOrder([
+      { id: "item_1", variant_id: "var_1", title: "Ring", quantity: 1 },
+    ])
+    const fulfillmentService = makeFulfillmentService(null)
+    const container = makeContainer(fulfillmentService, makeOrderService(order), makeQuery())
+
+    await expect(
+      generatePickListHandler({ order_id: "order_1" }, { container })
+    ).resolves.not.toThrow()
+
+    // FulfillmentRecord still created
+    expect(fulfillmentService.createFulfillmentRecords).toHaveBeenCalledWith(
+      expect.objectContaining({ order_id: "order_1", status: "picking" })
+    )
+    // Warning logged
+    expect(container._logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining("Skipping native fulfillment")
+    )
+  })
+
+  // ─── compensation tests ──────────────────────────────────────────────────────
+
+  it("compensation reverts existing record to pending with null pick_list", async () => {
+    const fulfillmentService = makeFulfillmentService(null)
+    const container = makeContainer(fulfillmentService, makeOrderService(makeOrder([])), makeQuery())
+
+    await compensateGeneratePickList(
+      {
+        order_id: "order_1",
+        record_id: "fr_1",
+        was_existing: true,
+        created_native_fulfillment_id: null,
+      },
+      { container }
+    )
+
+    expect(fulfillmentService.updateFulfillmentRecords).toHaveBeenCalledWith({
+      id: "fr_1",
+      status: "pending",
+      pick_list: null,
+    })
+    expect(fulfillmentService.deleteFulfillmentRecords).not.toHaveBeenCalled()
+    expect(mockCancelOrderFulfillmentRun).not.toHaveBeenCalled()
+  })
+
+  it("compensation deletes new record when was_existing is false", async () => {
+    const fulfillmentService = makeFulfillmentService(null)
+    const container = makeContainer(fulfillmentService, makeOrderService(makeOrder([])), makeQuery())
+
+    await compensateGeneratePickList(
+      {
+        order_id: "order_1",
+        record_id: "fr_new",
+        was_existing: false,
+        created_native_fulfillment_id: null,
+      },
+      { container }
+    )
+
+    expect(fulfillmentService.deleteFulfillmentRecords).toHaveBeenCalledWith("fr_new")
+    expect(fulfillmentService.updateFulfillmentRecords).not.toHaveBeenCalled()
+    expect(mockCancelOrderFulfillmentRun).not.toHaveBeenCalled()
+  })
+
+  it("compensation cancels native Medusa fulfillment when created_native_fulfillment_id is set", async () => {
+    const fulfillmentService = makeFulfillmentService(null)
+    const container = makeContainer(fulfillmentService, makeOrderService(makeOrder([])), makeQuery())
+
+    await compensateGeneratePickList(
+      {
+        order_id: "order_1",
+        record_id: "fr_new",
+        was_existing: false,
+        created_native_fulfillment_id: "ful_created",
+      },
+      { container }
+    )
+
+    expect(mockCancelOrderFulfillmentRun).toHaveBeenCalledWith({
+      input: {
+        order_id: "order_1",
+        fulfillment_id: "ful_created",
+      },
+    })
+  })
+
+  it("compensation is a no-op when data is undefined", async () => {
+    const fulfillmentService = makeFulfillmentService(null)
+    const container = makeContainer(fulfillmentService, makeOrderService(makeOrder([])), makeQuery())
+
+    await compensateGeneratePickList(undefined, { container })
+
+    expect(fulfillmentService.updateFulfillmentRecords).not.toHaveBeenCalled()
+    expect(fulfillmentService.deleteFulfillmentRecords).not.toHaveBeenCalled()
+    expect(mockCancelOrderFulfillmentRun).not.toHaveBeenCalled()
+  })
+
+  it("multi-item order produces pick list with one entry per line item", async () => {
+    const order = makeOrder([
+      { id: "item_1", variant_id: "var_1", title: "Ring Size 7", quantity: 1 },
+      { id: "item_2", variant_id: "var_2", title: "Necklace Gold", quantity: 2 },
+      { id: "item_3", variant_id: null, title: "Gift Wrap", quantity: 1 },
+    ])
+    const fulfillmentService = makeFulfillmentService(null)
+    const query = {
+      graph: jest.fn().mockImplementation(({ entity }: { entity: string }) => {
+        if (entity === "product_variant") {
+          return Promise.resolve({
+            data: [
+              { id: "var_1", sku: "RING-7", product: { images: [{ url: "https://cdn.example.com/ring.jpg" }] } },
+              { id: "var_2", sku: "NECK-G", product: null },
+            ],
+          })
+        }
+        if (entity === "order") {
+          return Promise.resolve({ data: [{ id: "order_1", fulfillments: [] }] })
+        }
+        return Promise.resolve({ data: [] })
+      }),
+    }
+    const container = makeContainer(fulfillmentService, makeOrderService(order), query)
+
+    await generatePickListHandler({ order_id: "order_1" }, { container })
+
+    const callArg = fulfillmentService.createFulfillmentRecords.mock.calls[0][0]
+    expect(callArg.pick_list).toHaveLength(3)
+    expect(callArg.pick_list).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ variant_id: "var_1", title: "Ring Size 7", quantity: 1, sku: "RING-7" }),
+        expect.objectContaining({ variant_id: "var_2", title: "Necklace Gold", quantity: 2, sku: "NECK-G" }),
+        expect.objectContaining({ variant_id: null, title: "Gift Wrap", quantity: 1, sku: null }),
+      ])
+    )
+  })
+
+  it("existing pending record is updated to picking and not duplicated", async () => {
+    const existingPending = { id: "fr_pending", order_id: "order_1", status: "pending" }
+    const order = makeOrder([
+      { id: "item_1", variant_id: "var_1", title: "Bracelet", quantity: 1 },
+    ])
+    const fulfillmentService = makeFulfillmentService(existingPending)
+    const container = makeContainer(
+      fulfillmentService,
+      makeOrderService(order),
+      makeQuery("BRAC-1", null)
+    )
+
+    await generatePickListHandler({ order_id: "order_1" }, { container })
+
+    expect(fulfillmentService.createFulfillmentRecords).not.toHaveBeenCalled()
+    expect(fulfillmentService.updateFulfillmentRecords).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "fr_pending",
+        status: "picking",
+        pick_list: expect.arrayContaining([
+          expect.objectContaining({ variant_id: "var_1", sku: "BRAC-1" }),
+        ]),
+      })
+    )
   })
 })

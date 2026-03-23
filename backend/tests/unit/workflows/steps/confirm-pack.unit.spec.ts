@@ -1,5 +1,8 @@
 import { MedusaError } from "@medusajs/framework/utils"
-import { confirmPackHandler } from "../../../../src/workflows/steps/confirm-pack"
+import {
+  confirmPackHandler,
+  compensateConfirmPack,
+} from "../../../../src/workflows/steps/confirm-pack"
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -91,5 +94,53 @@ describe("confirmPackHandler", () => {
     await expect(
       confirmPackHandler({ order_id: "order_1", packed_weight: 1.0 }, { container })
     ).rejects.toThrow(MedusaError)
+  })
+})
+
+describe("compensateConfirmPack", () => {
+  it("reverts record back to picking with previous packed_weight and packed_dimensions", async () => {
+    const record = makeRecord("packed")
+    const fulfillmentService = makeFulfillmentService(record)
+    const container = makeContainer(fulfillmentService)
+
+    await compensateConfirmPack(
+      { record_id: "fr_1", previous_weight: 0.8, previous_dimensions: "10x10x5" },
+      { container }
+    )
+
+    expect(fulfillmentService.updateFulfillmentRecords).toHaveBeenCalledWith({
+      id: "fr_1",
+      status: "picking",
+      packed_weight: 0.8,
+      packed_dimensions: "10x10x5",
+    })
+  })
+
+  it("is a no-op when compensation data is undefined", async () => {
+    const fulfillmentService = makeFulfillmentService(makeRecord("packed"))
+    const container = makeContainer(fulfillmentService)
+
+    await compensateConfirmPack(undefined, { container })
+
+    expect(fulfillmentService.updateFulfillmentRecords).not.toHaveBeenCalled()
+  })
+
+  it("stores null packed_dimensions when packed_dimensions was not provided", async () => {
+    const record = makeRecord("packed")
+    const fulfillmentService = makeFulfillmentService(record)
+    const container = makeContainer(fulfillmentService)
+
+    await compensateConfirmPack(
+      { record_id: "fr_1", previous_weight: 1.2, previous_dimensions: null },
+      { container }
+    )
+
+    expect(fulfillmentService.updateFulfillmentRecords).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "fr_1",
+        status: "picking",
+        packed_dimensions: null,
+      })
+    )
   })
 })
