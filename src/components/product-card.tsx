@@ -52,13 +52,21 @@ export function ProductCard({ product, language, soldOutLabel, addToCartLabel }:
       </Link>
       <div className="flex flex-col gap-2 px-3 pb-3 sm:flex-row sm:items-center">
         <ProductQuickView productId={product.id} className="h-10 w-full px-3 sm:w-auto sm:shrink-0" />
-        <Button
-          asChild
-          className="min-h-10 h-auto w-full px-3 py-2 text-xs !whitespace-normal leading-tight sm:h-10 sm:py-0 sm:text-sm sm:!whitespace-nowrap"
-          disabled={outOfStock}
-        >
-          <Link href={`/product/${product.id}`}>{outOfStock ? soldOutLabel : addToCartLabel}</Link>
-        </Button>
+        {outOfStock ? (
+          <Button
+            disabled
+            className="min-h-10 h-auto w-full px-3 py-2 text-xs !whitespace-normal leading-tight sm:h-10 sm:py-0 sm:text-sm sm:!whitespace-nowrap"
+          >
+            {soldOutLabel}
+          </Button>
+        ) : (
+          <Button
+            asChild
+            className="min-h-10 h-auto w-full px-3 py-2 text-xs !whitespace-normal leading-tight sm:h-10 sm:py-0 sm:text-sm sm:!whitespace-nowrap"
+          >
+            <Link href={`/product/${product.id}`}>{addToCartLabel}</Link>
+          </Button>
+        )}
       </div>
     </article>
   );

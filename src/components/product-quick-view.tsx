@@ -26,7 +26,7 @@ type RawProduct = {
   metadata?: Record<string, unknown> | null;
 };
 
-export function ProductQuickView({ productId, className }: { productId: string; className?: string }) {
+export function ProductQuickView({ productId, className, dotMode }: { productId: string; className?: string; dotMode?: boolean }) {
   const { language } = useLanguage();
   const { addToCart } = useCart();
   const [isOpen, setIsOpen] = useState(false);
@@ -296,6 +296,25 @@ export function ProductQuickView({ productId, className }: { productId: string; 
       </aside>
     </div>
   );
+
+  if (dotMode) {
+    return (
+      <>
+        <button
+          type="button"
+          onClick={openQuickView}
+          className={cn(
+            "relative inline-flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-[#111111]",
+            className,
+          )}
+          aria-label={t.quickView}
+        >
+          <span className="h-2 w-2 rounded-full bg-white" />
+        </button>
+        {isMounted ? createPortal(modal, document.body) : null}
+      </>
+    );
+  }
 
   return (
     <>

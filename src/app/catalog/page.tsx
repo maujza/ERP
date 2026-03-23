@@ -4,15 +4,13 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Filter, X } from "lucide-react";
 
-import { SafeImage } from "@/components/safe-image";
 import { useLanguage } from "@/components/language-provider";
-import { ProductQuickView } from "@/components/product-quick-view";
+import { ProductCard } from "@/components/product-card";
+import { ProductCardSkeleton } from "@/components/product-card-skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  calculateDiscountPercent,
-  formatArs,
   getProductName,
   hasPurchasablePrice,
   isJewelryProduct,
@@ -108,7 +106,7 @@ export default function CatalogPage() {
 
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [hasMore, setHasMore] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(true);
   const [offset, setOffset] = useState(0);
   const PAGE_SIZE = 20;
   const [activeSubcategory, setActiveSubcategory] = useState("Todos");
@@ -350,50 +348,17 @@ export default function CatalogPage() {
             )}
 
             <div className="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-              {paginated.map((product) => {
-                const isDiscounted = Boolean(product.originalPrice && product.originalPrice > product.price);
-                const outOfStock = product.stock <= 0;
-                return (
-                  <article key={product.id} className="relative overflow-hidden rounded-2xl border border-black/10 bg-white">
-                    <Link href={`/product/${product.id}`} className="block">
-                      <div className="relative h-44 w-full">
-                        <SafeImage src={product.image} alt={getProductName(product, language)} fill className="object-cover" />
-                        <div className="absolute left-2 top-2 flex flex-wrap gap-1">
-                          <Badge variant="outline" className="bg-white/90">
-                            {translateLabel(product.category, language)}
-                          </Badge>
-                          {outOfStock && <Badge variant="glow">{t.soldOut}</Badge>}
-                        </div>
-                      </div>
-                      <div className="space-y-2 p-3">
-                        <p className="line-clamp-2 text-sm font-semibold text-[#111111]">{getProductName(product, language)}</p>
-                        <div className="flex flex-wrap items-center gap-2 text-sm">
-                          <span className="font-semibold text-[#111111]">{formatArs(product.price, language)}</span>
-                          {isDiscounted && (
-                            <>
-                              <span className="text-xs text-[#777777] line-through">
-                                {formatArs(product.originalPrice ?? product.price, language)}
-                              </span>
-                              <span className="rounded-full bg-[#111111] px-2 py-0.5 text-[10px] text-white">
-                                -
-                                {calculateDiscountPercent(product.price, product.originalPrice ?? product.price
-                                )}
-                                %
-                              </span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </Link>
-                    <div className="flex flex-col gap-2 px-3 pb-3 xl:flex-row xl:items-center">
-                      <ProductQuickView productId={product.id} className="h-10 w-full px-3 xl:w-auto xl:shrink-0" />
-                      <Button asChild className="min-h-10 h-auto w-full px-3 py-2 text-xs !whitespace-normal leading-tight xl:h-10 xl:py-0 xl:text-sm xl:!whitespace-nowrap" disabled={outOfStock}>
-                        <Link href={`/product/${product.id}`}>{outOfStock ? t.soldOut : t.add}</Link>
-                      </Button>
-                    </div>
-                  </article>
-                );
-              })}
+              {allProducts.length === 0 && loadingMore
+                ? Array.from({ length: 6 }).map((_, i) => <ProductCardSkeleton key={i} />)
+                : paginated.map((product) => (
+                    <ProductCard
+                      key={product.id}
+                      product={product}
+                      language={language}
+                      soldOutLabel={t.soldOut}
+                      addToCartLabel={t.add}
+                    />
+                  ))}
             </div>
 
             {paginated.length === 0 && (

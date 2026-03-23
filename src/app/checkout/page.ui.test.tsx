@@ -209,3 +209,59 @@ describe("CheckoutPage", () => {
     ).not.toBeInTheDocument();
   });
 });
+
+// ─── progress bar step derivation logic ─────────────────────────────────────
+
+function getStep(
+  contactComplete: boolean,
+  allShippingRequiredComplete: boolean,
+  selectedShippingMethod: string | undefined,
+): number {
+  return selectedShippingMethod ? 3 : allShippingRequiredComplete ? 2 : contactComplete ? 1 : 0;
+}
+
+describe("CheckoutPage – progress bar step logic", () => {
+  it("returns 0 when nothing is complete", () => {
+    expect(getStep(false, false, undefined)).toBe(0);
+  });
+
+  it("returns 1 when only contactComplete is true", () => {
+    expect(getStep(true, false, undefined)).toBe(1);
+  });
+
+  it("returns 2 when allShippingRequiredComplete is true but no method selected", () => {
+    expect(getStep(true, true, undefined)).toBe(2);
+  });
+
+  it("returns 3 when selectedShippingMethod is set", () => {
+    expect(getStep(true, true, "standard")).toBe(3);
+  });
+
+  it("returns 3 even when contact/shipping flags are false if method is set", () => {
+    expect(getStep(false, false, "express")).toBe(3);
+  });
+});
+
+describe("CheckoutPage – progress bar DOM", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockCustomerRetrieve.mockRejectedValue(new Error("Unauthorized"));
+  });
+
+  it("renders 4 step nodes in the progress bar", () => {
+    render(<CheckoutPage />);
+    // Each step node is a div with h-7 w-7 classes; look for the step numbers 1–4
+    expect(screen.getByText("1")).toBeInTheDocument();
+    expect(screen.getByText("2")).toBeInTheDocument();
+    expect(screen.getByText("3")).toBeInTheDocument();
+    expect(screen.getByText("4")).toBeInTheDocument();
+  });
+
+  it("first step node (index 0) has border-2 border-[#111111] class when currentStep=0", () => {
+    render(<CheckoutPage />);
+    // Step "1" is in the active state (border-2 border-[#111111]) because nothing is filled
+    const step1 = screen.getByText("1");
+    expect(step1).toHaveClass("border-2");
+    expect(step1).toHaveClass("border-[#111111]");
+  });
+});

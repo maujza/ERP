@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import React from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,18 @@ export default function CheckoutPage() {
   const router = useRouter();
   const checkout = useCheckout();
   const { t, language, cartLines, isWhatsAppPaymentMethod, isSubmitting } = checkout;
+
+  const steps = language === "ko"
+    ? ["연락처", "배송지", "배송 방법", "결제"]
+    : ["Contacto", "Envío", "Método de envío", "Pago"];
+
+  const currentStep = checkout.selectedShippingMethod
+    ? 3
+    : checkout.allShippingRequiredComplete
+      ? 2
+      : checkout.contactComplete
+        ? 1
+        : 0;
 
   if (cartLines.length === 0) {
     return (
@@ -35,6 +48,20 @@ export default function CheckoutPage() {
   return (
     <div className="bg-[#f4f4f4] pb-28 md:pb-10">
       <main className="mx-auto grid w-full max-w-[1300px] gap-5 px-4 py-6 md:grid-cols-[1fr_360px] md:px-6 md:py-8">
+        <div className="md:col-span-2">
+          <div className="flex items-center gap-2 mb-4">
+            {steps.map((step, i) => (
+              <React.Fragment key={i}>
+                <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
+                  i < currentStep ? "bg-[#111111] text-white" :
+                  i === currentStep ? "border-2 border-[#111111] text-[#111111]" :
+                  "border border-black/20 text-[#999999]"
+                }`}>{i + 1}</div>
+                {i < steps.length - 1 && <div className={`h-px flex-1 ${i < currentStep ? "bg-[#111111]" : "bg-black/15"}`} />}
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
         <section className="space-y-4">
           <PaymentMethodPicker
             paymentMethod={checkout.paymentMethod}

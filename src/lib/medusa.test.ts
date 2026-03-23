@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+// docs/medusa-auth-keys.md — these tests guard against the "stale publishable key after DB rebuild" failure
+// where the storefront silently shows 0 results instead of throwing an obvious error.
 
 const mockedFetch = vi.fn()
 let lastConfig: Record<string, unknown> | null = null
@@ -92,5 +94,95 @@ describe("medusa lib", () => {
       "publishable key"
     )
     expect(consoleSpy).not.toHaveBeenCalled()
+  })
+
+  it("includes partial key in the error hint so the stale key is identifiable in logs", async () => {
+    process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY = "pk_1b12cc46stalekey"
+    mockedFetch.mockRejectedValueOnce({
+      status: 400,
+      message: "A valid publishable key is required to proceed with the request",
+    })
+    vi.spyOn(console, "error").mockImplementation(() => {})
+    const mod = await import("./medusa")
+
+    await expect(mod.sdk.client.fetch("/store/products")).rejects.toThrow(
+      "publishableKey=pk_1b12..."
+    )
+  })
+})
+
+// ─── validateMedusaEnv ────────────────────────────────────────────────────────
+// These tests guard against silent misconfiguration after a DB rebuild.
+// See docs/medusa-auth-keys.md for context.
+
+describe("validateMedusaEnv", () => {
+  beforeEach(() => {
+    vi.resetModules()
+    process.env = { ...ORIGINAL_ENV }
+  })
+
+  afterEach(() => {
+    process.env = ORIGINAL_ENV
+  })
+
+  it("returns no warnings when both key and region are correctly set", async () => {
+    process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY = "pk_4050679ff210valid"
+    process.env.NEXT_PUBLIC_MEDUSA_REGION_ID = "reg_01KME63SCBE7F8K1"
+    const { validateMedusaEnv } = await import("./medusa")
+
+    expect(validateMedusaEnv()).toEqual([])
+  })
+
+  it("warns when publishable key is missing — catches fresh DB rebuild with no .env.local update", async () => {
+    delete process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
+    process.env.NEXT_PUBLIC_MEDUSA_REGION_ID = "reg_valid"
+    const { validateMedusaEnv } = await import("./medusa")
+
+    const warnings = validateMedusaEnv()
+    expect(warnings).toHaveLength(1)
+    expect(warnings[0]).toMatch(/NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY is not set/)
+  })
+
+  it("warns when publishable key lacks pk_ prefix — catches copy-paste of wrong value", async () => {
+    process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY = "sk_accidental_secret_key"
+    process.env.NEXT_PUBLIC_MEDUSA_REGION_ID = "reg_valid"
+    const { validateMedusaEnv } = await import("./medusa")
+
+    const warnings = validateMedusaEnv()
+    expect(warnings).toHaveLength(1)
+    expect(warnings[0]).toMatch(/unexpected format/)
+    expect(warnings[0]).toMatch(/pk_/)
+  })
+
+  it("warns when region ID is missing — catches fresh DB rebuild", async () => {
+    process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY = "pk_valid"
+    delete process.env.NEXT_PUBLIC_MEDUSA_REGION_ID
+    const { validateMedusaEnv } = await import("./medusa")
+
+    const warnings = validateMedusaEnv()
+    expect(warnings).toHaveLength(1)
+    expect(warnings[0]).toMatch(/NEXT_PUBLIC_MEDUSA_REGION_ID is not set/)
+  })
+
+  it("warns when region ID lacks reg_ prefix — catches stale or malformed value", async () => {
+    process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY = "pk_valid"
+    process.env.NEXT_PUBLIC_MEDUSA_REGION_ID = "old_region_format"
+    const { validateMedusaEnv } = await import("./medusa")
+
+    const warnings = validateMedusaEnv()
+    expect(warnings).toHaveLength(1)
+    expect(warnings[0]).toMatch(/unexpected format/)
+    expect(warnings[0]).toMatch(/reg_/)
+  })
+
+  it("returns two warnings when both key and region are missing — full rebuild scenario", async () => {
+    delete process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY
+    delete process.env.NEXT_PUBLIC_MEDUSA_REGION_ID
+    const { validateMedusaEnv } = await import("./medusa")
+
+    const warnings = validateMedusaEnv()
+    expect(warnings).toHaveLength(2)
+    expect(warnings[0]).toMatch(/PUBLISHABLE_KEY/)
+    expect(warnings[1]).toMatch(/REGION_ID/)
   })
 })

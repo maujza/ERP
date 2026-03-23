@@ -3,17 +3,20 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLanguage } from "@/components/language-provider";
+import { useCart } from "@/components/cart-provider";
 
 export function WhatsAppFloat() {
   const pathname = usePathname();
   const { language } = useLanguage();
+  const { totalItems } = useCart();
 
   const hiddenRoutes = ["/backoffice", "/catalog", "/search", "/product", "/checkout"];
   if (hiddenRoutes.some((route) => pathname.startsWith(route))) {
     return null;
   }
 
-  const bottomClass = "bottom-5";
+  const isCheckout = pathname.startsWith("/checkout");
+  const bottomClass = (totalItems > 0 && !isCheckout) ? "bottom-20" : "bottom-5";
 
   return (
     <Link

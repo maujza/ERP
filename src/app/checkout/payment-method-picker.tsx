@@ -20,6 +20,7 @@ export function PaymentMethodPicker({ paymentMethod, setPaymentMethod, t, langua
 
   return (
     <div className="space-y-3 rounded-3xl border border-black/10 bg-white p-5">
+      <p className="text-xs uppercase tracking-[0.2em] text-[#3f3f3f]">{t.step4}</p>
       <p className="text-sm font-semibold text-[#111111]">{t.paymentTitle}</p>
       <div className="grid gap-2">
         {options.map(({ value, label }) => (

@@ -6,11 +6,11 @@ import { ArrowRight } from "lucide-react";
 
 import { SafeImage } from "@/components/safe-image";
 import { useLanguage } from "@/components/language-provider";
+import { useCart } from "@/components/cart-provider";
 import { ProductQuickView } from "@/components/product-quick-view";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  brands,
   hasPurchasablePrice,
   isJewelryProduct,
   mapMedusaProduct,
@@ -19,6 +19,7 @@ import {
   translateLabel,
 } from "@/lib/shop-data";
 import { ProductCard } from "@/components/product-card";
+import { ProductCardSkeleton } from "@/components/product-card-skeleton";
 import { sdk, withStorePricingContext } from "@/lib/medusa";
 
 const lookDotPositions = [
@@ -29,6 +30,7 @@ const lookDotPositions = [
 
 export default function HomePage() {
   const { language } = useLanguage();
+  const { totalItems } = useCart();
   const [slideIndex, setSlideIndex] = useState(0);
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
   const [featuredLoadError, setFeaturedLoadError] = useState(false);
@@ -143,6 +145,7 @@ export default function HomePage() {
   return (
     <div className="relative isolate overflow-hidden bg-[#f6f5f2]">
       <main className="mx-auto flex w-full max-w-[1400px] flex-col gap-8 px-4 py-6 md:gap-10 md:px-6 md:py-10">
+        {/* 1. Hero */}
         <section className="overflow-hidden rounded-3xl border border-black/10 bg-white">
           <div className="grid gap-0 md:grid-cols-2">
             <div className="order-1 space-y-4 p-5 md:p-8">
@@ -188,18 +191,50 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="grid grid-cols-2 gap-3">
-          {t.quickActions.map((action) => (
-            <Link
-              key={action.title}
-              href={action.href}
-              className="rounded-2xl border border-black/10 bg-white p-4 text-sm font-semibold text-[#111111]"
-            >
-              {action.title}
+        {/* 2. Featured Products */}
+        <section className="space-y-3">
+          <div className="flex items-center justify-between">
+            <Badge variant="outline">{t.featured}</Badge>
+            <Link href="/catalog" className="text-sm font-semibold text-[#111111]">
+              {t.ctaMore}
             </Link>
-          ))}
+          </div>
+          {featuredLoadError && (
+            <p className="text-sm text-[#b00020]">
+              {language === "ko" ? "상품을 불러올 수 없습니다." : "No pudimos cargar los productos."}
+            </p>
+          )}
+          <div className="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2 md:grid-cols-3">
+            {featuredProducts.length === 0 && !featuredLoadError
+              ? Array.from({ length: 3 }).map((_, i) => <ProductCardSkeleton key={i} />)
+              : featuredProducts.map((product) => (
+                  <ProductCard
+                    key={product.id}
+                    product={product}
+                    language={language}
+                    soldOutLabel={t.soldOut}
+                    addToCartLabel={t.addToCart}
+                  />
+                ))}
+          </div>
         </section>
 
+        {/* 3. Quick Actions */}
+        <section className="grid grid-cols-2 gap-3">
+          {t.quickActions
+            .filter((action) => action.href !== "/checkout" || totalItems > 0)
+            .map((action) => (
+              <Link
+                key={action.title}
+                href={action.href}
+                className="rounded-2xl border border-black/10 bg-white p-4 text-sm font-semibold text-[#111111]"
+              >
+                {action.title}
+              </Link>
+            ))}
+        </section>
+
+        {/* 4. Colecciones (merged categories scroll) */}
         <section className="space-y-3">
           <div className="flex items-center justify-between">
             <Badge variant="outline">{t.collections}</Badge>
@@ -228,67 +263,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="space-y-3">
-          <Badge variant="outline">{t.categories}</Badge>
-          <div className="no-scrollbar -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2">
-            {(["Aros", "Collares", "Pulseras", "Sets", "Kits"] as const).map((category, idx) => {
-              const accents = ["#ff174f", "#111111", "#2b2b2b", "#8f8f89", "#d8d6d1"];
-              const accent = accents[idx % accents.length];
-              return (
-                <Link
-                  key={category}
-                  href={`/catalog?category=${encodeURIComponent(category)}`}
-                  className="shrink-0 snap-start basis-[78%] overflow-hidden rounded-2xl border border-black/10 bg-white sm:basis-[45%] md:basis-[30%]"
-                >
-                  <div className="h-14 w-full" style={{ backgroundColor: accent }} />
-                  <div className="p-4">
-                    <p className="text-sm font-semibold">{translateLabel(category, language)}</p>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        </section>
-
-        <section className="space-y-3">
-          <Badge variant="outline">{t.brands}</Badge>
-          <div className="no-scrollbar -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2">
-            {brands.map((brand) => (
-              <div
-                key={brand}
-                className="shrink-0 snap-start basis-[78%] rounded-2xl border border-black/10 bg-white p-4 text-sm font-medium sm:basis-[45%] md:basis-[30%]"
-              >
-                {translateLabel(brand, language)}
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <Badge variant="outline">{t.featured}</Badge>
-            <Link href="/catalog" className="text-sm font-semibold text-[#111111]">
-              {t.ctaMore}
-            </Link>
-          </div>
-          {featuredLoadError && (
-            <p className="text-sm text-[#b00020]">
-              {language === "ko" ? "상품을 불러올 수 없습니다." : "No pudimos cargar los productos."}
-            </p>
-          )}
-          <div className="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2 md:grid-cols-3">
-            {featuredProducts.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                language={language}
-                soldOutLabel={t.soldOut}
-                addToCartLabel={t.addToCart}
-              />
-            ))}
-          </div>
-        </section>
-
+        {/* 5. Shop the Look */}
         <section className="rounded-3xl border border-black/10 bg-white p-4 md:p-6">
           <div className="mb-4 flex items-center justify-between">
             <Badge variant="outline">{t.shopLook}</Badge>
@@ -305,14 +280,12 @@ export default function HomePage() {
               const product = featuredProducts[i];
               if (!product) return null;
               return (
-                <Link
+                <ProductQuickView
                   key={product.id}
-                  href={`/product/${product.id}`}
-                  className={`absolute z-10 h-7 w-7 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-[#111111] ${pos.mobileClass} ${pos.desktopClass}`}
-                  aria-label={`${t.ctaMore} ${product.name}`}
-                >
-                  <span className="absolute left-1/2 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white" />
-                </Link>
+                  productId={product.id}
+                  dotMode
+                  className={`absolute z-10 -translate-x-1/2 -translate-y-1/2 ${pos.mobileClass} ${pos.desktopClass}`}
+                />
               );
             })}
           </div>
