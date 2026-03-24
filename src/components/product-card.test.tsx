@@ -182,6 +182,45 @@ describe("ProductCard – favorites heart", () => {
   });
 });
 
+describe("ProductCard – mobile viewport (no hover buttons)", () => {
+  it("does not render hover action buttons when matchMedia reports mobile", async () => {
+    // Override matchMedia to simulate a mobile viewport (matches: true)
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: vi.fn((query: string) => ({
+        matches: true,
+        media: query,
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    });
+
+    renderCard();
+
+    // Wait for the effect to run and isMobile to become true
+    await new Promise((r) => setTimeout(r, 0));
+
+    // Neither the add-to-cart link nor the quick-view button should be in the DOM
+    expect(screen.queryByRole("link", { name: "Seleccionar opciones" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Vista rapida" })).toBeNull();
+
+    // Restore desktop default for subsequent tests
+    Object.defineProperty(window, "matchMedia", {
+      writable: true,
+      value: vi.fn((query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    });
+  });
+});
+
 describe("ProductCard – Korean language", () => {
   it("uses Korean tooltip labels", async () => {
     render(
