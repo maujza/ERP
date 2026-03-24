@@ -52,7 +52,7 @@ export function ProductCard({ product, language, soldOutLabel, variant = "catalo
             src={product.image}
             alt={getProductName(product, language)}
             fill
-            className="object-cover transition-transform duration-500 group-hover:scale-105"
+            className="object-cover transition-transform duration-[300ms] ease-[ease] group-hover:scale-105"
           />
         </Link>
 
@@ -69,7 +69,7 @@ export function ProductCard({ product, language, soldOutLabel, variant = "catalo
           onClick={() => toggleFavorite(product.id)}
           aria-label={favorited ? t.removeFavorite : t.saveFavorite}
           aria-pressed={favorited}
-          className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow-sm transition-opacity duration-200 opacity-0 group-hover:opacity-100 max-md:opacity-100"
+          className="absolute right-2 top-2 flex h-11 w-11 items-center justify-center rounded-full bg-white/90 shadow-sm transition-opacity duration-200 opacity-0 group-hover:opacity-100 max-md:opacity-100"
         >
           <Heart
             className={`h-4 w-4 transition-colors ${
@@ -80,13 +80,13 @@ export function ProductCard({ product, language, soldOutLabel, variant = "catalo
 
         {/* Hover action buttons — desktop only, not in DOM on mobile */}
         {!isMobile && (
-          <div className="absolute bottom-0 left-0 right-0 flex items-center justify-center gap-[5px] bg-white py-[10px] opacity-0 translate-y-[10px] transition-all duration-[350ms] ease-[ease] will-change-[opacity,transform] group-hover:opacity-100 group-hover:translate-y-0 group-focus-within:opacity-100 group-focus-within:translate-y-0">
+          <div className="absolute bottom-0 left-0 right-0 z-[7] flex items-center justify-center gap-[5px] bg-white py-[10px] opacity-0 translate-y-[10px] transition-all duration-[350ms] ease-[ease] will-change-[opacity,transform] group-hover:opacity-100 group-hover:translate-y-0 group-focus-within:opacity-100 group-focus-within:translate-y-0">
             {/* Add to cart → navigates to product page for variant selection */}
             <div className="group/btn relative">
               <Link
                 href={`/product/${product.id}`}
                 aria-label={t.addToCart}
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--card-btn-add)] text-white transition-opacity duration-[150ms] hover:opacity-80"
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--card-btn-add)] text-white transition-opacity duration-[350ms] ease-[ease] hover:opacity-80"
               >
                 <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
                   <path
@@ -97,7 +97,7 @@ export function ProductCard({ product, language, soldOutLabel, variant = "catalo
                   />
                 </svg>
               </Link>
-              <span className="pointer-events-none absolute bottom-full left-1/2 mb-2 -translate-x-1/2 whitespace-nowrap rounded bg-black/75 px-2 py-1 text-[11px] text-white opacity-0 transition-opacity duration-[150ms] group-hover/btn:opacity-100">
+              <span className="pointer-events-none absolute bottom-full left-1/2 mb-2 -translate-x-1/2 whitespace-nowrap rounded bg-black/75 px-2 py-1 text-[11px] text-white opacity-0 transition-opacity duration-200 group-hover/btn:opacity-100">
                 {t.addToCart}
               </span>
             </div>
@@ -111,7 +111,7 @@ export function ProductCard({ product, language, soldOutLabel, variant = "catalo
                     type="button"
                     onClick={onClick}
                     aria-label={t.quickView}
-                    className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--card-btn-qv)] text-white transition-opacity duration-[150ms] hover:opacity-80"
+                    className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--card-btn-qv)] text-white transition-opacity duration-[150ms] ease-in-out hover:opacity-80"
                   >
                     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
                       <path
@@ -122,7 +122,7 @@ export function ProductCard({ product, language, soldOutLabel, variant = "catalo
                       <circle cx="9" cy="9" r="2.25" stroke="currentColor" strokeWidth="1.5" />
                     </svg>
                   </button>
-                  <span className="pointer-events-none absolute bottom-full left-1/2 mb-2 -translate-x-1/2 whitespace-nowrap rounded bg-black/75 px-2 py-1 text-[11px] text-white opacity-0 transition-opacity duration-[150ms] group-hover/btn:opacity-100">
+                  <span className="pointer-events-none absolute bottom-full left-1/2 mb-2 -translate-x-1/2 whitespace-nowrap rounded bg-black/75 px-2 py-1 text-[11px] text-white opacity-0 transition-opacity duration-200 group-hover/btn:opacity-100">
                     {t.quickView}
                   </span>
                 </div>

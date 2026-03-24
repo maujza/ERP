@@ -152,9 +152,13 @@ describe("ProductCard – favorites heart", () => {
     localStorage.clear();
   });
 
-  it("renders the favorites button", () => {
-    renderCard();
-    expect(screen.getByRole("button", { name: "Guardar en favoritos" })).toBeInTheDocument();
+  it("renders the favorites button with minimum 44px touch target", () => {
+    const { container } = renderCard();
+    const btn = screen.getByRole("button", { name: "Guardar en favoritos" });
+    expect(btn).toBeInTheDocument();
+    // h-11 w-11 = 44px minimum touch target per DESIGN.md
+    expect(btn).toHaveClass("h-11");
+    expect(btn).toHaveClass("w-11");
   });
 
   it("aria-pressed is false initially", () => {
