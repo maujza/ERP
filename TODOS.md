@@ -1,7 +1,7 @@
 # TODOS — Aurelia ERP
 
 Deferred work, vision items, and known gaps.
-Created from plan-ceo-review session 2026-03-15. Updated after Sprint 2 plan review 2026-03-15. **Last updated: 2026-03-22 (i18n parity fix — account, auth, order-confirmation, shop-data all fully bilingual; 34 new tests).**
+Created from plan-ceo-review session 2026-03-15. Updated after Sprint 2 plan review 2026-03-15. **Last updated: 2026-03-24 (account page tracking bug fix, coverage pass, adversarial review findings captured).**
 
 ---
 
@@ -185,6 +185,90 @@ Three workflows: `startPickingWorkflow`, `confirmPackWorkflow`, `dispatchOrderWo
 7. Shop the Look dots → `ProductQuickView`
 8. Trust signals row (blocked on copy from user)
 9. WhatsApp button color (#25D366)
+
+---
+
+## Backend Hardening — Adversarial Review Findings (2026-03-24)
+
+*Captured from adversarial review during Sprint 2 ship. None are blockers for shipping; all are production reliability concerns for Sprint 3+.*
+
+---
+
+### [P1] [M] FulfillmentRecord state transitions need row-level locking
+
+**What:** `dispatchOrderStep`, `confirmPackStep`, and `generatePickListHandler` all read a `FulfillmentRecord` status and then update it in two separate operations with no database-level lock. Two concurrent requests can both pass the status guard and double-dispatch an order.
+
+**Why:** Data corruption risk — double-dispatch creates duplicate Medusa shipments and double-adjusts inventory.
+
+**How to apply:** Add `SELECT FOR UPDATE` (or Medusa equivalent optimistic version check) before any state transition in fulfillment steps. Alternatively, use a Redis-based distributed lock keyed on `order_id`.
+
+**Effort:** M | **Priority:** P1
+
+---
+
+### [P2] [S] notify-agent rate limiter must use Redis, not in-process Map
+
+**What:** `rateLimitMap` in `notify-agent/route.ts` is module-level — bypassed in any multi-process deployment (PM2 cluster, Kubernetes). Also leaks memory as entries for distinct order IDs accumulate forever without pruning.
+
+**Why:** Rate limit is trivially bypassed in production; memory leak in long-running deployments.
+
+**How to apply:** Replace `rateLimitMap` with Redis `INCR` + TTL, or at minimum add a periodic pruning pass that removes expired entries on each write.
+
+**Effort:** S | **Priority:** P2
+
+---
+
+### [P2] [S] getRecipientsByRole: add pagination / `take` bound
+
+**What:** `notification-recipients.ts` fetches ALL users with no `take`/`skip`. In stores with many admin users, this is a full-table scan on every cache miss (every 60 seconds).
+
+**Why:** O(n) DB query on a hot notification path; two simultaneous misses fire duplicate queries.
+
+**How to apply:** Add `take: 100` (or filter by role server-side) to the `query.graph` call.
+
+**Effort:** S | **Priority:** P2
+
+---
+
+### [P1] [M] Wrap receive-purchase-order inventory + audit log in a transaction
+
+**What:** `receiveOrderHandler` adjusts inventory and writes `StockAdjustmentLog` entries sequentially, outside a transaction. Partial failure leaves stock and logs inconsistent, and a re-receive could double-count partial stock.
+
+**Why:** Data integrity — stock levels and audit logs diverge on any mid-loop failure.
+
+**How to apply:** Wrap the entire item-adjustment loop in a Medusa transaction context (or a raw Knex transaction), so all adjustments + logs commit atomically or roll back together.
+
+**Effort:** M | **Priority:** P1
+
+---
+
+### [P2] [S] packed-not-shipped job: paginate listFulfillmentRecords
+
+**What:** `listFulfillmentRecords({ status: "packed" })` has no `take` limit. After an outage with many stuck orders, this loads all of them into memory simultaneously.
+
+**How to apply:** Add `take: 50` and process in batches with cursor-based pagination.
+
+**Effort:** S | **Priority:** P2
+
+---
+
+### [P3] [S] KPI avgLeadTimeMinutes: add dispatched_at column
+
+**What:** Average lead time uses `updated_at` as the dispatch timestamp, but `updated_at` changes on any field write (e.g. `last_notified_at` updates). The KPI silently drifts.
+
+**How to apply:** Add `dispatched_at timestamptz` column to `FulfillmentRecord`, set once when status transitions to `"dispatched"`. Use this column in the KPI calculation.
+
+**Effort:** S | **Priority:** P3
+
+---
+
+### [P2] [S] StockAdjustmentLog compensation: preserve instead of delete
+
+**What:** The model comment says "Never updated, never deleted" but `compensateReceiveOrder` calls `deleteStockAdjustmentLogs`. The compensation destroys audit evidence.
+
+**How to apply:** Instead of deleting, insert a compensating entry with `reason_code: "correction"` and a negative delta. Removes the "never deleted" invariant violation and preserves the audit trail.
+
+**Effort:** S | **Priority:** P2
 
 ---
 

@@ -16,7 +16,7 @@ All notable changes to this project will be documented in this file.
 - **`docs/medusa-auth-keys.md`**: documents publishable key lifecycle, JWT auth flow, stale-key refresh procedure, and quick diagnostic commands
 - **`backend/src/scripts/validate-env.ts`**: `npx medusa exec` script that validates publishable key, region ID, and admin user against the live DB
 - **i18n parity**: `/account`, `/auth`, and `/order-confirmation` pages fully bilingual (es/ko); `getProductName`/`getProductDescription` now language-aware via `metadata.name_ko`/`metadata.description_ko`
-- 172+ backend unit tests; 636 frontend tests (up from 545)
+- 346 backend unit tests (up from 172); 712 frontend tests (up from 545) — added coverage for `buildTracking`, `QuantitySelector`, `CartDrawer`, `LanguageToggle`, backend RBAC branches, `notify-agent` rate-limit paths, and `low-stock-check` edge cases
 
 ### Changed
 - **Header nav**: language toggle moved from desktop nav bar into the hamburger drawer (consistent across all screen sizes); "Finalizar compra" merges into the cart slot as a morphing pill on md+ — zero layout shift when cart state changes
@@ -30,6 +30,9 @@ All notable changes to this project will be documented in this file.
 - **RBAC middleware** snapshot tests added for all `/admin/fulfillment/*` routes
 - **Jest test isolation**: module-level caches (`roleCache`, recipients cache, `rateLimitMap`) now export `clearX()` functions called in `beforeEach`
 - **Hardcoded `"N° pedido:"` in order-confirmation**: now reads from `t.orderNumber`
+- **Account page order tracking bug**: `"not_fulfilled".includes("fulfilled")` evaluated to `true` (substring match), causing the shipping step to show as done for every unfulfilled order; replaced with exact-match `Set`
+- **Account page payment status**: "Pago validado" now only shows when `payment_status` is `captured` or `paid` — `authorized` correctly shows "Validando pago"
+- **Account page layout**: orders section moved above promotions/price-tier grid (primary information hierarchy); redundant 3-badge row removed; `OrderStepper` circles updated to brand teal `#61c3d8` (DESIGN.md token)
 
 ## [0.1.0.0] - 2026-03-15
 
