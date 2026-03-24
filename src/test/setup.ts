@@ -1,6 +1,19 @@
 import "@testing-library/jest-dom";
 import { beforeEach, vi } from "vitest";
 
+// jsdom doesn't implement window.matchMedia — provide a no-op stub
+Object.defineProperty(window, "matchMedia", {
+  writable: true,
+  value: vi.fn((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+});
+
 // Reset localStorage between tests
 beforeEach(() => {
   localStorage.clear();

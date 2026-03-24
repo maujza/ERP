@@ -9,6 +9,10 @@
   --brand-red-dark: #e3043c;
   --brand-red-soft: #ff6b8f;
   --brand-red-tint: #ffd9e3;
+  --card-btn-add: #111111;
+  --card-btn-add-icon: #ffffff;
+  --card-btn-qv: #6b6b6b;
+  --card-btn-qv-icon: #ffffff;
 }
 
 @theme inline {

@@ -25,12 +25,14 @@ vi.mock("next/link", () => ({
     href,
     children,
     className,
+    ...rest
   }: {
     href: string;
     children: React.ReactNode;
     className?: string;
+    [key: string]: unknown;
   }) => (
-    <a href={href} className={className}>
+    <a href={href} className={className} {...rest}>
       {children}
     </a>
   ),
@@ -47,9 +49,16 @@ vi.mock("@/components/language-provider", () => ({
 }));
 
 vi.mock("@/components/product-quick-view", () => ({
-  ProductQuickView: ({ className }: { className?: string }) => (
-    <button className={className}>Vista rapida</button>
-  ),
+  ProductQuickView: ({
+    className,
+    renderTrigger,
+  }: {
+    className?: string;
+    renderTrigger?: (props: { onClick: () => void }) => React.ReactNode;
+  }) => {
+    if (renderTrigger) return <>{renderTrigger({ onClick: () => {} })}</>;
+    return <button className={className}>Vista rapida</button>;
+  },
 }));
 
 vi.mock("@/lib/medusa", async (importOriginal) => {
@@ -247,20 +256,23 @@ describe("SearchPage – out of stock product", () => {
     expect(agotadoLabels.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("add button is disabled for out-of-stock products", async () => {
+  it("sold-out badge is visible (not a disabled button) for out-of-stock products", async () => {
     mockQ = "pulsera";
     render(<SearchPage />);
-    const agotadoBtn = await screen.findByRole("button", { name: "AGOTADO" });
-    expect(agotadoBtn).toBeDisabled();
+    // New card design: shows a badge, no longer a disabled button
+    const badge = await screen.findByText("AGOTADO");
+    expect(badge).toBeInTheDocument();
+    expect(badge.closest("button[disabled]")).toBeNull();
   });
 });
 
 describe("SearchPage – button consistency", () => {
-  it("add-to-cart CTA does NOT use the outline variant (regression guard)", async () => {
+  it("add-to-cart circle button links to the product page", async () => {
     mockQ = "aros";
     render(<SearchPage />);
-    const addBtn = await screen.findByRole("link", { name: "Agregar" });
-    expect(addBtn).not.toHaveClass("border-black/20");
+    // New card design: circle button with aria-label navigates to product page
+    const addLink = await screen.findByRole("link", { name: "Seleccionar opciones" });
+    expect(addLink).toHaveAttribute("href", "/product/p1");
   });
 });
 

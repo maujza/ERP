@@ -356,7 +356,6 @@ export default function CatalogPage() {
                       product={product}
                       language={language}
                       soldOutLabel={t.soldOut}
-                      addToCartLabel={t.add}
                     />
                   ))}
             </div>
