@@ -5,7 +5,10 @@ const STORAGE_KEY = "aurelia_favorites";
 function readFavorites(): string[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as string[]) : [];
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed) || !parsed.every((v) => typeof v === "string")) return [];
+    return parsed;
   } catch {
     return [];
   }
@@ -14,17 +17,15 @@ function readFavorites(): string[] {
 function writeFavorites(ids: string[]): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
-  } catch {
-    // ignore write errors
+  } catch (e) {
+    console.warn("[useFavorites] Failed to persist favorites to localStorage:", e);
   }
 }
 
 export function useFavorites() {
-  const [favorites, setFavorites] = useState<string[]>([]);
-
-  useEffect(() => {
-    setFavorites(readFavorites());
-  }, []);
+  const [favorites, setFavorites] = useState<string[]>(() =>
+    typeof window !== "undefined" ? readFavorites() : [],
+  );
 
   const toggleFavorite = useCallback((id: string) => {
     setFavorites((prev) => {
