@@ -275,3 +275,100 @@ describe("notification payload", () => {
     expect(notification.data.title.length).toBeGreaterThan(0)
   })
 })
+
+// ─── rate limiting ────────────────────────────────────────────────────────────
+
+describe("rate limiting", () => {
+  it("allows the first 3 requests for the same order_id", async () => {
+    const createNotifications = jest.fn().mockResolvedValue({})
+    const order = makeOrder({ id: "order_rl" })
+    for (let i = 0; i < 3; i++) {
+      const res = makeRes()
+      await POST(makeReq({ body: { order_id: "order_rl" }, orders: [order], createNotifications }), res)
+      expect(res.json).toHaveBeenCalledWith({ ok: true })
+    }
+  })
+
+  it("returns 429 on the 4th request for the same order_id within the window", async () => {
+    const createNotifications = jest.fn().mockResolvedValue({})
+    const order = makeOrder({ id: "order_rl2" })
+    // First 3 succeed
+    for (let i = 0; i < 3; i++) {
+      await POST(makeReq({ body: { order_id: "order_rl2" }, orders: [order], createNotifications }), makeRes())
+    }
+    // 4th should be rate-limited
+    const res = makeRes()
+    await POST(makeReq({ body: { order_id: "order_rl2" }, orders: [order], createNotifications }), res)
+    expect(res.status).toHaveBeenCalledWith(429)
+    expect(res.json).toHaveBeenCalledWith({ error: "Too many requests. Try again later." })
+  })
+
+  it("allows a new order_id after the previous one was rate-limited", async () => {
+    const createNotifications = jest.fn().mockResolvedValue({})
+    const orderA = makeOrder({ id: "order_a" })
+    const orderB = makeOrder({ id: "order_b" })
+    // Exhaust order_a
+    for (let i = 0; i < 3; i++) {
+      await POST(makeReq({ body: { order_id: "order_a" }, orders: [orderA], createNotifications }), makeRes())
+    }
+    // order_b should still succeed
+    const res = makeRes()
+    await POST(makeReq({ body: { order_id: "order_b" }, orders: [orderB], createNotifications }), res)
+    expect(res.json).toHaveBeenCalledWith({ ok: true })
+  })
+})
+
+// ─── customer ownership check ─────────────────────────────────────────────────
+
+describe("customer ownership check", () => {
+  it("returns 403 when authenticated customer_id does not match order.customer_id", async () => {
+    const order = { id: "order_03", display_id: 123, email: "other@test.com", customer_id: "cust_abc" }
+    const req = makeReq({ body: { order_id: "order_03" }, orders: [order] }) as any
+    // Set auth_context to a different customer
+    req.auth_context = { actor_id: "cust_different" }
+    const res = makeRes()
+    await POST(req, res)
+    expect(res.status).toHaveBeenCalledWith(403)
+    expect(res.json).toHaveBeenCalledWith({ error: "Forbidden" })
+  })
+
+  it("allows the request when customer_id matches order.customer_id", async () => {
+    const order = { id: "order_04", display_id: 124, email: "owner@test.com", customer_id: "cust_owner" }
+    const req = makeReq({ body: { order_id: "order_04" }, orders: [order] }) as any
+    req.auth_context = { actor_id: "cust_owner" }
+    const res = makeRes()
+    await POST(req, res)
+    expect(res.json).toHaveBeenCalledWith({ ok: true })
+  })
+
+  it("allows the request when order has no customer_id (guest order)", async () => {
+    const order = { id: "order_05", display_id: 125, email: "guest@test.com", customer_id: null }
+    const req = makeReq({ body: { order_id: "order_05" }, orders: [order] }) as any
+    req.auth_context = { actor_id: "cust_someone" }
+    const res = makeRes()
+    await POST(req, res)
+    expect(res.json).toHaveBeenCalledWith({ ok: true })
+  })
+})
+
+// ─── non-feed error re-throw ──────────────────────────────────────────────────
+
+describe("non-feed provider error handling", () => {
+  it("rethrows errors unrelated to missing feed provider", async () => {
+    const createNotifications = jest.fn().mockRejectedValue(new Error("Database connection failed"))
+    const req = makeReq({ body: { order_id: "order_01" }, orders: [makeOrder()], createNotifications })
+    const res = makeRes()
+    await expect(POST(req, res)).rejects.toThrow("Database connection failed")
+  })
+
+  it("does NOT rethrow when the error message mentions missing feed provider", async () => {
+    const logger = { warn: jest.fn() }
+    const createNotifications = jest.fn().mockRejectedValue(
+      new Error("Could not find a notification provider for channel: feed")
+    )
+    const req = makeReq({ body: { order_id: "order_01" }, orders: [makeOrder()], createNotifications, logger })
+    const res = makeRes()
+    await expect(POST(req, res)).resolves.not.toThrow()
+    expect(logger.warn).toHaveBeenCalled()
+  })
+})

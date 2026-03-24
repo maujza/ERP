@@ -166,4 +166,28 @@ describe("requireRole", () => {
     await middleware(makeReq("inventory"), makeRes(), next)
     expect(next).toHaveBeenCalled()
   })
+
+  it("returns 401 when there is no auth_context (unauthenticated request)", async () => {
+    const middleware = requireRole([ROLES.PURCHASING])
+    const res = makeRes()
+    const next = jest.fn()
+    const req = { scope: makeScope({ metadata: {} }) } as any // no auth_context at all
+    await middleware(req, res, next)
+    expect(next).not.toHaveBeenCalled()
+    expect(res.status).toHaveBeenCalledWith(401)
+    expect(res.json).toHaveBeenCalledWith({ message: "Unauthorized" })
+  })
+
+  it("returns 401 when auth_context has no actor_id (null actor)", async () => {
+    const middleware = requireRole([ROLES.PURCHASING])
+    const res = makeRes()
+    const next = jest.fn()
+    const req = {
+      auth_context: { actor_id: null },
+      scope: makeScope({ metadata: {} }),
+    } as any
+    await middleware(req, res, next)
+    expect(next).not.toHaveBeenCalled()
+    expect(res.status).toHaveBeenCalledWith(401)
+  })
 })

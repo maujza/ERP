@@ -8,11 +8,13 @@ const THRESHOLD = 5
 
 function makeContainer({
   stockedQuantity = 0,
+  emptyLevels = false,
   users = [] as { id: string; metadata?: any }[],
   inventoryError = false,
   notifyError = false,
 }: {
   stockedQuantity?: number
+  emptyLevels?: boolean
   users?: { id: string; metadata?: any }[]
   inventoryError?: boolean
   notifyError?: boolean
@@ -29,15 +31,15 @@ function makeContainer({
           listInventoryLevels: inventoryError
             ? jest.fn().mockRejectedValue(new Error("DB error"))
             : jest.fn().mockResolvedValue(
-                stockedQuantity !== undefined
-                  ? [
+                emptyLevels
+                  ? []
+                  : [
                       {
                         inventory_item_id: "inv_1",
                         location_id: "sloc_1",
                         stocked_quantity: stockedQuantity,
                       },
                     ]
-                  : []
               ),
         }
       }
@@ -130,5 +132,46 @@ describe("lowStockCheckHandler", () => {
       lowStockCheckHandler({ event: { data: { inventory_item_id: "inv_1", location_id: "sloc_1" } }, container: { resolve } } as any)
     ).resolves.toBeUndefined()
     expect(_logger.warn).toHaveBeenCalled()
+  })
+
+  it("does NOT send notification when inventory level is not found (empty result)", async () => {
+    const { resolve, _createNotifications } = makeContainer({
+      emptyLevels: true,
+      users: [{ id: "user_1", metadata: { role: "inventory" } }],
+    }) as any
+    await lowStockCheckHandler({
+      event: { data: { inventory_item_id: "inv_missing", location_id: "sloc_1" } },
+      container: { resolve },
+    } as any)
+    expect(_createNotifications).not.toHaveBeenCalled()
+  })
+
+  it("falls back to 'system' recipient when no users match the notify roles", async () => {
+    const { resolve, _createNotifications } = makeContainer({
+      stockedQuantity: 2,
+      users: [], // no users with purchasing or inventory role
+    }) as any
+    await lowStockCheckHandler({
+      event: { data: { inventory_item_id: "inv_1", location_id: "sloc_1" } },
+      container: { resolve },
+    } as any)
+    expect(_createNotifications).toHaveBeenCalledWith(
+      expect.objectContaining({ to: "system" })
+    )
+  })
+
+  it("notification data includes correct stocked_quantity and threshold", async () => {
+    const { resolve, _createNotifications } = makeContainer({
+      stockedQuantity: 3,
+      users: [{ id: "user_1", metadata: { role: "inventory" } }],
+    }) as any
+    await lowStockCheckHandler({
+      event: { data: { inventory_item_id: "inv_1", location_id: "sloc_1" } },
+      container: { resolve },
+    } as any)
+    const call = _createNotifications.mock.calls[0][0]
+    expect(call.data.stocked_quantity).toBe(3)
+    expect(call.data.threshold).toBe(5)
+    expect(call.data.inventory_item_id).toBe("inv_1")
   })
 })
