@@ -1,7 +1,7 @@
 # TODOS — Aurelia ERP
 
 Deferred work, vision items, and known gaps.
-Created from plan-ceo-review session 2026-03-15. Updated after Sprint 2 plan review 2026-03-15. **Last updated: 2026-03-24 (sprint 2.5 hover card shipped: product card hover buttons, favorites heart + useFavorites hook, useIsMobile hook, renderTrigger on ProductQuickView).**
+Created from plan-ceo-review session 2026-03-15. Updated after Sprint 2 plan review 2026-03-15. **Last updated: 2026-03-24 (v0.2.1.1: fix add-to-cart icon stroke color).**
 
 ---
 
