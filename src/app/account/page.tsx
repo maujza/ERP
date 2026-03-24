@@ -147,7 +147,7 @@ function buildTracking(order: OrderSummary, lang: AccountLang) {
     return { steps: canceledSteps, progress: 100 };
   }
 
-  const paymentApproved = payment.includes("authorized") || payment.includes("captured") || payment.includes("paid");
+  const paymentApproved = payment.includes("captured") || payment.includes("paid");
   // Use exact-match set — "not fulfilled".includes("fulfilled") would incorrectly return true
   const PREPARING_STATUSES = new Set(["partially fulfilled", "fulfilled", "partially shipped", "shipped", "delivered"]);
   const preparingShipment = PREPARING_STATUSES.has(fulfillment);

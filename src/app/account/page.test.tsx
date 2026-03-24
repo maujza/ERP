@@ -137,13 +137,15 @@ describe("AccountPage authenticated state", () => {
 
     // Stepper step labels
     expect(screen.getByText("Pedido confirmado")).toBeInTheDocument();
-    expect(screen.getByText("Pago validado")).toBeInTheDocument();
-    // For not_fulfilled: shipping step is current (not done), shows "Pendiente de despacho"
+    // payment_status "authorized" is NOT captured — should show "Validando pago" (current), not "Pago validado"
+    expect(screen.getByText("Validando pago")).toBeInTheDocument();
+    expect(screen.queryByText("Pago validado")).not.toBeInTheDocument();
+    // Shipping step is future (payment not yet done), label shows "Pendiente de despacho"
     expect(screen.getByText("Pendiente de despacho")).toBeInTheDocument();
     expect(screen.queryByText("Preparando / enviando")).not.toBeInTheDocument();
     expect(screen.getByText("Entrega pendiente")).toBeInTheDocument();
-    // Tracking hint shows current step label
-    expect(screen.getByText("Seguimiento: Pendiente de despacho")).toBeInTheDocument();
+    // Tracking hint shows current step label (payment step is current)
+    expect(screen.getByText("Seguimiento: Validando pago")).toBeInTheDocument();
   });
 });
 
@@ -245,6 +247,8 @@ describe("AccountPage – i18n Korean, authenticated", () => {
     render(<AccountPage />);
     await screen.findByText("내 주문");
     expect(screen.getByText("주문 확인")).toBeInTheDocument();
-    expect(screen.getByText("결제 확인됨")).toBeInTheDocument();
+    // payment_status "authorized" is not captured — shows "결제 확인 중" (validating), not "결제 확인됨"
+    expect(screen.getByText("결제 확인 중")).toBeInTheDocument();
+    expect(screen.queryByText("결제 확인됨")).not.toBeInTheDocument();
   });
 });
