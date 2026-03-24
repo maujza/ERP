@@ -128,21 +128,22 @@ describe("AccountPage authenticated state", () => {
     expect(screen.getByText("Nivel actual: VIP")).toBeInTheDocument();
   });
 
-  it("shows tracking badges and expands timeline details", async () => {
+  it("shows order stepper with correct steps for not_fulfilled order", async () => {
     render(<AccountPage />);
 
     await waitFor(() => {
       expect(screen.getByText("Pedido #649")).toBeInTheDocument();
     });
 
-    expect(screen.getByText("Estado: Pendiente")).toBeInTheDocument();
-    expect(screen.getByText("Pago: Autorizado")).toBeInTheDocument();
-    expect(screen.getByText("Envio: Aun no despachado")).toBeInTheDocument();
-    expect(screen.getByText("Seguimiento: Entrega pendiente")).toBeInTheDocument();
+    // Stepper step labels
     expect(screen.getByText("Pedido confirmado")).toBeInTheDocument();
     expect(screen.getByText("Pago validado")).toBeInTheDocument();
-    expect(screen.getByText("Preparando / enviando")).toBeInTheDocument();
+    // For not_fulfilled: shipping step is current (not done), shows "Pendiente de despacho"
+    expect(screen.getByText("Pendiente de despacho")).toBeInTheDocument();
+    expect(screen.queryByText("Preparando / enviando")).not.toBeInTheDocument();
     expect(screen.getByText("Entrega pendiente")).toBeInTheDocument();
+    // Tracking hint shows current step label
+    expect(screen.getByText("Seguimiento: Pendiente de despacho")).toBeInTheDocument();
   });
 });
 
@@ -238,18 +239,6 @@ describe("AccountPage – i18n Korean, authenticated", () => {
     render(<AccountPage />);
     await screen.findByText("내 주문");
     expect(screen.getByText(/주문 #77/)).toBeInTheDocument();
-  });
-
-  it("shows Korean status label (pending)", async () => {
-    render(<AccountPage />);
-    await screen.findByText("내 주문");
-    expect(screen.getByText(/상태:.*대기 중/)).toBeInTheDocument();
-  });
-
-  it("shows Korean payment label (authorized)", async () => {
-    render(<AccountPage />);
-    await screen.findByText("내 주문");
-    expect(screen.getByText(/결제:.*승인됨/)).toBeInTheDocument();
   });
 
   it("shows Korean tracking step labels", async () => {
