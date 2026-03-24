@@ -1,7 +1,7 @@
 # TODOS — Aurelia ERP
 
 Deferred work, vision items, and known gaps.
-Created from plan-ceo-review session 2026-03-15. Updated after Sprint 2 plan review 2026-03-15. **Last updated: 2026-03-24 (account page tracking bug fix, coverage pass, adversarial review findings captured).**
+Created from plan-ceo-review session 2026-03-15. Updated after Sprint 2 plan review 2026-03-15. **Last updated: 2026-03-24 (sprint 2.5 hover card shipped: product card hover buttons, favorites heart + useFavorites hook, useIsMobile hook, renderTrigger on ProductQuickView).**
 
 ---
 
@@ -472,15 +472,21 @@ Three workflows: `startPickingWorkflow`, `confirmPackWorkflow`, `dispatchOrderWo
 
 ---
 
-### [P3] [S] DESIGN.md — living design system document
+### ✅ [P3] [S] DESIGN.md — living design system document — DONE
 
-**What:** Create `DESIGN.md` at repo root with color tokens, typography scale, spacing vocabulary, component conventions, and design rationale.
+DESIGN.md created at repo root with full token set, typography, spacing, component specs, and design rationale. Maintained throughout sprint 2.5. Last updated 2026-03-20.
 
-**Why:** Without it, design decisions drift across files. New contributors (and future Claude sessions) have no single source of truth.
+---
 
-**How to apply:** After storefront redesign ships, extract all token decisions into a DESIGN.md. Keep it updated as new UI ships.
+### [P3] [S] Shared FavoritesContext so all cards on a page share favorites state
 
-**Effort:** S | **Priority:** P3 | **Depends on:** Storefront redesign (above).
+**What:** Wrap `useFavorites` in a React context provider so all `ProductCard` instances on the same page share one favorites state instead of each having their own independent copy.
+
+**Why:** Currently, if the same product appears on the same page twice (e.g., featured on homepage AND visible in a catalog section below the fold), favoriting from one card won't make the other card's heart fill in until a page reload. The localStorage data is always consistent, but the in-memory state diverges until remount.
+
+**How to apply:** Create `src/components/favorites-provider.tsx` with a `FavoritesContext`. The `useFavorites` hook reads from context if available, falls back to its own state if used outside the provider. Add `<FavoritesProvider>` to the root layout. All `ProductCard` instances then share one favorites array.
+
+**Effort:** S | **Priority:** P3 | **Depends on:** `feat/sprint2.5-hover-card` merged.
 
 ---
 
@@ -490,9 +496,9 @@ Three workflows: `startPickingWorkflow`, `confirmPackWorkflow`, `dispatchOrderWo
 
 **Why:** Without a discoverable entry point, users can't find their saved items unless they know the URL. The /favoritos page (built in redesign sprint) has zero discovery path.
 
-**How to apply:** Add icon link to `site-header.tsx` header nav. Teal heart icon. Show count badge if >0 favorites in localStorage.
+**How to apply:** Add icon link to `site-header.tsx` header nav. Teal heart icon. Show count badge if >0 favorites in localStorage. `useFavorites` hook is now available in `src/hooks/use-favorites.ts` — use `favorites.length` for the badge count.
 
-**Effort:** S | **Priority:** P3 | **Depends on:** Favorites localStorage implementation (storefront redesign).
+**Effort:** S | **Priority:** P3 | **Depends on:** `feat/sprint2.5-hover-card` merged, `/favoritos` page (sprint 2.5 step 5).
 
 ---
 
