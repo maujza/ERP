@@ -91,7 +91,7 @@ export function ProductCard({ product, language, soldOutLabel, variant = "catalo
                 <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
                   <path
                     d="M9 3.75v10.5M3.75 9h10.5"
-                    stroke="currentColor"
+                    stroke="white"
                     strokeWidth="1.8"
                     strokeLinecap="round"
                   />

@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.1.1] - 2026-03-24
+
+### Fixed
+- **Add-to-cart icon stroke color**: changed from `currentColor` to `white` to match design token `--card-btn-add-icon: #ffffff`; icon was invisible when inherited text color was dark
+
 ## [0.2.1.0] - 2026-03-24
 
 ### Added
