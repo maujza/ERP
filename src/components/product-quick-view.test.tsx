@@ -55,6 +55,61 @@ const mockProduct = {
   ],
 };
 
+describe("ProductQuickView – renderTrigger", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockRetrieveProduct.mockResolvedValue({ product: mockProduct });
+  });
+
+  it("renders custom trigger content provided via renderTrigger", () => {
+    render(
+      <ProductQuickView
+        productId="prod_1"
+        renderTrigger={({ onClick }) => (
+          <button type="button" onClick={onClick} data-testid="custom-trigger">
+            Abrir vista rápida
+          </button>
+        )}
+      />,
+    );
+    expect(screen.getByTestId("custom-trigger")).toBeInTheDocument();
+    expect(screen.getByText("Abrir vista rápida")).toBeInTheDocument();
+  });
+
+  it("clicking the custom trigger opens the modal and loads product details", async () => {
+    render(
+      <ProductQuickView
+        productId="prod_1"
+        renderTrigger={({ onClick }) => (
+          <button type="button" onClick={onClick} data-testid="custom-trigger">
+            Abrir vista rápida
+          </button>
+        )}
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId("custom-trigger"));
+
+    await screen.findByText("Aros Argolla Fina Plateada");
+    expect(mockRetrieveProduct).toHaveBeenCalledWith("prod_1", expect.anything());
+  });
+
+  it("does not render the default eye-icon trigger when renderTrigger is provided", () => {
+    render(
+      <ProductQuickView
+        productId="prod_1"
+        renderTrigger={({ onClick }) => (
+          <button type="button" onClick={onClick}>
+            Custom
+          </button>
+        )}
+      />,
+    );
+    // The default "Ver" button should NOT be present
+    expect(screen.queryByText("Ver")).toBeNull();
+  });
+});
+
 describe("ProductQuickView – dotMode", () => {
   beforeEach(() => {
     vi.clearAllMocks();

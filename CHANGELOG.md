@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.1.0] - 2026-03-24
+
+### Added
+- **Hover-card UX for product cards** (sprint 2.5): on desktop hover, product cards now reveal animated action buttons (add-to-cart circle link + quick-view circle button) that slide up from the bottom of the image
+- **Favorites heart button**: every product card has a heart toggle (always visible on mobile, appears on hover on desktop) persisted to `localStorage` via the new `useFavorites` hook
+- **`useFavorites` hook** (`src/hooks/use-favorites.ts`): lazy-initialized from localStorage with type validation, immutable state updates, and `console.warn` on write failures
+- **`useIsMobile` hook** (`src/hooks/use-is-mobile.ts`): MediaQueryList-based mobile detection; hover buttons are SSR-safe (excluded from DOM on mobile, no hydration mismatch)
+- **`variant` prop on `ProductCard`**: `"catalog"` (default, `h-52` image) vs `"featured"` (`h-64` image) — enables differentiated grid layouts
+- **`renderTrigger` prop on `ProductQuickView`**: custom trigger pattern for embedding the modal in third-party button styles without coupling to the default eye-icon
+
+### Changed
+- `ProductCard` no longer renders a permanent add-to-cart button bar below the image; hover actions replace it per DESIGN.md principle: "interaction is earned, not announced"
+- `addToCartLabel` prop removed from `ProductCard` (no longer needed); callers updated in `page.tsx`, `catalog/page.tsx`, and `search/page.tsx`
+- Image zoom effect (`scale-105`) added on hover via Tailwind `group-hover` — images breathe without layout shift (overflow hidden on container)
+- Discount badge repositioned: moved from below price to absolute top-left corner of the image area
+- CSS custom properties for card hover buttons added to `globals.css`: `--card-btn-add`, `--card-btn-qv`, and their icon counterparts
+
+### Fixed
+- **Favorites flicker**: `useFavorites` now uses a lazy `useState` initializer (reads localStorage on first render) — eliminates the unfilled → filled flash for favorited products on page load
+- **localStorage type safety**: `readFavorites()` validates that parsed data is `string[]` before trusting it; corrupt or tampered data falls back to `[]`
+
 ## [0.2.0.0] - 2026-03-23
 
 ### Added

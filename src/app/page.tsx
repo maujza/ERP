@@ -213,7 +213,7 @@ export default function HomePage() {
                     product={product}
                     language={language}
                     soldOutLabel={t.soldOut}
-                    addToCartLabel={t.addToCart}
+                    variant="featured"
                   />
                 ))}
           </div>

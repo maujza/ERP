@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { ChevronLeft, Eye, X } from "lucide-react";
 import { createPortal } from "react-dom";
 
@@ -26,7 +26,7 @@ type RawProduct = {
   metadata?: Record<string, unknown> | null;
 };
 
-export function ProductQuickView({ productId, className, dotMode }: { productId: string; className?: string; dotMode?: boolean }) {
+export function ProductQuickView({ productId, className, dotMode, renderTrigger }: { productId: string; className?: string; dotMode?: boolean; renderTrigger?: (props: { onClick: () => void }) => ReactNode }) {
   const { language } = useLanguage();
   const { addToCart } = useCart();
   const [isOpen, setIsOpen] = useState(false);
@@ -296,6 +296,15 @@ export function ProductQuickView({ productId, className, dotMode }: { productId:
       </aside>
     </div>
   );
+
+  if (renderTrigger) {
+    return (
+      <>
+        {renderTrigger({ onClick: openQuickView })}
+        {isMounted ? createPortal(modal, document.body) : null}
+      </>
+    );
+  }
 
   if (dotMode) {
     return (
