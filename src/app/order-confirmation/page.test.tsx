@@ -25,8 +25,10 @@ vi.mock("next/link", () => ({
   ),
 }));
 
+const { mockOCLanguage } = vi.hoisted(() => ({ mockOCLanguage: { current: "es" as "es" | "ko" } }));
+
 vi.mock("@/components/language-provider", () => ({
-  useLanguage: () => ({ language: "es" as const }),
+  useLanguage: () => ({ language: mockOCLanguage.current }),
 }));
 
 vi.mock("@/lib/whatsapp", () => ({
@@ -70,6 +72,7 @@ function setLocation(search: string) {
 describe("OrderConfirmationPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockOCLanguage.current = "es";
     setLocation("?wa=1&order_id=order_test_123");
     mockReadDraft.mockReturnValue(DRAFT);
   });
@@ -243,6 +246,36 @@ describe("OrderConfirmationPage", () => {
 
       await waitFor(() => screen.getByRole("button", { name: "Agente notificado ✓" }));
       expect(mockClientFetch).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  // ── i18n — orderNumber label ────────────────────────────────────────────────
+
+  describe("i18n – order number label", () => {
+    it("shows 'N° pedido' prefix in Spanish", () => {
+      mockOCLanguage.current = "es";
+      render(<OrderConfirmationPage />);
+      expect(screen.getByText("N° pedido: order_test_123")).toBeInTheDocument();
+    });
+
+    it("shows '주문 번호' prefix in Korean", () => {
+      mockOCLanguage.current = "ko";
+      render(<OrderConfirmationPage />);
+      expect(screen.getByText("주문 번호: order_test_123")).toBeInTheDocument();
+    });
+
+    it("does not show order number when param is absent (Spanish)", () => {
+      mockOCLanguage.current = "es";
+      setLocation("?wa=1");
+      render(<OrderConfirmationPage />);
+      expect(screen.queryByText(/N° pedido/)).not.toBeInTheDocument();
+    });
+
+    it("does not show order number when param is absent (Korean)", () => {
+      mockOCLanguage.current = "ko";
+      setLocation("?wa=1");
+      render(<OrderConfirmationPage />);
+      expect(screen.queryByText(/주문 번호/)).not.toBeInTheDocument();
     });
   });
 });

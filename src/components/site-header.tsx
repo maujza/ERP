@@ -6,7 +6,6 @@ import { FormEvent, useMemo, useState } from "react";
 import { Languages, Menu, Search, ShoppingBag, User, X } from "lucide-react";
 
 import { useLanguage } from "@/components/language-provider";
-import { LanguageToggle } from "@/components/language-toggle";
 import { Badge } from "@/components/ui/badge";
 import { navCategories, translateLabel } from "@/lib/shop-data";
 import { useCart } from "@/components/cart-provider";
@@ -62,10 +61,10 @@ export function SiteHeader() {
 
   return (
     <>
-      <header className="fixed top-0 z-50 w-full border-b border-black/10 bg-white">
-        <div className="mx-auto flex w-full max-w-[1400px] items-center gap-2 px-2.5 py-3 min-[361px]:gap-3 min-[361px]:px-4 md:gap-6">
+      <header className="fixed top-0 z-50 w-full border-b border-black/10 bg-white/70 backdrop-blur-md">
+        <div className="mx-auto flex w-full max-w-[1400px] items-center gap-2 px-2.5 py-3 min-[361px]:gap-3 min-[361px]:px-4 md:gap-3 lg:gap-6">
           <button
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/15 md:hidden"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/15"
             onClick={() => setMobileMenuOpen(true)}
             aria-label={t.openMenu}
           >
@@ -85,14 +84,9 @@ export function SiteHeader() {
                 {link.label}
               </Link>
             ))}
-            {totalItems > 0 && (
-              <button onClick={openDrawer} className="rounded-full bg-black px-4 py-1.5 text-sm font-semibold text-white hover:bg-black/80">
-                {checkoutNavLink.label}
-              </button>
-            )}
           </nav>
 
-          <form onSubmit={submitSearch} className="ml-auto hidden w-full max-w-md items-center md:flex">
+          <form onSubmit={submitSearch} className="ml-auto hidden w-full max-w-[180px] items-center md:flex lg:max-w-md">
             <div className="flex h-10 w-full items-center rounded-full border border-black/15 bg-white px-3">
               <input
                 value={search}
@@ -114,16 +108,35 @@ export function SiteHeader() {
             <Search className="h-4 w-4" />
           </button>
 
+          {/* Mobile: always cart icon. md+: morphs into "Finalizar compra N" pill when cart has items */}
           <button
-            className="relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/15"
             onClick={openDrawer}
             aria-label={t.openCart}
+            className={
+              totalItems > 0
+                ? "relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/15 md:hidden"
+                : "relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/15"
+            }
           >
             <ShoppingBag className="h-4 w-4" />
-            <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#111111] px-1 text-[11px] font-semibold text-white">
-              {totalItems}
-            </span>
+            {totalItems > 0 && (
+              <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#111111] px-1 text-[11px] font-semibold text-white">
+                {totalItems}
+              </span>
+            )}
           </button>
+          {totalItems > 0 && (
+            <button
+              onClick={openDrawer}
+              aria-label={t.openCart}
+              className="hidden items-center gap-2 whitespace-nowrap rounded-full bg-black px-4 py-2 text-sm font-semibold text-white hover:bg-black/80 md:inline-flex"
+            >
+              {checkoutNavLink.label}
+              <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-white/20 px-1 text-[11px] font-semibold">
+                {totalItems}
+              </span>
+            </button>
+          )}
 
           <Link
             href="/account"
@@ -133,7 +146,6 @@ export function SiteHeader() {
             <User className="h-4 w-4" />
           </Link>
 
-          <LanguageToggle className="hidden md:inline-flex" />
         </div>
 
         {mobileSearchOpen && (
@@ -156,13 +168,13 @@ export function SiteHeader() {
 
       {/* Mobile menu — rendered outside <header> so backdrop-filter doesn't affect fixed positioning */}
       <div
-        className={`fixed inset-0 z-[80] bg-black/50 transition-opacity md:hidden ${
+        className={`fixed inset-0 z-[80] bg-black/50 transition-opacity ${
           mobileMenuOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
         }`}
         onClick={() => setMobileMenuOpen(false)}
       />
       <aside
-        className={`fixed left-0 top-0 z-[85] flex h-full w-[88%] max-w-sm flex-col overflow-y-auto bg-white p-5 shadow-2xl transition-transform md:hidden ${
+        className={`fixed left-0 top-0 z-[85] flex h-full w-[88%] max-w-sm flex-col overflow-y-auto bg-white p-5 shadow-2xl transition-transform ${
           mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >

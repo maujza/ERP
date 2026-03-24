@@ -1,12 +1,8 @@
 import Medusa from "@medusajs/js-sdk"
 
-const RAW_MEDUSA_BACKEND_URL =
+const MEDUSA_BACKEND_URL =
   process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "http://localhost:9000"
-export const MEDUSA_BACKEND_URL =
-  typeof window !== "undefined" && RAW_MEDUSA_BACKEND_URL.startsWith("/")
-    ? new URL(RAW_MEDUSA_BACKEND_URL, window.location.origin).toString()
-    : RAW_MEDUSA_BACKEND_URL
-export const MEDUSA_PUBLISHABLE_KEY =
+const MEDUSA_PUBLISHABLE_KEY =
   process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY || ""
 export const MEDUSA_REGION_ID = process.env.NEXT_PUBLIC_MEDUSA_REGION_ID || ""
 export const MEDUSA_COUNTRY_CODE = (process.env.NEXT_PUBLIC_MEDUSA_COUNTRY_CODE || "ar").toLowerCase()
@@ -61,4 +57,30 @@ export function withStorePricingContext<T extends Record<string, unknown>>(param
     return { ...params, region_id: MEDUSA_REGION_ID }
   }
   return { ...params, country_code: MEDUSA_COUNTRY_CODE }
+}
+
+/**
+ * Validates that the Medusa env vars look structurally correct.
+ * Returns a list of warning strings — empty means all good.
+ *
+ * Call this at app startup to surface stale keys (e.g. after a DB rebuild)
+ * before they cause silent "0 results" failures in the storefront.
+ */
+export function validateMedusaEnv(): string[] {
+  const warnings: string[] = []
+  if (!MEDUSA_PUBLISHABLE_KEY) {
+    warnings.push("NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY is not set")
+  } else if (!MEDUSA_PUBLISHABLE_KEY.startsWith("pk_")) {
+    warnings.push(
+      `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY has unexpected format (got "${MEDUSA_PUBLISHABLE_KEY.slice(0, 10)}...", expected "pk_...")`
+    )
+  }
+  if (!MEDUSA_REGION_ID) {
+    warnings.push("NEXT_PUBLIC_MEDUSA_REGION_ID is not set")
+  } else if (!MEDUSA_REGION_ID.startsWith("reg_")) {
+    warnings.push(
+      `NEXT_PUBLIC_MEDUSA_REGION_ID has unexpected format (got "${MEDUSA_REGION_ID}", expected "reg_...")`
+    )
+  }
+  return warnings
 }

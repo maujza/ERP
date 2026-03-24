@@ -1,5 +1,6 @@
 import { SubscriberArgs, SubscriberConfig } from "@medusajs/framework"
-import { Modules } from "@medusajs/framework/utils"
+import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
+import { getRecipientsByRole } from "../lib/notification-recipients"
 
 type OrderRecord = {
   id: string
@@ -8,23 +9,11 @@ type OrderRecord = {
   metadata?: Record<string, unknown>
 }
 
-type UserRecord = {
-  id: string
-  metadata?: Record<string, unknown>
-}
-
 const CUSTOMER_SERVICE_ROLE = "customer_service"
 
-function readRoles(metadata: Record<string, unknown> | undefined): string[] {
-  if (!metadata) return []
-  const candidate = metadata.notification_roles ?? metadata.role
-  if (Array.isArray(candidate)) {
-    return candidate.map((r) => String(r).trim().toLowerCase()).filter(Boolean)
-  }
-  if (typeof candidate === "string") {
-    return [candidate.trim().toLowerCase()].filter(Boolean)
-  }
-  return []
+function isMissingFeedProviderError(error: unknown): boolean {
+  return error instanceof Error &&
+    error.message.includes("Could not find a notification provider for channel: feed")
 }
 
 export default async function orderPlacedHandler({
@@ -44,15 +33,10 @@ export default async function orderPlacedHandler({
   const order = orders[0] as OrderRecord | undefined
   if (!order?.metadata?.whatsapp_required) return
 
-  // Find users with the customer_service role
-  const { data: allUsers } = await query.graph({
-    entity: "user",
-    fields: ["id", "metadata"],
-  })
-
-  const csUserIds = (allUsers as UserRecord[])
-    .filter((u) => readRoles(u.metadata).includes(CUSTOMER_SERVICE_ROLE))
-    .map((u) => u.id)
+  const csUserIds = await getRecipientsByRole(
+    container as Parameters<typeof getRecipientsByRole>[0],
+    [CUSTOMER_SERVICE_ROLE]
+  )
 
   const phone = order.metadata.customer_phone as string | undefined
   const paymentMethod = order.metadata.whatsapp_payment_method as string | undefined
@@ -62,30 +46,48 @@ export default async function orderPlacedHandler({
     (phone ? ` · 📱 ${phone}` : "") +
     ` · Método: ${paymentMethod ?? "—"}`
 
+  const logger = container.resolve(ContainerRegistrationKeys.LOGGER) as {
+    warn: (message: string) => void
+  }
+
   const notificationModule = container.resolve(Modules.NOTIFICATION) as {
     createNotifications: (input: {
       to: string
       channel: string
       template: string
       data: Record<string, unknown>
+      resource_id?: string
+      resource_type?: string
     }) => Promise<unknown>
   }
 
-  const recipients = csUserIds.length > 0 ? csUserIds : [""]
+  const recipients = csUserIds.length > 0 ? csUserIds : ["system"]
 
-  await Promise.all(
-    recipients.map((to) =>
-      notificationModule.createNotifications({
-        to,
-        channel: "feed",
-        template: "admin-ui",
-        data: {
-          title: "Nueva orden WhatsApp pendiente",
-          description,
-        },
-      })
+  try {
+    await Promise.all(
+      recipients.map((to) =>
+        notificationModule.createNotifications({
+          to,
+          channel: "feed",
+          template: "admin-ui",
+          resource_id: order.id,
+          resource_type: "order",
+          data: {
+            title: "Nueva orden WhatsApp pendiente",
+            description,
+          },
+        })
+      )
     )
-  )
+  } catch (error) {
+    if (!isMissingFeedProviderError(error)) {
+      throw error
+    }
+
+    logger.warn(
+      `Skipping WhatsApp order feed notification for order ${order.id}: no feed notification provider is configured.`
+    )
+  }
 }
 
 export const config: SubscriberConfig = {

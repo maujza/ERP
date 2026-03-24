@@ -4,6 +4,10 @@ import { receivePurchaseOrderStep } from "./steps/receive-purchase-order"
 type Input = {
   order_id: string
   location_id: string
+  items?: Array<{
+    id: string
+    received_quantity: number
+  }>
 }
 
 export const receivePurchaseOrderWorkflow = createWorkflow(

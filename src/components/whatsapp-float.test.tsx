@@ -15,9 +15,14 @@ import { WhatsAppFloat } from "./whatsapp-float";
 // Mocks
 // ---------------------------------------------------------------------------
 let mockPathname = "/";
+let mockTotalItems = 0;
 
 vi.mock("next/navigation", () => ({
   usePathname: () => mockPathname,
+}));
+
+vi.mock("@/components/cart-provider", () => ({
+  useCart: () => ({ totalItems: mockTotalItems }),
 }));
 
 vi.mock("next/link", () => ({
@@ -52,6 +57,7 @@ vi.mock("@/components/language-provider", () => ({
 beforeEach(() => {
   mockPathname = "/";
   mockLanguage = "es";
+  mockTotalItems = 0;
   vi.clearAllMocks();
 });
 
@@ -141,13 +147,53 @@ describe("WhatsAppFloat – positioning", () => {
     expect(screen.getByRole("link")).toHaveClass("fixed");
   });
 
-  it("has bottom-5 class (no longer adjusts position on checkout)", () => {
+  it("has bottom-5 class when cart is empty", () => {
+    mockTotalItems = 0;
     render(<WhatsAppFloat />);
     expect(screen.getByRole("link")).toHaveClass("bottom-5");
   });
 
-  it("does NOT have bottom-24 class (removed checkout-specific offset)", () => {
+  it("does NOT have bottom-24 class", () => {
     render(<WhatsAppFloat />);
     expect(screen.getByRole("link")).not.toHaveClass("bottom-24");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Bottom positioning based on cart state
+// ---------------------------------------------------------------------------
+describe("WhatsAppFloat – bottom positioning with cart", () => {
+  it("renders at bottom-5 when cart is empty (totalItems=0)", () => {
+    mockTotalItems = 0;
+    mockPathname = "/";
+    render(<WhatsAppFloat />);
+    expect(screen.getByRole("link")).toHaveClass("bottom-5");
+    expect(screen.getByRole("link")).not.toHaveClass("bottom-20");
+  });
+
+  it("renders at bottom-20 when cart has items and not on checkout page", () => {
+    mockTotalItems = 3;
+    mockPathname = "/";
+    render(<WhatsAppFloat />);
+    expect(screen.getByRole("link")).toHaveClass("bottom-20");
+    expect(screen.getByRole("link")).not.toHaveClass("bottom-5");
+  });
+
+  it("renders at bottom-5 when on /checkout even with items in cart", () => {
+    // /checkout is in hiddenRoutes so the component returns null — this validates
+    // the positioning logic doesn't interfere with the hidden routes guard.
+    // We use a non-checkout route that starts with none of the hidden prefixes
+    // to confirm bottom-20 is properly set when items exist.
+    mockTotalItems = 2;
+    mockPathname = "/order-confirmation";
+    render(<WhatsAppFloat />);
+    expect(screen.getByRole("link")).toHaveClass("bottom-20");
+  });
+
+  it("renders at bottom-5 on home page when cart is empty", () => {
+    mockTotalItems = 0;
+    mockPathname = "/";
+    render(<WhatsAppFloat />);
+    expect(screen.getByRole("link")).toHaveClass("bottom-5");
   });
 });

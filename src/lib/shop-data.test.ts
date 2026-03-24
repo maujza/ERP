@@ -96,8 +96,23 @@ describe("getProductName", () => {
     expect(getProductName(mockProduct, "es")).toBe("Test Product Name");
   });
 
-  it("returns the product name for 'ko'", () => {
+  it("falls back to Spanish name for 'ko' when nameKo is absent", () => {
     expect(getProductName(mockProduct, "ko")).toBe("Test Product Name");
+  });
+
+  it("returns nameKo when language is 'ko' and nameKo is set", () => {
+    const product: Product = { ...mockProduct, nameKo: "테스트 제품 이름" };
+    expect(getProductName(product, "ko")).toBe("테스트 제품 이름");
+  });
+
+  it("returns Spanish name even when nameKo is set and language is 'es'", () => {
+    const product: Product = { ...mockProduct, nameKo: "테스트 제품 이름" };
+    expect(getProductName(product, "es")).toBe("Test Product Name");
+  });
+
+  it("falls back to Spanish when nameKo is empty string", () => {
+    const product: Product = { ...mockProduct, nameKo: "" };
+    expect(getProductName(product, "ko")).toBe("Test Product Name");
   });
 
   it("returns a string for any product", () => {
@@ -114,8 +129,23 @@ describe("getProductDescription", () => {
     expect(getProductDescription(mockProduct, "es")).toBe("Test product description.");
   });
 
-  it("returns the product description for 'ko'", () => {
+  it("falls back to Spanish description for 'ko' when descriptionKo is absent", () => {
     expect(getProductDescription(mockProduct, "ko")).toBe("Test product description.");
+  });
+
+  it("returns descriptionKo when language is 'ko' and descriptionKo is set", () => {
+    const product: Product = { ...mockProduct, descriptionKo: "테스트 제품 설명입니다." };
+    expect(getProductDescription(product, "ko")).toBe("테스트 제품 설명입니다.");
+  });
+
+  it("returns Spanish description even when descriptionKo is set and language is 'es'", () => {
+    const product: Product = { ...mockProduct, descriptionKo: "테스트 제품 설명입니다." };
+    expect(getProductDescription(product, "es")).toBe("Test product description.");
+  });
+
+  it("falls back to Spanish when descriptionKo is empty string", () => {
+    const product: Product = { ...mockProduct, descriptionKo: "" };
+    expect(getProductDescription(product, "ko")).toBe("Test product description.");
   });
 
   it("returns a string for any product", () => {

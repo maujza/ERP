@@ -9,7 +9,7 @@ import {
   useSyncExternalStore,
 } from "react";
 
-export type Language = "es" | "ko";
+type Language = "es" | "ko";
 
 export const SUPPORTED_LANGUAGES: { code: Language; label: string }[] = [
   { code: "es", label: "Español" },
@@ -78,15 +78,9 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 }
 
-export function useLanguage() {
-  const context = useContext(LanguageContext);
-  if (context) {
-    return context;
-  }
+const noop = () => {};
+const defaultContext: LanguageContextValue = { language: "es", setLanguage: noop, toggleLanguage: noop };
 
-  return {
-    language: "es" as const,
-    setLanguage: () => {},
-    toggleLanguage: () => {},
-  };
+export function useLanguage() {
+  return useContext(LanguageContext) ?? defaultContext;
 }

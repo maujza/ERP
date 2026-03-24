@@ -7,6 +7,22 @@ const forceInsecureCookies = process.env.MEDUSA_FORCE_INSECURE_COOKIES === "true
 module.exports = defineConfig({
   modules: [
     { resolve: "./src/modules/purchaseDepartment" },
+    {
+      resolve: "@medusajs/medusa/notification",
+      options: {
+        providers: [
+          {
+            resolve: "@medusajs/notification-sendgrid",
+            id: "sendgrid",
+            options: {
+              channels: ["email"],
+              api_key: process.env.SENDGRID_API_KEY,
+              from: process.env.SENDGRID_FROM,
+            },
+          },
+        ],
+      },
+    },
   ],
   projectConfig: {
     databaseUrl: process.env.DATABASE_URL,
@@ -18,8 +34,8 @@ module.exports = defineConfig({
         customer: ["emailpass"],
         user: ["emailpass"],
       },
-      jwtSecret: process.env.JWT_SECRET || "supersecret",
-      cookieSecret: process.env.COOKIE_SECRET || "supersecret",
+      jwtSecret: process.env.JWT_SECRET ?? (() => { throw new Error("JWT_SECRET env var is required") })(),
+      cookieSecret: process.env.COOKIE_SECRET ?? (() => { throw new Error("COOKIE_SECRET env var is required") })(),
     },
     cookieOptions: forceInsecureCookies
       ? {

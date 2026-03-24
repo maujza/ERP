@@ -11,21 +11,17 @@ const parseCsv = (value: string | undefined) =>
     .map((entry) => entry.trim().toLowerCase())
     .filter(Boolean)
 
-const readRolesFromMetadata = (metadata: Record<string, unknown> | undefined) => {
-  if (!metadata) return [] as string[]
-
-  const candidate = metadata.notification_roles ?? metadata.role
-  if (Array.isArray(candidate)) {
-    return candidate
-      .map((role) => String(role).trim().toLowerCase())
-      .filter(Boolean)
-  }
-
-  if (typeof candidate === "string") {
-    return [candidate.trim().toLowerCase()].filter(Boolean)
-  }
-
-  return [] as string[]
+// Read metadata.role as a raw lowercase string — no enum validation.
+// WA notification roles come from an env var and can be arbitrary strings,
+// so we don't restrict to the canonical ROLES enum here.
+// NOTE: metadata.notification_roles (array) is no longer supported.
+// Users previously using that key must migrate to metadata.role (string).
+const getRawRole = (metadata: Record<string, unknown> | undefined): string | null => {
+  if (!metadata) return null
+  const candidate = metadata.role
+  if (typeof candidate !== "string") return null
+  const normalized = candidate.trim().toLowerCase()
+  return normalized || null
 }
 
 export async function GET(req: AuthenticatedMedusaRequest, res: MedusaResponse) {
@@ -49,13 +45,13 @@ export async function GET(req: AuthenticatedMedusaRequest, res: MedusaResponse) 
 
   const user = data[0]
   const userEmail = (user?.email ?? "").toLowerCase()
-  const userRoles = readRolesFromMetadata(user?.metadata)
+  const userRole = getRawRole(user?.metadata)
 
   const canReceiveByEmail = allowedEmails.length === 0 ? false : allowedEmails.includes(userEmail)
   const canReceiveByRole =
     allowedRoles.length === 0
       ? false
-      : userRoles.some((role) => allowedRoles.includes(role))
+      : userRole !== null && allowedRoles.includes(userRole)
 
   const noRbacConfigured = allowedEmails.length === 0 && allowedRoles.length === 0
   const canReceive = noRbacConfigured || canReceiveByEmail || canReceiveByRole

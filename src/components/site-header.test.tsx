@@ -45,9 +45,11 @@ vi.mock("@/components/language-provider", () => ({
 }));
 
 const mockOpenDrawer = vi.fn();
+let mockTotalItemsHeader = 3;
+
 vi.mock("@/components/cart-provider", () => ({
   useCart: () => ({
-    totalItems: 3,
+    get totalItems() { return mockTotalItemsHeader; },
     openDrawer: mockOpenDrawer,
   }),
 }));
@@ -100,17 +102,20 @@ describe("SiteHeader – rendering", () => {
 
   it("renders the cart button", () => {
     render(<SiteHeader />);
-    expect(screen.getByLabelText("Abrir carrito")).toBeInTheDocument();
+    // When cart has items, both the icon button (mobile) and pill button (desktop) render
+    expect(screen.getAllByLabelText("Abrir carrito").length).toBeGreaterThanOrEqual(1);
   });
 
   it("shows the cart item count badge", () => {
     render(<SiteHeader />);
-    expect(screen.getByText("3")).toBeInTheDocument();
+    // Count may appear in both the icon badge and the pill button — either is fine
+    expect(screen.getAllByText("3").length).toBeGreaterThanOrEqual(1);
   });
 
   it("calls openDrawer when cart button is clicked", () => {
     render(<SiteHeader />);
-    fireEvent.click(screen.getByLabelText("Abrir carrito"));
+    // Click the first cart button (icon button visible on mobile)
+    fireEvent.click(screen.getAllByLabelText("Abrir carrito")[0]);
     expect(mockOpenDrawer).toHaveBeenCalledTimes(1);
   });
 
@@ -119,7 +124,13 @@ describe("SiteHeader – rendering", () => {
     const nav = document.querySelector("nav")!;
     expect(within(nav).getByText("Home")).toBeInTheDocument();
     expect(within(nav).getByText("Colección")).toBeInTheDocument();
-    expect(within(nav).getByText("Finalizar compra")).toBeInTheDocument();
+  });
+
+  it("renders Finalizar compra button in the header (outside nav) when cart has items", () => {
+    render(<SiteHeader />);
+    // The pill button renders as md:inline-flex outside <nav> when cart has items
+    const header = screen.getByRole("banner");
+    expect(within(header).getAllByText("Finalizar compra").length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders account icon action on the right side", () => {
@@ -136,24 +147,23 @@ describe("SiteHeader – rendering", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Desktop language toggle integration
+// Language toggle — moved to hamburger drawer
 // ---------------------------------------------------------------------------
-describe("SiteHeader – desktop LanguageToggle", () => {
+describe("SiteHeader – language toggle in hamburger drawer", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("renders the LanguageToggle inside the header element", () => {
+  it("language toggle is NOT rendered in the header bar (it lives only in the drawer)", () => {
     render(<SiteHeader />);
     const header = screen.getByRole("banner");
-    expect(header).toContainElement(screen.getByTestId("language-toggle-stub"));
+    expect(header).not.toContainElement(screen.queryByTestId("language-toggle-stub"));
   });
 
-  it("passes hidden md:inline-flex className to LanguageToggle", () => {
+  it("hamburger drawer contains the Korean language option when language is es", () => {
     render(<SiteHeader />);
-    const stub = screen.getByTestId("language-toggle-stub");
-    expect(stub).toHaveClass("hidden");
-    expect(stub).toHaveClass("md:inline-flex");
+    fireEvent.click(screen.getByLabelText("Abrir menú"));
+    expect(within(getAside()!).getByText("한국어")).toBeInTheDocument();
   });
 });
 
@@ -300,6 +310,31 @@ describe("SiteHeader – mobile menu content", () => {
   it("closes the menu when a category link is clicked", () => {
     fireEvent.click(within(getAside()!).getByText("Novedades"));
     expect(getAside()).toHaveClass("-translate-x-full");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Cart badge
+// ---------------------------------------------------------------------------
+describe("SiteHeader – cart badge", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockTotalItemsHeader = 3;
+  });
+
+  it("cart badge IS in DOM when totalItems === 3, shows '3'", () => {
+    mockTotalItemsHeader = 3;
+    render(<SiteHeader />);
+    // Count appears in the icon badge (mobile) and/or pill button (desktop)
+    expect(screen.getAllByText("3").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("cart badge is NOT in DOM when totalItems === 0", () => {
+    mockTotalItemsHeader = 0;
+    render(<SiteHeader />);
+    // The badge span only renders when totalItems > 0
+    // We check that the number "0" is not displayed as a badge
+    expect(screen.queryByText("0")).not.toBeInTheDocument();
   });
 });
 

@@ -37,6 +37,7 @@ export default function OrderConfirmationPage() {
         wppHint: "링크가 실패하면 재시도하거나 상담원에게 알릴 수 있습니다.",
         continue: "쇼핑 계속하기",
         home: "홈으로",
+        orderNumber: "주문 번호",
       }
     : {
         confirmed: "Orden confirmada",
@@ -49,6 +50,7 @@ export default function OrderConfirmationPage() {
         wppHint: "Si el enlace falló, podés reintentarlo o avisar a un agente para que te contacte.",
         continue: "Seguir comprando",
         home: "Volver al home",
+        orderNumber: "N° pedido",
       };
 
   const openDraft = () => {
@@ -78,7 +80,7 @@ export default function OrderConfirmationPage() {
         <h1 className="text-3xl font-semibold text-[#111111]">{t.title}</h1>
         <p className="text-sm text-[#555555]">{t.desc}</p>
         {orderIdFromQuery && (
-          <p className="text-sm font-semibold text-[#222222]">N° pedido: {orderIdFromQuery}</p>
+          <p className="text-sm font-semibold text-[#222222]">{t.orderNumber}: {orderIdFromQuery}</p>
         )}
         {shouldShowWhatsAppActions && hasDraft && (
           <div className="space-y-2 rounded-2xl border border-[#25d366]/30 bg-[#f0faf4] p-4">

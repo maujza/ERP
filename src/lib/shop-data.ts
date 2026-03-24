@@ -1,5 +1,32 @@
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type MedusaProduct = any
+// Typed subset of the Medusa store product response used by mapMedusaProduct.
+// Fields match what is requested via the `fields` query param in product list calls.
+type MedusaProductVariant = {
+  id: string
+  title?: string | null
+  inventory_quantity?: number | null
+  calculated_price?: {
+    calculated_amount?: number | null
+    original_amount?: number | null
+  } | null
+  prices?: { amount: number; currency_code: string }[]
+}
+
+type MedusaProductCategory = {
+  id: string
+  name: string
+  handle?: string | null
+}
+
+type MedusaProduct = {
+  id: string
+  title?: string | null
+  description?: string | null
+  thumbnail?: string | null
+  images?: { url: string }[]
+  variants?: MedusaProductVariant[]
+  categories?: MedusaProductCategory[]
+  metadata?: Record<string, unknown> | null
+}
 
 export type ProductVariant = {
   id: string;
@@ -10,7 +37,9 @@ export type ProductVariant = {
 export type Product = {
   id: string;
   name: string;
+  nameKo?: string;
   description: string;
+  descriptionKo?: string;
   category: string;
   subcategory: string;
   brand: string;
@@ -31,7 +60,7 @@ export const sortOptions = [
   { id: "price_desc" as SortOption, label: "Precio: mayor" },
 ];
 
-export const jewelryCategories = ["Aros", "Collares", "Pulseras", "Sets", "Kits", "Anillos", "Perlas"];
+const jewelryCategories = ["Aros", "Collares", "Pulseras", "Sets", "Kits", "Anillos", "Perlas"];
 export const navCategories = ["Novedades", "Best Sellers", ...jewelryCategories];
 
 export const subcategories = ["Todos", "Novedades", "Best Sellers", "Esenciales", "Fiesta", "Kits"];
@@ -85,10 +114,12 @@ export function translateLabel(value: string, language: UiLanguage) {
 }
 
 export function getProductName(product: Product, language: UiLanguage) {
+  if (language === "ko" && product.nameKo) return product.nameKo;
   return product.name;
 }
 
 export function getProductDescription(product: Product, language: UiLanguage) {
+  if (language === "ko" && product.descriptionKo) return product.descriptionKo;
   return product.description;
 }
 
@@ -112,18 +143,22 @@ export function mapMedusaProduct(p: MedusaProduct): Product {
   const originalPrice = originalAmount && originalAmount !== price ? originalAmount : undefined
 
   const totalStock = p.variants?.reduce(
-    (sum: number, v: MedusaProduct) => sum + (v.inventory_quantity ?? 0),
+    (sum: number, v: MedusaProductVariant) => sum + (v.inventory_quantity ?? 0),
     0
   ) ?? 0
 
   const category = (p.metadata?.category as string) ?? p.categories?.[0]?.name ?? inferCategoryFromText(p.title ?? "", p.description ?? "")
   const subcategory = (p.metadata?.subcategory as string) ?? ""
   const brand = (p.metadata?.brand as string) ?? ""
+  const nameKo = (p.metadata?.name_ko as string) || undefined
+  const descriptionKo = (p.metadata?.description_ko as string) || undefined
 
   return {
     id: p.id,
-    name: p.title,
+    name: p.title ?? "",
+    nameKo,
     description: p.description ?? "",
+    descriptionKo,
     category,
     subcategory,
     brand,
@@ -131,10 +166,10 @@ export function mapMedusaProduct(p: MedusaProduct): Product {
     price,
     originalPrice,
     stock: totalStock,
-    variants: p.variants?.map((v: MedusaProduct) => ({
-      id: v.id as string,
-      label: (v.title ?? "") as string,
-      stock: (v.inventory_quantity ?? 0) as number,
+    variants: p.variants?.map((v: MedusaProductVariant) => ({
+      id: v.id,
+      label: v.title ?? "",
+      stock: v.inventory_quantity ?? 0,
     })),
   }
 }
@@ -142,8 +177,8 @@ export function mapMedusaProduct(p: MedusaProduct): Product {
 function resolveProductImage(rawImage: string) {
   const trimmed = rawImage.trim()
   if (!trimmed) return "/file.svg"
-  if (trimmed.startsWith("/")) return trimmed
   if (trimmed.startsWith("//")) return `https:${trimmed}`
+  if (trimmed.startsWith("/")) return trimmed
 
   try {
     const parsed = new URL(trimmed)
@@ -183,4 +218,13 @@ export function isJewelryProduct(product: Product) {
   }
 
   return Boolean(inferCategoryFromText(product.name, product.description))
+}
+
+/**
+ * Calculate the discount percentage between original and current price.
+ * Returns 0 if originalPrice is 0 or not greater than price.
+ */
+export function calculateDiscountPercent(price: number, originalPrice: number): number {
+  if (originalPrice <= 0 || originalPrice <= price) return 0
+  return Math.round(((originalPrice - price) / originalPrice) * 100)
 }

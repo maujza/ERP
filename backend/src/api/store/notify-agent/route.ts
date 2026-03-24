@@ -1,5 +1,6 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import { Modules } from "@medusajs/framework/utils"
+import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
+import { getRecipientsByRole } from "../../../lib/notification-recipients"
 
 type NotifyAgentBody = {
   order_id?: string
@@ -9,28 +10,47 @@ type OrderRecord = {
   id: string
   display_id?: number
   email?: string
-}
-
-type UserRecord = {
-  id: string
-  metadata?: Record<string, unknown>
+  customer_id?: string | null
 }
 
 const CUSTOMER_SERVICE_ROLE = "customer_service"
 
-function readRoles(metadata: Record<string, unknown> | undefined): string[] {
-  if (!metadata) return []
-  const candidate = metadata.notification_roles ?? metadata.role
-  if (Array.isArray(candidate)) return candidate.map((r) => String(r).trim().toLowerCase()).filter(Boolean)
-  if (typeof candidate === "string") return [candidate.trim().toLowerCase()].filter(Boolean)
-  return []
+// Simple in-memory rate limiter: max 3 requests per order_id per hour
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
+const RATE_LIMIT_MAX = 3
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000
+
+function isMissingFeedProviderError(error: unknown): boolean {
+  return error instanceof Error &&
+    error.message.includes("Could not find a notification provider for channel: feed")
+}
+
+/** Clear the rate limit state. Intended for use in tests only. */
+export function clearRateLimitForTesting(): void {
+  rateLimitMap.clear()
+}
+
+function checkRateLimit(key: string): boolean {
+  const now = Date.now()
+  const entry = rateLimitMap.get(key)
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS })
+    return true
+  }
+  if (entry.count >= RATE_LIMIT_MAX) return false
+  entry.count++
+  return true
 }
 
 export async function POST(req: MedusaRequest, res: MedusaResponse) {
   const { order_id } = req.body as NotifyAgentBody
 
-  if (!order_id) {
+  if (!order_id || typeof order_id !== "string") {
     return res.status(400).json({ error: "order_id is required" })
+  }
+
+  if (!checkRateLimit(order_id)) {
+    return res.status(429).json({ error: "Too many requests. Try again later." })
   }
 
   const query = req.scope.resolve("query") as {
@@ -39,7 +59,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
 
   const { data: orders } = await query.graph({
     entity: "order",
-    fields: ["id", "display_id", "email"],
+    fields: ["id", "display_id", "email", "customer_id"],
     filters: { id: order_id },
   })
 
@@ -48,9 +68,19 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     return res.status(404).json({ error: "Order not found" })
   }
 
+  // Verify order ownership: if a customer is authenticated, ensure the order belongs to them
+  const customerId = (req as MedusaRequest & { auth_context?: { actor_id?: string } }).auth_context?.actor_id
+  if (customerId && order.customer_id && order.customer_id !== customerId) {
+    return res.status(403).json({ error: "Forbidden" })
+  }
+
   const description =
     `Orden #${order.display_id ?? order.id} · ${order.email ?? "—"} · ` +
     `El cliente solicitó atención desde la confirmación de pedido.`
+
+  const logger = req.scope.resolve(ContainerRegistrationKeys.LOGGER) as {
+    warn: (message: string) => void
+  }
 
   const notificationModule = req.scope.resolve(Modules.NOTIFICATION) as {
     createNotifications: (input: {
@@ -63,32 +93,38 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
     }) => Promise<unknown>
   }
 
-  const { data: allUsers } = await query.graph({
-    entity: "user",
-    fields: ["id", "metadata"],
-  })
-
-  const csUserIds = (allUsers as UserRecord[])
-    .filter((u) => readRoles(u.metadata).includes(CUSTOMER_SERVICE_ROLE))
-    .map((u) => u.id)
-
-  const recipients = csUserIds.length > 0 ? csUserIds : [""]
-
-  await Promise.all(
-    recipients.map((to) =>
-      notificationModule.createNotifications({
-        to,
-        channel: "feed",
-        template: "admin-ui",
-        resource_id: order.id,
-        resource_type: "order",
-        data: {
-          title: "Atención solicitada por cliente",
-          description,
-        },
-      })
-    )
+  const csUserIds = await getRecipientsByRole(
+    req.scope as Parameters<typeof getRecipientsByRole>[0],
+    [CUSTOMER_SERVICE_ROLE]
   )
+
+  const recipients = csUserIds.length > 0 ? csUserIds : ["system"]
+
+  try {
+    await Promise.all(
+      recipients.map((to) =>
+        notificationModule.createNotifications({
+          to,
+          channel: "feed",
+          template: "admin-ui",
+          resource_id: order.id,
+          resource_type: "order",
+          data: {
+            title: "Atención solicitada por cliente",
+            description,
+          },
+        })
+      )
+    )
+  } catch (error) {
+    if (!isMissingFeedProviderError(error)) {
+      throw error
+    }
+
+    logger.warn(
+      `Skipping /store/notify-agent feed notification for order ${order.id}: no feed notification provider is configured.`
+    )
+  }
 
   return res.json({ ok: true })
 }

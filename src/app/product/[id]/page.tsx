@@ -6,11 +6,14 @@ import { useParams } from "next/navigation";
 
 import { useLanguage } from "@/components/language-provider";
 import { useCart } from "@/components/cart-provider";
+import { useToast } from "@/components/toast-provider";
+import { QuantitySelector } from "@/components/quantity-selector";
 import { SafeImage } from "@/components/safe-image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
+  calculateDiscountPercent,
   formatArs,
   getProductDescription,
   getProductName,
@@ -26,6 +29,7 @@ export default function ProductDetailPage() {
   const { language } = useLanguage();
   const params = useParams<{ id: string }>();
   const { addToCart } = useCart();
+  const { showToast } = useToast();
 
   const t = language === "ko"
     ? {
@@ -157,7 +161,7 @@ export default function ProductDetailPage() {
               <>
                 <p className="text-sm text-[#777777] line-through">{formatArs(product.originalPrice, language)}</p>
                 <Badge variant="outline">
-                  -{Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}%
+                  -{calculateDiscountPercent(product.price, product.originalPrice)}%
                 </Badge>
               </>
             )}
@@ -195,37 +199,13 @@ export default function ProductDetailPage() {
           {canAdd && (
             <div className="flex items-center gap-3">
               <span className="text-sm font-medium text-[#555555]">{t.qty}:</span>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setQty((q) => Math.max(1, q - 1))}
-                  className="h-9 w-9 rounded-full border border-black/20 text-lg font-semibold leading-none"
-                  aria-label={t.decreaseQty}
-                >
-                  −
-                </button>
-                <input
-                  type="number"
-                  min={1}
-                  max={maxQty}
-                  value={qty}
-                  onChange={(e) => {
-                    const v = Number.parseInt(e.target.value, 10);
-                    if (!Number.isNaN(v)) setQty(Math.min(maxQty, Math.max(1, v)));
-                  }}
-                  onBlur={(e) => {
-                    const v = Number.parseInt(e.target.value, 10);
-                    if (Number.isNaN(v) || v < 1) setQty(1);
-                  }}
-                  className="h-9 w-14 rounded-xl border border-black/20 px-2 text-center text-sm font-semibold outline-none focus:border-black/40"
-                />
-                <button
-                  onClick={() => setQty((q) => Math.min(maxQty, q + 1))}
-                  className="h-9 w-9 rounded-full border border-black/20 text-lg font-semibold leading-none"
-                  aria-label={t.increaseQty}
-                >
-                  +
-                </button>
-              </div>
+              <QuantitySelector
+                qty={qty}
+                max={maxQty}
+                decreaseLabel={t.decreaseQty}
+                increaseLabel={t.increaseQty}
+                onChange={setQty}
+              />
             </div>
           )}
 
@@ -234,7 +214,10 @@ export default function ProductDetailPage() {
             disabled={!canAdd}
             onClick={() => {
               const variantId = selectedVariant ?? defaultVariantId ?? "";
-              if (variantId) addToCart(variantId, qty);
+              if (variantId) {
+                addToCart(variantId, qty);
+                showToast({ message: `${getProductName(product, language)} agregado`, type: "success" });
+              }
             }}
           >
             {outOfStock ? t.soldOut : missingVariant ? t.selectVariantBtn : t.addToCart}

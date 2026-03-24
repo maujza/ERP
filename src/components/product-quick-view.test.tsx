@@ -55,6 +55,38 @@ const mockProduct = {
   ],
 };
 
+describe("ProductQuickView – dotMode", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockAddToCart.mockResolvedValue(undefined);
+    mockRetrieveProduct.mockResolvedValue({ product: mockProduct });
+  });
+
+  it("renders a button (not a Link) when dotMode is true", () => {
+    render(<ProductQuickView productId="prod_1" dotMode />);
+    // dotMode renders a round button trigger, not a link
+    const btn = screen.getByRole("button", { name: "Vista rapida" });
+    expect(btn).toBeInTheDocument();
+    expect(btn.tagName).toBe("BUTTON");
+  });
+
+  it("the dot button has a white inner circle span", () => {
+    render(<ProductQuickView productId="prod_1" dotMode />);
+    const btn = screen.getByRole("button", { name: "Vista rapida" });
+    // Inner span has h-2 w-2 rounded-full bg-white classes
+    const innerSpan = btn.querySelector("span");
+    expect(innerSpan).not.toBeNull();
+    expect(innerSpan).toHaveClass("bg-white");
+    expect(innerSpan).toHaveClass("rounded-full");
+  });
+
+  it("dot button has a dark background (bg-[#111111])", () => {
+    render(<ProductQuickView productId="prod_1" dotMode />);
+    const btn = screen.getByRole("button", { name: "Vista rapida" });
+    expect(btn).toHaveClass("bg-[#111111]");
+  });
+});
+
 describe("ProductQuickView", () => {
   beforeEach(() => {
     vi.clearAllMocks();

@@ -4,14 +4,13 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Filter, X } from "lucide-react";
 
-import { SafeImage } from "@/components/safe-image";
 import { useLanguage } from "@/components/language-provider";
-import { ProductQuickView } from "@/components/product-quick-view";
+import { ProductCard } from "@/components/product-card";
+import { ProductCardSkeleton } from "@/components/product-card-skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  formatArs,
   getProductName,
   hasPurchasablePrice,
   isJewelryProduct,
@@ -23,20 +22,23 @@ import {
 } from "@/lib/shop-data";
 import { sdk, withStorePricingContext } from "@/lib/medusa";
 
+const PRICE_LOW_THRESHOLD = 20_000;
+const PRICE_MID_THRESHOLD = 30_000;
+
 const priceFilters = [
   { id: "all", label: "Todos" },
-  { id: "low", label: "Hasta $20.000" },
-  { id: "mid", label: "$20.000 - $30.000" },
-  { id: "high", label: "Mas de $30.000" },
+  { id: "low", label: `Hasta $${PRICE_LOW_THRESHOLD.toLocaleString("es-AR")}` },
+  { id: "mid", label: `$${PRICE_LOW_THRESHOLD.toLocaleString("es-AR")} - $${PRICE_MID_THRESHOLD.toLocaleString("es-AR")}` },
+  { id: "high", label: `Mas de $${PRICE_MID_THRESHOLD.toLocaleString("es-AR")}` },
 ] as const;
 
 type PriceFilter = (typeof priceFilters)[number]["id"];
 
 function byPrice(product: Product, filter: PriceFilter) {
   if (filter === "all") return true;
-  if (filter === "low") return product.price <= 20000;
-  if (filter === "mid") return product.price > 20000 && product.price <= 30000;
-  return product.price > 30000;
+  if (filter === "low") return product.price <= PRICE_LOW_THRESHOLD;
+  if (filter === "mid") return product.price > PRICE_LOW_THRESHOLD && product.price <= PRICE_MID_THRESHOLD;
+  return product.price > PRICE_MID_THRESHOLD;
 }
 
 export default function CatalogPage() {
@@ -66,6 +68,8 @@ export default function CatalogPage() {
         brand: "브랜드",
         prev: "이전",
         next: "다음",
+        loadMore: "더 불러오기",
+        loading: "불러오는 중...",
       }
     : {
         home: "Home",
@@ -90,6 +94,8 @@ export default function CatalogPage() {
         brand: "Marca",
         prev: "Prev",
         next: "Next",
+        loadMore: "Cargar más",
+        loading: "Cargando...",
       };
 
   const sortOptions = [
@@ -99,6 +105,10 @@ export default function CatalogPage() {
   ];
 
   const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(true);
+  const [offset, setOffset] = useState(0);
+  const PAGE_SIZE = 20;
   const [activeSubcategory, setActiveSubcategory] = useState("Todos");
   const [search, setSearch] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -110,14 +120,34 @@ export default function CatalogPage() {
 
   const gridRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
+  const loadProducts = (currentOffset: number, append: boolean) => {
+    if (!append) setAllProducts([]);
+    setLoadingMore(true);
     sdk.store.product.list(withStorePricingContext({
-      limit: 100,
+      limit: PAGE_SIZE,
+      offset: currentOffset,
       fields: "+variants.calculated_price,+variants.inventory_quantity,+metadata,+categories",
-    })).then(({ products }) => {
-      setAllProducts(products.map(mapMedusaProduct).filter(hasPurchasablePrice).filter(isJewelryProduct));
-    }).catch(() => {});
+    })).then(({ products, count }) => {
+      const mapped = products.map(mapMedusaProduct).filter(hasPurchasablePrice).filter(isJewelryProduct);
+      setAllProducts((prev) => append ? [...prev, ...mapped] : mapped);
+      setHasMore(currentOffset + PAGE_SIZE < (count ?? 0));
+      setOffset(currentOffset + PAGE_SIZE);
+    }).catch(() => {
+      setHasMore(false);
+    }).finally(() => {
+      setLoadingMore(false);
+    });
+  };
+
+  useEffect(() => {
+    loadProducts(0, false);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const loadMore = () => {
+    if (loadingMore || !hasMore) return;
+    loadProducts(offset, true);
+  };
 
   const categories = useMemo(
     () => Array.from(new Set(allProducts.map((product) => product.category))).filter(Boolean),
@@ -167,10 +197,10 @@ export default function CatalogPage() {
     return list;
   }, [allProducts, activeSubcategory, language, priceFilter, search, selectedBrands, selectedCategories, sortBy]);
 
-  const pageSize = 8;
-  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / pageSize));
+  const UI_PAGE_SIZE = 8;
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / UI_PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
-  const paginated = filteredProducts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const paginated = filteredProducts.slice((currentPage - 1) * UI_PAGE_SIZE, currentPage * UI_PAGE_SIZE);
 
   const activeFilterCount =
     selectedCategories.length +
@@ -318,53 +348,17 @@ export default function CatalogPage() {
             )}
 
             <div className="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-              {paginated.map((product) => {
-                const isDiscounted = Boolean(product.originalPrice && product.originalPrice > product.price);
-                const outOfStock = product.stock <= 0;
-                return (
-                  <article key={product.id} className="relative overflow-hidden rounded-2xl border border-black/10 bg-white">
-                    <Link href={`/product/${product.id}`} className="block">
-                      <div className="relative h-44 w-full">
-                        <SafeImage src={product.image} alt={getProductName(product, language)} fill className="object-cover" />
-                        <div className="absolute left-2 top-2 flex flex-wrap gap-1">
-                          <Badge variant="outline" className="bg-white/90">
-                            {translateLabel(product.category, language)}
-                          </Badge>
-                          {outOfStock && <Badge variant="glow">{t.soldOut}</Badge>}
-                        </div>
-                      </div>
-                      <div className="space-y-2 p-3">
-                        <p className="line-clamp-2 text-sm font-semibold text-[#111111]">{getProductName(product, language)}</p>
-                        <div className="flex flex-wrap items-center gap-2 text-sm">
-                          <span className="font-semibold text-[#111111]">{formatArs(product.price, language)}</span>
-                          {isDiscounted && (
-                            <>
-                              <span className="text-xs text-[#777777] line-through">
-                                {formatArs(product.originalPrice ?? product.price, language)}
-                              </span>
-                              <span className="rounded-full bg-[#111111] px-2 py-0.5 text-[10px] text-white">
-                                -
-                                {Math.round(
-                                  (((product.originalPrice ?? product.price) - product.price) /
-                                    (product.originalPrice ?? product.price)) *
-                                    100,
-                                )}
-                                %
-                              </span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </Link>
-                    <div className="flex flex-col gap-2 px-3 pb-3 xl:flex-row xl:items-center">
-                      <ProductQuickView productId={product.id} className="h-10 w-full px-3 xl:w-auto xl:shrink-0" />
-                      <Button asChild className="min-h-10 h-auto w-full px-3 py-2 text-xs !whitespace-normal leading-tight xl:h-10 xl:py-0 xl:text-sm xl:!whitespace-nowrap" disabled={outOfStock}>
-                        <Link href={`/product/${product.id}`}>{outOfStock ? t.soldOut : t.add}</Link>
-                      </Button>
-                    </div>
-                  </article>
-                );
-              })}
+              {allProducts.length === 0 && loadingMore
+                ? Array.from({ length: 6 }).map((_, i) => <ProductCardSkeleton key={i} />)
+                : paginated.map((product) => (
+                    <ProductCard
+                      key={product.id}
+                      product={product}
+                      language={language}
+                      soldOutLabel={t.soldOut}
+                      addToCartLabel={t.add}
+                    />
+                  ))}
             </div>
 
             {paginated.length === 0 && (
@@ -395,6 +389,14 @@ export default function CatalogPage() {
                 {t.next}
               </Button>
             </div>
+
+            {hasMore && (
+              <div className="flex justify-center">
+                <Button variant="outline" onClick={loadMore} disabled={loadingMore}>
+                  {loadingMore ? t.loading : t.loadMore}
+                </Button>
+              </div>
+            )}
           </div>
         </section>
 
