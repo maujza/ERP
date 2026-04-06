@@ -1,70 +1,140 @@
-# ERP Commerce Stack
+# Aurelia ERP Commerce Stack
 
-Este repositorio combina dos piezas principales:
+Repositorio monorepo para la operación comercial de Aurelia. El stack combina storefront B2B, backoffice visual, backend Medusa, POS y base de datos PostgreSQL.
 
-- **Web B2B**: front en Next.js 16 (carpeta raíz) que sirve el catálogo mayorista.
-- **Medusa POS**: app mobile (Expo + React Native) ubicada en `pos/` que permite operar tiendas físicas contra tu backend de Medusa v2.
+## Qué incluye
 
-Ambos servicios se orquestan con Docker Compose para que puedas levantarlos con un solo comando y sin preocuparte por versiones de Node.js o dependencias globales.
+- `./`: storefront y backoffice en Next.js 16.
+- `backend/`: backend Medusa v2 con seeds, migraciones y módulo custom `purchaseDepartment`.
+- `pos/`: POS web/mobile basado en Expo.
+- `docker-compose.yml`: stack local con `db`, `backend-init`, `backend`, `web` y `pos`.
 
-## Requisitos
+## Servicios locales
 
-- Docker y Docker Compose.
-- Dispositivo iOS/Android con la app Expo Go instalada para probar el POS (o un emulador configurado).
-- Un backend de Medusa v2 accesible vía HTTPS + usuario admin para autenticarte desde el POS.
+Cuando el stack está levantado:
 
-## Puesta en marcha con Docker
+- Storefront: `http://localhost:7358`
+- Backoffice Medusa: `http://localhost:9000/app`
+- API Medusa: `http://localhost:9000`
+- POS web: `http://localhost:8081`
+- PostgreSQL: `localhost:5433`
 
-```bash
-# Construir imágenes después de clonar o actualizar dependencias
-docker compose build web pos
+## Levante recomendado
 
-# Levantar el storefront
-docker compose up web
-# La web queda disponible en http://localhost:7358
-
-# Levantar el POS (levanta Metro + DevTools + túnel Expo)
-docker compose up pos
-# Metro:      http://localhost:8081
-# DevTools:   http://localhost:19002 (muestra el QR que consume Expo Go)
-```
-
-Los contenedores montan el código fuente local, así que cualquier cambio en `src/` o `pos/` se refleja automáticamente sin reinstalar dependencias. Los módulos de cada servicio viven dentro del contenedor (volumen `pos_node_modules`) para mantener tu host limpio.
-
-## Cómo probar el Medusa POS
-
-1. **Arrancá el servicio** con `docker compose up pos` (ver logs con `-f`). Esperá a ver el QR en DevTools (http://localhost:19002).
-2. **Conectá tu dispositivo** a la misma red que la máquina que corre Docker.
-3. **Abrí Expo Go** y escaneá el QR desde DevTools. Si preferís emulador, usá los botones "Run on iOS" / "Run on Android" de la misma pantalla.
-4. **Login**: ingresá la URL pública HTTPS de tu backend Medusa (ej. `erp-demo.medusajs.com`), el email y la contraseña del usuario admin. El POS valida `https://<url>/health`, así que si trabajás contra un backend local necesitás exponerlo con un túnel HTTPS (ngrok, Cloudflare Tunnel, etc.).
-5. **Setup wizard**: elegí o creá Region, Sales Channel y Stock Location. Quedan persistidas vía la Admin API.
-6. **Flujo de pruebas**:
-   - Leé productos (search o scan barcode si el dispositivo tiene cámara).
-   - Creá un carrito, sumá variantes y cliente.
-   - Confirmá el pedido (crea draft order en Medusa) y revisá el historial en la pestaña Orders.
-7. **Salida limpia**: `docker compose down pos` detiene Metro y libera los puertos 8081/19000-19002.
-
-## Cómo testear sin dispositivo
-
-- Usá `docker compose run --rm pos npm run lint` para asegurarte de que la app compile y pase ESLint.
-- Ejecutá `docker compose up pos` y accedé a http://localhost:19002 desde el navegador; desde ahí podés disparar simuladores si tenés Xcode/Android Studio instalado localmente.
-
-## Web B2B (Next.js)
-
-El flujo no cambió respecto al template de Next.js:
+El flujo correcto no es `docker compose up` a mano sino:
 
 ```bash
-# Desarrollo local (hot reload) fuera de Docker
-npm install
-npm run dev
+./scripts/compose-up.sh
 ```
 
-Para producción continuá usando `docker compose up web` o el pipeline que ya tengas (el `Dockerfile` expone la app en `3000`).
+Ese script hace lo siguiente:
 
-## Troubleshooting rápido
+1. levanta PostgreSQL
+2. construye solo las imágenes que cambiaron
+3. corre `backend-init` para migraciones y bootstrap
+4. resincroniza `.env.local` con publishable key + región actual
+5. recompila `web` solo si cambió su fingerprint
+6. levanta `backend`, `web` y `pos`
 
-- **El POS no puede resolver tu backend**: asegurate de que la URL sea HTTPS y accesible desde el teléfono/emulador.
-- **No ves el QR**: confirmá que los puertos 19000-19002 estén libres y que el container no haya salido (revisá logs: `docker compose logs pos`).
-- **Reload lento**: Expo corre en modo `--tunnel` por defecto para simplificar la conexión desde dispositivos externos; si estás en la misma LAN podés editar `docker-compose.yml` y quitar `--tunnel` para usar `--lan` y ganar velocidad.
+## Rebuild selectivo
 
-Con esto tenés el POS de Medusa corriendo junto al storefront dentro del mismo repo y stack de Docker.
+`./scripts/compose-up.sh` usa fingerprints guardados en `.deploy-state/` para decidir si hay que reconstruir:
+
+- `backend`
+- `web`
+- `pos`
+
+Eso evita rebuilds innecesarios incluso si el árbol de trabajo tiene cambios locales sin commit.
+
+## Variables importantes del storefront
+
+El storefront depende de estas variables en [`.env.local`](/home/akwiek/code/ERP/.env.local):
+
+- `NEXT_PUBLIC_MEDUSA_BACKEND_URL`
+- `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY`
+- `NEXT_PUBLIC_MEDUSA_REGION_ID`
+- `NEXT_PUBLIC_MEDUSA_COUNTRY_CODE`
+
+`scripts/sync-medusa-env.sh` actualiza automáticamente:
+
+- `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY`
+- `NEXT_PUBLIC_MEDUSA_REGION_ID`
+- `NEXT_PUBLIC_MEDUSA_COUNTRY_CODE`
+
+La URL pública del backend se preserva si ya existe en `.env.local`. Hoy el valor esperado es:
+
+```env
+NEXT_PUBLIC_MEDUSA_BACKEND_URL=https://backoffice.aurelia.gleeze.com
+```
+
+Después de cambiar una variable `NEXT_PUBLIC_*`, hay que reconstruir `web` para que Next la hornee en el bundle.
+
+## Docker y build
+
+El repo ya no compila storefront ni backend al arrancar contenedores:
+
+- `web` usa Docker multi-stage + `Next standalone`
+- `backend` usa Docker multi-stage con imagen final reducida
+- `backend-init` usa el target `builder` para correr migraciones y bootstrap
+
+Tamaños observados luego del ajuste:
+
+- `erp-web:local`: ~`296MB`
+- `erp-backend:local`: ~`673MB`
+- `erp-backend-init:local`: ~`895MB`
+- `erp-pos:local`: ~`241MB`
+
+## Seeds y bootstrap
+
+El bootstrap corre en [`backend/src/scripts/bootstrap.ts`](/home/akwiek/code/ERP/backend/src/scripts/bootstrap.ts).
+
+Hace dos chequeos idempotentes:
+
+- si falta la seed base de Medusa, la corre
+- si falta la región de Argentina, corre la seed de Aurelia
+
+Eso evita reseedear todo en cada restart del backend.
+
+## Desarrollo del frontend
+
+El storefront está en `src/` y mezcla:
+
+- home editorial
+- catálogo con filtros
+- producto
+- checkout
+- búsqueda
+- backoffice visual en `/backoffice`
+
+Hoy catálogo, búsqueda y destacados cargan productos desde cliente. Eso funciona, pero puede mostrar estado vacío inicial hasta que hidrata. Una mejora pendiente es mover la carga inicial de productos a server-side rendering.
+
+## Despliegue
+
+El workflow de GitHub vive en [`.github/workflows/deploy-to-rpi.yml`](/home/akwiek/code/ERP/.github/workflows/deploy-to-rpi.yml) y delega el levante al mismo `./scripts/compose-up.sh`.
+
+Eso mantiene alineado el flujo local y el de deploy.
+
+## Problemas comunes
+
+- Storefront sin productos:
+  suele ser una `NEXT_PUBLIC_MEDUSA_BACKEND_URL` incorrecta o un bundle de `web` construido con una URL vieja.
+
+- Cambié `.env.local` y no impactó:
+  si tocaste una variable `NEXT_PUBLIC_*`, rebuild de `web`.
+
+- El backend tarda mucho en frío:
+  la primera corrida de `backend-init` puede tardar porque ejecuta migraciones y bootstrap completo.
+
+- El HDD se dispara durante builds:
+  el costo grande sigue estando en la primera compilación del backend; las corridas posteriores deberían reutilizar caché y evitar rebuild si no hubo cambios.
+
+## Comandos útiles
+
+```bash
+./scripts/compose-up.sh
+docker compose ps
+docker compose logs -f backend
+docker compose logs -f web
+docker compose logs -f pos
+./scripts/sync-medusa-env.sh
+```
