@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Filter, X } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
 
 import { useLanguage } from "@/components/language-provider";
 import { ProductCard } from "@/components/product-card";
@@ -24,6 +25,8 @@ import { sdk, withStorePricingContext } from "@/lib/medusa";
 
 const PRICE_LOW_THRESHOLD = 20_000;
 const PRICE_MID_THRESHOLD = 30_000;
+const CATALOG_FETCH_BATCH_SIZE = 100;
+const PAGE_SIZE_OPTIONS = [12, 24, 48] as const;
 
 const priceFilters = [
   { id: "all", label: "Todos" },
@@ -43,6 +46,8 @@ function byPrice(product: Product, filter: PriceFilter) {
 
 export default function CatalogPage() {
   const { language } = useLanguage();
+  const pathname = usePathname();
+  const router = useRouter();
 
   const t = language === "ko"
     ? {
@@ -54,6 +59,7 @@ export default function CatalogPage() {
         filters: "필터",
         results: "결과",
         sortBy: "정렬",
+        perPage: "표시",
         searchPrefix: "검색",
         price: "가격",
         soldOut: "품절",
@@ -80,6 +86,7 @@ export default function CatalogPage() {
         filters: "Filtros",
         results: "resultados",
         sortBy: "Ordenar por",
+        perPage: "Ver",
         searchPrefix: "Buscar",
         price: "Precio",
         soldOut: "AGOTADO",
@@ -94,7 +101,6 @@ export default function CatalogPage() {
         brand: "Marca",
         prev: "Prev",
         next: "Next",
-        loadMore: "Cargar más",
         loading: "Cargando...",
       };
 
@@ -105,10 +111,7 @@ export default function CatalogPage() {
   ];
 
   const [allProducts, setAllProducts] = useState<Product[]>([]);
-  const [hasMore, setHasMore] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(true);
-  const [offset, setOffset] = useState(0);
-  const PAGE_SIZE = 20;
+  const [loadingProducts, setLoadingProducts] = useState(true);
   const [activeSubcategory, setActiveSubcategory] = useState("Todos");
   const [search, setSearch] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -116,38 +119,63 @@ export default function CatalogPage() {
   const [priceFilter, setPriceFilter] = useState<PriceFilter>("all");
   const [sortBy, setSortBy] = useState<SortOption>("recommended");
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<(typeof PAGE_SIZE_OPTIONS)[number]>(12);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
   const gridRef = useRef<HTMLDivElement | null>(null);
 
-  const loadProducts = (currentOffset: number, append: boolean) => {
-    if (!append) setAllProducts([]);
-    setLoadingMore(true);
-    sdk.store.product.list(withStorePricingContext({
-      limit: PAGE_SIZE,
-      offset: currentOffset,
-      fields: "+variants.calculated_price,+variants.inventory_quantity,+metadata,+categories",
-    })).then(({ products, count }) => {
-      const mapped = products.map(mapMedusaProduct).filter(hasPurchasablePrice).filter(isJewelryProduct);
-      setAllProducts((prev) => append ? [...prev, ...mapped] : mapped);
-      setHasMore(currentOffset + PAGE_SIZE < (count ?? 0));
-      setOffset(currentOffset + PAGE_SIZE);
-    }).catch(() => {
-      setHasMore(false);
-    }).finally(() => {
-      setLoadingMore(false);
-    });
-  };
-
   useEffect(() => {
-    loadProducts(0, false);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    let cancelled = false;
 
-  const loadMore = () => {
-    if (loadingMore || !hasMore) return;
-    loadProducts(offset, true);
-  };
+    const loadAllProducts = async () => {
+      setLoadingProducts(true);
+
+      try {
+        const loaded: Product[] = [];
+        let currentOffset = 0;
+        let totalCount = Number.POSITIVE_INFINITY;
+
+        while (!cancelled && currentOffset < totalCount) {
+          const { products, count } = await sdk.store.product.list(withStorePricingContext({
+            limit: CATALOG_FETCH_BATCH_SIZE,
+            offset: currentOffset,
+            fields: "+variants.calculated_price,+variants.inventory_quantity,+metadata,+categories",
+          }));
+
+          const mapped = products
+            .map(mapMedusaProduct)
+            .filter(hasPurchasablePrice)
+            .filter(isJewelryProduct);
+
+          loaded.push(...mapped);
+          totalCount = count ?? loaded.length;
+          currentOffset += products.length;
+
+          if (products.length === 0) {
+            break;
+          }
+        }
+
+        if (!cancelled) {
+          setAllProducts(loaded);
+        }
+      } catch {
+        if (!cancelled) {
+          setAllProducts([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingProducts(false);
+        }
+      }
+    };
+
+    loadAllProducts();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const categories = useMemo(
     () => Array.from(new Set(allProducts.map((product) => product.category))).filter(Boolean),
@@ -162,11 +190,19 @@ export default function CatalogPage() {
     const qs = new URLSearchParams(window.location.search);
     const subcategory = qs.get("subcategory");
     const category = qs.get("category");
+    const rawPage = Number(qs.get("page") || "1");
+    const rawPageSize = Number(qs.get("pageSize") || String(PAGE_SIZE_OPTIONS[0]));
     if (subcategory && subcategories.includes(subcategory as (typeof subcategories)[number])) {
       setActiveSubcategory(subcategory);
     }
     if (category) {
       setSelectedCategories([category]);
+    }
+    if (Number.isFinite(rawPage) && rawPage >= 1) {
+      setPage(Math.floor(rawPage));
+    }
+    if (PAGE_SIZE_OPTIONS.includes(rawPageSize as (typeof PAGE_SIZE_OPTIONS)[number])) {
+      setPageSize(rawPageSize as (typeof PAGE_SIZE_OPTIONS)[number]);
     }
   }, []);
 
@@ -197,10 +233,39 @@ export default function CatalogPage() {
     return list;
   }, [allProducts, activeSubcategory, language, priceFilter, search, selectedBrands, selectedCategories, sortBy]);
 
-  const UI_PAGE_SIZE = 8;
-  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / UI_PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / pageSize));
   const currentPage = Math.min(page, totalPages);
-  const paginated = filteredProducts.slice((currentPage - 1) * UI_PAGE_SIZE, currentPage * UI_PAGE_SIZE);
+  const paginated = filteredProducts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  useEffect(() => {
+    if (page !== currentPage) {
+      setPage(currentPage);
+    }
+  }, [currentPage, page]);
+
+  useEffect(() => {
+    const qs = new URLSearchParams(window.location.search);
+
+    if (currentPage > 1) {
+      qs.set("page", String(currentPage));
+    } else {
+      qs.delete("page");
+    }
+
+    if (pageSize !== PAGE_SIZE_OPTIONS[0]) {
+      qs.set("pageSize", String(pageSize));
+    } else {
+      qs.delete("pageSize");
+    }
+
+    const nextQuery = qs.toString();
+    const nextUrl = nextQuery ? `${pathname}?${nextQuery}` : pathname;
+    const currentUrl = `${window.location.pathname}${window.location.search}`;
+
+    if (currentUrl !== nextUrl) {
+      router.replace(nextUrl, { scroll: false });
+    }
+  }, [currentPage, pageSize, pathname, router]);
 
   const activeFilterCount =
     selectedCategories.length +
@@ -307,12 +372,30 @@ export default function CatalogPage() {
                 <span className="text-[#666666]">{t.sortBy}</span>
                 <select
                   value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as SortOption)}
+                  onChange={(e) => {
+                    setSortBy(e.target.value as SortOption);
+                    setPage(1);
+                  }}
                   className="rounded-full border border-black/15 bg-white px-3 py-2"
                 >
                   {sortOptions.map((option) => (
                     <option key={option.id} value={option.id}>
                       {option.label}
+                    </option>
+                  ))}
+                </select>
+                <span className="text-[#666666]">{t.perPage}</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value) as (typeof PAGE_SIZE_OPTIONS)[number]);
+                    setPage(1);
+                  }}
+                  className="rounded-full border border-black/15 bg-white px-3 py-2"
+                >
+                  {PAGE_SIZE_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
                     </option>
                   ))}
                 </select>
@@ -348,8 +431,8 @@ export default function CatalogPage() {
             )}
 
             <div className="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-              {allProducts.length === 0 && loadingMore
-                ? Array.from({ length: 6 }).map((_, i) => <ProductCardSkeleton key={i} />)
+              {allProducts.length === 0 && loadingProducts
+                ? Array.from({ length: pageSize }).map((_, i) => <ProductCardSkeleton key={i} />)
                 : paginated.map((product) => (
                     <ProductCard
                       key={product.id}
@@ -388,14 +471,6 @@ export default function CatalogPage() {
                 {t.next}
               </Button>
             </div>
-
-            {hasMore && (
-              <div className="flex justify-center">
-                <Button variant="outline" onClick={loadMore} disabled={loadingMore}>
-                  {loadingMore ? t.loading : t.loadMore}
-                </Button>
-              </div>
-            )}
           </div>
         </section>
 
