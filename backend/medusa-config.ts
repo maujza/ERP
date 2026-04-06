@@ -7,6 +7,7 @@ const forceInsecureCookies = process.env.MEDUSA_FORCE_INSECURE_COOKIES === "true
 module.exports = defineConfig({
   modules: [
     { resolve: "./src/modules/purchaseDepartment" },
+    { resolve: "./src/modules/taskBoard" },
     {
       resolve: "@medusajs/medusa/notification",
       options: {

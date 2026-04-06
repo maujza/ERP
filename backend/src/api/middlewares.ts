@@ -6,6 +6,7 @@ import {
 import { createFindParams } from "@medusajs/medusa/api/utils/validators"
 import { z } from "zod"
 import { requireRole, ROLES } from "../lib/rbac"
+import { TASK_AREAS, TASK_PRIORITIES, TASK_STATUSES } from "../lib/task-board"
 
 // --- Supplier schemas ---
 
@@ -71,10 +72,79 @@ export type DispatchOrderSchema = z.infer<typeof DispatchOrderSchema>
 
 export const GetListSchema = createFindParams()
 
+// --- Team task board schemas ---
+
+export const CreateTaskSchema = z.object({
+  title: z.string().min(1),
+  description: z.string().optional().nullable(),
+  status: z.enum(TASK_STATUSES).optional(),
+  priority: z.enum(TASK_PRIORITIES).optional(),
+  area: z.enum(TASK_AREAS).optional(),
+  assignee: z.string().optional().nullable(),
+  due_date: z.string().datetime().optional().nullable(),
+  position: z.number().int().nonnegative().optional(),
+})
+export type CreateTaskSchema = z.infer<typeof CreateTaskSchema>
+
+export const UpdateTaskSchema = z.object({
+  title: z.string().min(1).optional(),
+  description: z.string().optional().nullable(),
+  status: z.enum(TASK_STATUSES).optional(),
+  priority: z.enum(TASK_PRIORITIES).optional(),
+  area: z.enum(TASK_AREAS).optional(),
+  assignee: z.string().optional().nullable(),
+  due_date: z.string().datetime().optional().nullable(),
+  position: z.number().int().nonnegative().optional(),
+})
+export type UpdateTaskSchema = z.infer<typeof UpdateTaskSchema>
+
 // Exported for policy snapshot tests — defineMiddlewares may transform the
 // config in ways that make method inspection unreliable; import this directly.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const routes: any[] = [
+    {
+      matcher: "/admin/team-tasks",
+      method: "GET",
+      middlewares: [
+        validateAndTransformQuery(GetListSchema, {
+          defaults: [
+            "id",
+            "title",
+            "description",
+            "status",
+            "priority",
+            "area",
+            "assignee",
+            "due_date",
+            "position",
+            "created_at",
+            "updated_at",
+          ],
+          isList: true,
+          defaultLimit: 200,
+        }),
+      ],
+    },
+    {
+      matcher: "/admin/team-tasks",
+      method: "POST",
+      middlewares: [validateAndTransformBody(CreateTaskSchema)],
+    },
+    {
+      matcher: "/admin/team-tasks/:id",
+      method: "GET",
+      middlewares: [],
+    },
+    {
+      matcher: "/admin/team-tasks/:id",
+      method: "POST",
+      middlewares: [validateAndTransformBody(UpdateTaskSchema)],
+    },
+    {
+      matcher: "/admin/team-tasks/:id",
+      method: "DELETE",
+      middlewares: [],
+    },
     // Supplier list — purchasing only
     {
       matcher: "/admin/purchase/suppliers",
