@@ -13,7 +13,7 @@
     "medusa"
   ],
   "scripts": {
-    "build": "medusa build",
+    "build": "medusa build && node ./scripts/patch-admin-branding.mjs",
     "seed": "medusa exec ./src/scripts/seed.ts",
     "seed:aurelia": "medusa exec ./src/scripts/seed-aurelia.ts",
     "seed:demo": "medusa exec ./src/scripts/seed-demo-historic.ts",
