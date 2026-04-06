@@ -15,22 +15,42 @@ services:
       timeout: 5s
       retries: 20
 
-  backend:
+  backend-init:
+    image: erp-backend-init:local
     build:
       context: ./backend
+      target: builder
     command: >
       sh -c "
-        ln -sfn /app/src /src &&
-        node ./scripts/patch-dashboard-i18n.mjs &&
         npx medusa db:migrate &&
-        npx medusa exec ./src/scripts/seed-aurelia.ts &&
-        npx medusa user -e ${MEDUSA_ADMIN_EMAIL:-admin@aurelia.com} -p ${MEDUSA_ADMIN_PASSWORD} >/dev/null 2>&1 || true &&
-        npm run build &&
-        mkdir -p /app/public &&
-        rm -rf /app/public/admin &&
-        cp -R /app/.medusa/server/public/admin /app/public/admin &&
-        npm run start
+        npx medusa exec ./src/scripts/bootstrap.ts &&
+        npx medusa user -e ${MEDUSA_ADMIN_EMAIL:-admin@aurelia.com} -p ${MEDUSA_ADMIN_PASSWORD} >/dev/null 2>&1 || true
       "
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://medusa:medusa@db:5432/medusa?sslmode=disable
+      STORE_CORS: ${STORE_CORS:-http://localhost:7358,http://127.0.0.1:7358,http://localhost:8081,http://127.0.0.1:8081,http://localhost:9000,http://127.0.0.1:9000,http://pione:7358,http://pione:8081,http://pione:9000}
+      ADMIN_CORS: ${ADMIN_CORS:-http://localhost:8081,http://127.0.0.1:8081,http://localhost:9000,http://127.0.0.1:9000,http://pione:8081,http://pione:9000}
+      AUTH_CORS: ${AUTH_CORS:-http://localhost:7358,http://127.0.0.1:7358,http://localhost:8081,http://127.0.0.1:8081,http://localhost:9000,http://127.0.0.1:9000,http://pione:7358,http://pione:8081,http://pione:9000}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      COOKIE_SECRET: ${COOKIE_SECRET:?COOKIE_SECRET is required}
+      MEDUSA_FORCE_INSECURE_COOKIES: ${MEDUSA_FORCE_INSECURE_COOKIES:-true}
+      MEDUSA_ADMIN_EMAIL: ${MEDUSA_ADMIN_EMAIL:-admin@aurelia.com}
+      MEDUSA_ADMIN_PASSWORD: ${MEDUSA_ADMIN_PASSWORD:?MEDUSA_ADMIN_PASSWORD is required}
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY:-}
+      SENDGRID_FROM: ${SENDGRID_FROM:-no-reply@aurelia.com}
+      MEDUSA_ADMIN_URL: ${MEDUSA_ADMIN_URL:-http://localhost:9000}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  backend:
+    image: erp-backend:local
+    build:
+      context: ./backend
+      target: runner
+    command: npm run start
     ports:
       - "9000:9000"
     environment:
@@ -53,6 +73,7 @@ services:
     restart: unless-stopped
 
   web:
+    image: erp-web:local
     build:
       context: .
     ports:
@@ -63,12 +84,12 @@ services:
       - MEDUSA_INTERNAL_BACKEND_URL=http://backend:9000
       - NODE_ENV=production
       - NEXT_TELEMETRY_DISABLED=1
-    command: sh -c "npm run build && npm run start -- --hostname 0.0.0.0 --port 3000"
     restart: unless-stopped
     depends_on:
       - backend
 
   pos:
+    image: erp-pos:local
     build:
       context: ./pos
       dockerfile: Dockerfile.web

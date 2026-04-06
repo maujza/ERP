@@ -4,6 +4,7 @@ const medusaInternalBackendUrl =
   process.env.MEDUSA_INTERNAL_BACKEND_URL || "http://localhost:9000";
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   async rewrites() {
     return [
       {

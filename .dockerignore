@@ -4,3 +4,13 @@ npm-debug.log*
 .git
 Dockerfile
 docker-compose.yml
+backend
+pos
+.github
+adr
+docs
+CHANGELOG.md
+CLAUDE.md
+DESIGN.md
+TEST-PLAN.md
+TODOS.md
