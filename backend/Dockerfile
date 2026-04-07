@@ -25,7 +25,9 @@ ENV NODE_ENV=production \
     MEDUSA_ADMIN_PASSWORD=build-time-password \
     MEDUSA_ADMIN_URL=http://localhost:9000 \
     SENDGRID_API_KEY= \
-    SENDGRID_FROM=no-reply@aurelia.com
+    SENDGRID_FROM=no-reply@aurelia.com \
+    RESEND_API_KEY= \
+    RESEND_FROM="Aurelia <invitaciones@mail.aurelia.gleeze.com>"
 
 RUN node ./scripts/patch-dashboard-i18n.mjs \
   && npm run build \
