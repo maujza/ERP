@@ -50,22 +50,22 @@ Eso evita rebuilds innecesarios incluso si el árbol de trabajo tiene cambios lo
 
 El storefront depende de estas variables en [`.env.local`](/home/akwiek/code/ERP/.env.local):
 
-- `NEXT_PUBLIC_MEDUSA_BACKEND_URL`
 - `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY`
 - `NEXT_PUBLIC_MEDUSA_REGION_ID`
 - `NEXT_PUBLIC_MEDUSA_COUNTRY_CODE`
+- `NEXT_PUBLIC_WHATSAPP_NUMBER`
+- `NEXT_PUBLIC_SHIPPING_STANDARD_ARS`
+- `NEXT_PUBLIC_SHIPPING_EXPRESS_ARS`
+
+La API de Medusa ya no se configura con una URL pública del lado cliente.
+El storefront usa siempre el proxy interno `/api/medusa`, y Next lo reescribe
+hacia `MEDUSA_INTERNAL_BACKEND_URL` del lado servidor.
 
 `scripts/sync-medusa-env.sh` actualiza automáticamente:
 
 - `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY`
 - `NEXT_PUBLIC_MEDUSA_REGION_ID`
 - `NEXT_PUBLIC_MEDUSA_COUNTRY_CODE`
-
-La URL pública del backend se preserva si ya existe en `.env.local`. Hoy el valor esperado es:
-
-```env
-NEXT_PUBLIC_MEDUSA_BACKEND_URL=https://backoffice.aurelia.gleeze.com
-```
 
 Después de cambiar una variable `NEXT_PUBLIC_*`, hay que reconstruir `web` para que Next la hornee en el bundle.
 
@@ -117,7 +117,7 @@ Eso mantiene alineado el flujo local y el de deploy.
 ## Problemas comunes
 
 - Storefront sin productos:
-  suele ser una `NEXT_PUBLIC_MEDUSA_BACKEND_URL` incorrecta o un bundle de `web` construido con una URL vieja.
+  suele ser una publishable key/región desactualizada o un bundle de `web` viejo.
 
 - Cambié `.env.local` y no impactó:
   si tocaste una variable `NEXT_PUBLIC_*`, rebuild de `web`.

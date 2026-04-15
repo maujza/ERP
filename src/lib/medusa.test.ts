@@ -58,26 +58,24 @@ describe("medusa lib", () => {
     })
   })
 
-  it("initializes sdk with backend URL and publishable key from env", async () => {
-    process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL = "http://localhost:9000"
+  it("initializes sdk with the internal proxy path and publishable key", async () => {
     process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY = "pk_valid_key"
     await import("./medusa")
 
     expect(lastConfig).toEqual({
-      baseUrl: "http://localhost:9000",
+      baseUrl: "/api/medusa",
       publishableKey: "pk_valid_key",
     })
   })
 
   it("adds env hint on failed network calls", async () => {
-    process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL = "http://localhost:9000"
     process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY = "pk_1234567890"
     mockedFetch.mockRejectedValueOnce(new Error("Failed to fetch"))
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {})
     const mod = await import("./medusa")
 
     await expect(mod.sdk.client.fetch("/store/products/prod_123")).rejects.toThrow(
-      "Check storefront env (backend=http://localhost:9000, publishableKey=pk_1234...)"
+      "Check storefront env (backend=/api/medusa, publishableKey=pk_1234...)"
     )
     expect(consoleSpy).toHaveBeenCalledTimes(1)
   })

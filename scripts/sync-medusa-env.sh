@@ -54,11 +54,6 @@ upsert_env_var() {
 
 PUBLISHABLE_KEY="$(query_db "select token from api_key where type='publishable' and deleted_at is null and revoked_at is null order by created_at desc limit 1;")"
 REGION_ID="$(query_db "select id from region where currency_code='ars' and deleted_at is null order by created_at desc limit 1;")"
-BACKEND_URL="${NEXT_PUBLIC_MEDUSA_BACKEND_URL:-$(read_env_var "NEXT_PUBLIC_MEDUSA_BACKEND_URL")}"
-
-if [ -z "$BACKEND_URL" ]; then
-  BACKEND_URL="http://localhost:9000"
-fi
 
 if [ -z "$PUBLISHABLE_KEY" ]; then
   echo "No publishable API key found in database" >&2
@@ -70,12 +65,10 @@ if [ -z "$REGION_ID" ]; then
   exit 1
 fi
 
-upsert_env_var "NEXT_PUBLIC_MEDUSA_BACKEND_URL" "$BACKEND_URL"
 upsert_env_var "NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY" "$PUBLISHABLE_KEY"
 upsert_env_var "NEXT_PUBLIC_MEDUSA_REGION_ID" "$REGION_ID"
 upsert_env_var "NEXT_PUBLIC_MEDUSA_COUNTRY_CODE" "ar"
 
 echo "Synced .env.local"
-echo "  NEXT_PUBLIC_MEDUSA_BACKEND_URL=${BACKEND_URL}"
 echo "  NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=${PUBLISHABLE_KEY}"
 echo "  NEXT_PUBLIC_MEDUSA_REGION_ID=${REGION_ID}"

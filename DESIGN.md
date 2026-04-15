@@ -245,8 +245,8 @@ Estos son gaps reales, no bugs de styling:
 1. **Carga de productos demasiado client-side**
    La home y el catálogo pueden verse vacíos al inicio.
 
-2. **Dependencia de `NEXT_PUBLIC_MEDUSA_BACKEND_URL`**
-   Si la URL pública del backend está mal, el storefront parece vacío aunque Medusa tenga productos.
+2. **Carga de productos todavía demasiado client-side**
+   Aunque el proxy `/api/medusa` ya simplifica la conectividad, la home y el catálogo siguen hidratando tarde.
 
 3. **Documentación visual vieja**
    La versión anterior de este documento describía otro sistema de color, otra tipografía y otra intención visual.
@@ -256,7 +256,7 @@ Estos son gaps reales, no bugs de styling:
 Orden recomendado:
 
 1. mover carga inicial de productos a server-side
-2. usar proxy interno `/api/medusa` para no depender del host público en cliente
+2. terminar de mover carga inicial a server-side donde tenga sentido
 3. consolidar visualmente storefront y backoffice sin mezclarlos
 4. revisar estados vacíos y de loading para que no parezcan errores
 
