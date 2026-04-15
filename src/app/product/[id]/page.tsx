@@ -6,7 +6,6 @@ import { useParams } from "next/navigation";
 
 import { useLanguage } from "@/components/language-provider";
 import { useCart } from "@/components/cart-provider";
-import { useToast } from "@/components/toast-provider";
 import { QuantitySelector } from "@/components/quantity-selector";
 import { SafeImage } from "@/components/safe-image";
 import { Badge } from "@/components/ui/badge";
@@ -29,7 +28,6 @@ export default function ProductDetailPage() {
   const { language } = useLanguage();
   const params = useParams<{ id: string }>();
   const { addToCart } = useCart();
-  const { showToast } = useToast();
 
   const t = language === "ko"
     ? {
@@ -216,7 +214,6 @@ export default function ProductDetailPage() {
               const variantId = selectedVariant ?? defaultVariantId ?? "";
               if (variantId) {
                 addToCart(variantId, qty);
-                showToast({ message: `${getProductName(product, language)} agregado`, type: "success" });
               }
             }}
           >
