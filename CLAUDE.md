@@ -4,10 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Aurelia is a bilingual (Spanish/Korean) jewelry e-commerce platform targeting the Argentine market. It is a monorepo with two main parts:
+Aurelia is a bilingual (Spanish/Korean) jewelry e-commerce platform targeting the Argentine market. It is a monorepo with three main applications:
 
-- **Frontend**: Next.js 16 App Router storefront (`/src`)
+- **Frontend**: Next.js 16 App Router storefront + backoffice (`/src`)
 - **Backend**: Medusa 2.x headless commerce (`/backend`)
+- **POS**: Expo 54 / React Native point-of-sale app (`/pos`)
 
 ## Commands
 
@@ -33,15 +34,23 @@ npm run test:integration:http
 
 ### Docker (full stack)
 
+The recommended way to start the stack:
+
+```bash
+./scripts/compose-up.sh   # smart orchestration: selective rebuilds, migrations, env sync
+```
+
+Or individual rebuilds:
+
 ```bash
 docker compose up --build web -d      # rebuild & restart frontend only
 docker compose up --build backend -d  # rebuild & restart backend only
 docker compose up --build -d          # rebuild everything
 ```
 
-The full stack runs at: frontend → `localhost:7358`, backend → `localhost:9000`.
+The full stack runs at: frontend → `localhost:7358`, backend → `localhost:9000`, POS → `localhost:8081`.
 
-> **Note**: The `web` service runs a production Next.js build (no hot reload). After frontend changes, rebuild the container.
+> **Note**: The `web` service runs a production Next.js build (no hot reload). After frontend changes, rebuild the container. After changing any `NEXT_PUBLIC_*` env var, rebuild `web`.
 
 ## Architecture
 
@@ -55,13 +64,19 @@ The full stack runs at: frontend → `localhost:7358`, backend → `localhost:90
     - `checkout-choice-modal.tsx`, `order-summary.tsx`, `field.tsx` — UI components
     - `types.ts`, `translations.ts` — types and i18n strings
 - **Components** in `src/components/`:
+  - `app-chrome.tsx` — main app shell (header, footer, cart drawer, toasts)
   - `cart-provider.tsx` — global cart state and cart context
   - `cart-drawer.tsx` — drawer UI for viewing cart
   - `product-card.tsx` — reusable product display component
+  - `product-quick-view.tsx` — modal for quick product inspection
   - `quantity-selector.tsx` — quantity picker UI
   - `language-provider.tsx` — i18n context (es/ko)
   - `safe-image.tsx` — graceful image fallbacks
-- **Medusa SDK** initialized in `src/lib/medusa.ts`. Requires env vars `NEXT_PUBLIC_MEDUSA_BACKEND_URL`, `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY`, `NEXT_PUBLIC_MEDUSA_REGION_ID`.
+  - `toast-provider.tsx` / `toast-list.tsx` — toast notifications
+- **Hooks** in `src/hooks/`:
+  - `use-favorites.ts` — favorite products (localStorage)
+  - `use-is-mobile.ts` — viewport detection
+- **Medusa SDK** initialized in `src/lib/medusa.ts`. Uses the internal proxy `/api/medusa` (rewritten server-side via `MEDUSA_INTERNAL_BACKEND_URL` in `next.config.ts`); `NEXT_PUBLIC_MEDUSA_BACKEND_URL` falls back to `/api/medusa` if unset.
 - **Product utilities** in `src/lib/shop-data.ts`: category definitions, Spanish/Korean label translations, ARS price formatting.
 - **Path alias**: `@/` → `src/`.
 - **Tests**: Vitest with jsdom; 579+ tests; setup clears localStorage before each test.
@@ -69,16 +84,22 @@ The full stack runs at: frontend → `localhost:7358`, backend → `localhost:90
 ### Backend (`/backend/src`)
 
 - **API routes**:
-  - `api/admin/` — admin endpoints for purchase orders, suppliers, fulfillment, KPIs
+  - `api/admin/purchase/` — suppliers and purchase orders CRUD + lifecycle (submit/receive/cancel)
+  - `api/admin/fulfillment/` — fulfillment lifecycle (pick/pack/dispatch) + KPIs
+  - `api/admin/team-tasks/` — team task board CRUD
+  - `api/admin/whatsapp-notifications/` — WhatsApp eligibility check
   - `api/store/` — storefront endpoints including order notifications
-  - Following Medusa conventions with container DI pattern
-- **Custom modules**: `modules/purchaseDepartment/` — supplier, purchase order, and fulfillment management with write-time cached `fill_rate`
+  - Following Medusa conventions with container DI pattern (`req.scope.resolve("serviceName")`)
+- **Custom modules**:
+  - `modules/purchaseDepartment/` — supplier, purchase order, and fulfillment management with write-time cached `fill_rate`
+  - `modules/taskBoard/` — team task board (title, description, status, priority, area, assignee, due_date); model: `Task`; migration: `Migration20260406000001`
 - **Workflows**:
   - `create-supplier`, `update-supplier` — supplier lifecycle
   - `receive-purchase-order`, `create-purchase-order` — PO management
   - `startPickingWorkflow`, `confirmPackWorkflow`, `dispatchOrderWorkflow` — fulfillment steps
 - **Database models**: `Supplier`, `PurchaseOrder`, `PurchaseOrderItem`, `FulfillmentRecord`, `StockAdjustmentLog` with proper migrations
 - **Subscribers**:
+  - `invite-created.ts` — sends invite email via Resend (`RESEND_API_KEY`, `RESEND_FROM`)
   - `low-stock-check.ts` — monitors stock levels
   - `order-placed.ts` — handles new order events
 - **Jobs**: `packed-not-shipped.ts` — background job for order status monitoring
@@ -90,7 +111,12 @@ The full stack runs at: frontend → `localhost:7358`, backend → `localhost:90
   - `seed-demo-historic.ts` — demo data for testing
   - `cleanup-seeded-orders.ts` — cleanup utility
   - `reset-demo-data.ts` — reset utility
-- **Custom admin UI**: `admin/routes/aurelia-dashboard/page.tsx` — sales analytics dashboard with WhatsApp notification eligibility checks
+- **Custom admin UI** in `admin/routes/`:
+  - `aurelia-dashboard/` — sales analytics dashboard
+  - `purchase/` — purchase orders and suppliers UI
+  - `fulfillment/` — fulfillment orders UI
+  - `team-tasks/` — task board UI
+  - `notifications/` — notification preferences
 - **Tests**: Jest with 172+ unit tests; pattern: `*.unit.spec.ts` inside `__tests__/` directories
 
 ### Medusa Config (`backend/medusa-config.ts`)
@@ -135,8 +161,8 @@ Available gstack skills:
 <!-- AUTO-GENERATED: Last updated from .env.example -->
 
 **Frontend** (`.env.local`):
-- `NEXT_PUBLIC_MEDUSA_BACKEND_URL` — backend API URL
-- `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` — Medusa storefront publishable key
+- `NEXT_PUBLIC_MEDUSA_BACKEND_URL` — optional; defaults to `/api/medusa` (the internal proxy)
+- `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` — Medusa storefront publishable key (auto-synced by `scripts/sync-medusa-env.sh`)
 - `NEXT_PUBLIC_MEDUSA_REGION_ID` — region identifier
 - `NEXT_PUBLIC_MEDUSA_COUNTRY_CODE` — country code (default: `"ar"`)
 - `NEXT_PUBLIC_WHATSAPP_NUMBER` — WhatsApp business number for order notifications
@@ -154,9 +180,12 @@ Available gstack skills:
 - `MEDUSA_ADMIN_EMAIL` — admin user email (default: `admin@aurelia.com`)
 - `MEDUSA_ADMIN_PASSWORD` — admin user password (required)
 - `MEDUSA_ADMIN_URL` — admin UI URL (used in invite emails)
-- `SENDGRID_API_KEY` — SendGrid API key for email delivery
-- `SENDGRID_FROM` — SendGrid sender email address
+- `RESEND_API_KEY` — Resend API key for transactional email (invite-created subscriber)
+- `RESEND_FROM` — sender address for Resend emails (e.g. `Aurelia <invitaciones@...>`)
 - `WHATSAPP_NOTIFICATION_RECIPIENTS` — comma-separated admin emails eligible for WhatsApp notifications
 - `WHATSAPP_NOTIFICATION_ROLES` — comma-separated roles eligible for WhatsApp notifications
+
+**Next.js server-side** (not `NEXT_PUBLIC_*`, not baked into bundle):
+- `MEDUSA_INTERNAL_BACKEND_URL` — URL used by `next.config.ts` to rewrite `/api/medusa` requests server-side (defaults to `http://localhost:9000`)
 
 <!-- AUTO-GENERATED END -->
