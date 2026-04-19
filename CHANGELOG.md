@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.2.0] - 2026-04-19
+
+### Added
+- **TEST-PLAN.md**: rewrote from scratch — removed stale branch reference, added `taskBoard`/`team-tasks` coverage, `invite-created` (Resend) subscriber cases, and concurrency/edge-case scenarios
+- **backend/.env.template**: unblocked from `.gitignore` (was swallowed by `.env*` pattern) so it can now be committed and shared with new devs
+
+### Changed
+- **CLAUDE.md**: added `pos/` (Expo 54) as third monorepo application; documented `taskBoard` module; expanded API route list to include `team-tasks`; added `invite-created` subscriber (Resend); corrected Medusa SDK env var note (uses `/api/medusa` proxy); added `MEDUSA_INTERNAL_BACKEND_URL`; replaced `SENDGRID_*` with `RESEND_*`; added `./scripts/compose-up.sh` as recommended startup command
+- **README.md**: fixed three hardcoded absolute paths (`/home/akwiek/code/ERP/...`) that would break on any machine other than the one that wrote them
+- **VERSION**: bumped `0.2.1.1` → `0.2.2.0` to reflect taskBoard module, Resend migration, and post-Sprint-2.5 work
+
+### Removed
+- **TODOS.md**: deleted — stale sprint planning document last updated 2026-03-24; current sprint state lives in git history and task board
+
 ## [0.2.1.1] - 2026-03-24
 
 ### Fixed

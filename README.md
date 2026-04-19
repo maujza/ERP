@@ -48,7 +48,7 @@ Eso evita rebuilds innecesarios incluso si el árbol de trabajo tiene cambios lo
 
 ## Variables importantes del storefront
 
-El storefront depende de estas variables en [`.env.local`](/home/akwiek/code/ERP/.env.local):
+El storefront depende de estas variables en `.env.local`:
 
 - `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY`
 - `NEXT_PUBLIC_MEDUSA_REGION_ID`
@@ -86,7 +86,7 @@ Tamaños observados luego del ajuste:
 
 ## Seeds y bootstrap
 
-El bootstrap corre en [`backend/src/scripts/bootstrap.ts`](/home/akwiek/code/ERP/backend/src/scripts/bootstrap.ts).
+El bootstrap corre en `backend/src/scripts/bootstrap.ts`.
 
 Hace dos chequeos idempotentes:
 
@@ -110,7 +110,7 @@ Hoy catálogo, búsqueda y destacados cargan productos desde cliente. Eso funcio
 
 ## Despliegue
 
-El workflow de GitHub vive en [`.github/workflows/deploy-to-rpi.yml`](/home/akwiek/code/ERP/.github/workflows/deploy-to-rpi.yml) y delega el levante al mismo `./scripts/compose-up.sh`.
+El workflow de GitHub vive en `.github/workflows/deploy-to-rpi.yml` y delega el levante al mismo `./scripts/compose-up.sh`.
 
 Eso mantiene alineado el flujo local y el de deploy.
 
