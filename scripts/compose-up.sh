@@ -48,7 +48,12 @@ hash_targets() {
 
 hash_backend() {
   find backend \
-    \( -path 'backend/node_modules' -o -path 'backend/.medusa' -o -path 'backend/dist' \) -prune \
+    \( -path 'backend/node_modules' \
+       -o -path 'backend/.medusa' \
+       -o -path 'backend/dist' \
+       -o -name '*.md' \
+       -o -name '*.template' \
+    \) -prune \
     -o -type f -print0 \
     | sort -z \
     | xargs -0 sha256sum \
