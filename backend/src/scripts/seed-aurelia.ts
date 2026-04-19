@@ -66,10 +66,10 @@ export default async function seedAureliaData({ container }: ExecArgs) {
   const existingCurrencies: { currency_code: string; is_default: boolean }[] = (storeData[0] as any)?.supported_currencies ?? [];
   const hasArs = existingCurrencies.some((c) => c.currency_code === "ars");
   if (!hasArs) {
-    // Keep existing currencies; ensure there's always a default (EUR from original seed)
+    // Keep existing currencies; on fresh install default to ARS only
     const currencyList = existingCurrencies.length > 0
       ? [...existingCurrencies.map((c) => ({ currency_code: c.currency_code, is_default: c.is_default })), { currency_code: "ars", is_default: false }]
-      : [{ currency_code: "eur", is_default: true }, { currency_code: "usd", is_default: false }, { currency_code: "ars", is_default: false }];
+      : [{ currency_code: "ars", is_default: true }];
     await updateStoresWorkflow(container).run({
       input: {
         selector: { id: store.id },

@@ -38,10 +38,10 @@ export default async function bootstrap({ container }: ExecArgs) {
   })
 
   if (!defaultSalesChannel) {
-    logger.info("Default sales channel not found. Running base Medusa seed...")
+    logger.info("Default sales channel not found. Running base seed...")
     await seedDemoData({ container, args: [] })
   } else {
-    logger.info("Base Medusa seed already present. Skipping default seed.")
+    logger.info("Base seed already present. Skipping default seed.")
   }
 
   const { data: regions } = await query.graph({
