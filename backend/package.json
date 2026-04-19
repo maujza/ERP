@@ -1,19 +1,20 @@
 {
-  "name": "medusa-starter-default",
+  "name": "aurelia-backend",
   "version": "0.0.1",
-  "description": "A starter for Medusa projects.",
-  "author": "Medusa (https://medusajs.com)",
+  "description": "Aurelia – bijouterie mayorista Argentina, backend Medusa 2.x.",
+  "author": "Aurelia",
   "license": "MIT",
   "keywords": [
-    "sqlite",
     "postgres",
     "typescript",
     "ecommerce",
     "headless",
-    "medusa"
+    "argentina",
+    "aurelia"
   ],
   "scripts": {
-    "build": "medusa build && node ./scripts/patch-admin-branding.mjs",
+    "build": "node ./scripts/patch-dashboard-i18n.mjs && medusa build && node ./scripts/patch-admin-branding.mjs",
+    "postinstall": "node ./scripts/patch-dashboard-i18n.mjs",
     "seed": "medusa exec ./src/scripts/seed.ts",
     "seed:aurelia": "medusa exec ./src/scripts/seed-aurelia.ts",
     "seed:demo": "medusa exec ./src/scripts/seed-demo-historic.ts",
