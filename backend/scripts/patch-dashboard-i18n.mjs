@@ -23,7 +23,7 @@ const replacements = [
   ["Checkout", "Finalizar compra"],
 ]
 
-const files = [
+const translationFiles = [
   "node_modules/@medusajs/dashboard/src/i18n/translations/en.json",
   "node_modules/@medusajs/dashboard/src/i18n/translations/es.json",
 ]
@@ -34,7 +34,7 @@ const replaceAll = (content) =>
     content
   )
 
-for (const relPath of files) {
+for (const relPath of translationFiles) {
   const filePath = path.join(root, relPath)
   if (!fs.existsSync(filePath)) {
     continue
@@ -46,5 +46,33 @@ for (const relPath of files) {
   if (next !== previous) {
     fs.writeFileSync(filePath, next, "utf8")
     console.log(`patched ${relPath}`)
+  }
+}
+
+// Patch compiled dashboard dist to default the UI language to Spanish (es).
+// Wrapped in try/catch so a read-only node_modules (Docker prod builds) doesn't
+// crash the install step — the fallback is the browser language setting.
+const distDir = path.join(root, "node_modules/@medusajs/dashboard/dist")
+if (fs.existsSync(distDir)) {
+  try {
+    const distFiles = fs.readdirSync(distDir).filter((f) => f.endsWith(".mjs") || f.endsWith(".js"))
+    let patched = 0
+    for (const file of distFiles) {
+      const filePath = path.join(distDir, file)
+      const previous = fs.readFileSync(filePath, "utf8")
+      const next = previous
+        .replaceAll('fallbackLng:"en"', 'fallbackLng:"es"')
+        .replaceAll('fallbackLng: "en"', 'fallbackLng: "es"')
+      if (next !== previous) {
+        fs.writeFileSync(filePath, next, "utf8")
+        console.log(`patched fallbackLng → es in ${file}`)
+        patched++
+      }
+    }
+    if (patched === 0) {
+      console.warn("patch-dashboard-i18n: fallbackLng not found in dist — dashboard may have been updated. Admin UI may default to English.")
+    }
+  } catch (err) {
+    console.warn(`patch-dashboard-i18n: could not patch dist (${err.message}) — admin UI may default to English.`)
   }
 }

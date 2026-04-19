@@ -121,9 +121,9 @@ const FulfillmentOrdersPage = () => {
       ),
   })
 
-  // Fetch Medusa orders that are paid and not yet fulfilled, to show "Ready" rows
+  // Fetch orders that are paid and not yet fulfilled, to show "Ready" rows
   const { data: ordersData, isLoading: ordersLoading } = useQuery({
-    queryKey: ["medusa-orders-fulfillable"],
+    queryKey: ["aurelia-orders-fulfillable"],
     queryFn: () =>
       sdk.client.fetch<{ orders: MedusaOrder[]; count: number }>("/admin/orders", {
         query: {

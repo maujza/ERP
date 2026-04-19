@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.3.0] - 2026-04-19
+
+### Changed
+- **backend/package.json**: renamed package from `medusa-starter-default` → `aurelia-backend`; updated author, description, and keywords to reflect Aurelia/Argentina
+- **seed.ts**: renamed default demo products from "Medusa T-Shirt/Sweatshirt/Sweatpants/Shorts" → "Aurelia ..."
+- **seed-aurelia.ts**: fresh-install currency default changed from EUR+USD+ARS → ARS only (correct for Argentine market)
+- **bootstrap.ts**: cleaned up log messages that referenced "Medusa" as a brand
+- **fulfillment/orders/page.tsx**: renamed React Query cache key `medusa-orders-fulfillable` → `aurelia-orders-fulfillable`
+
+### Added
+- **patch-dashboard-i18n.mjs**: now patches the compiled Medusa dashboard dist to set `fallbackLng: "es"` so the admin UI defaults to Spanish for all users regardless of browser language. Wrapped in try/catch for read-only `node_modules` environments (prod Docker). Added no-match warning for future dashboard version upgrades.
+- **backend/package.json** `postinstall` hook: ensures the i18n patch re-applies after every `npm install`
+- **backend/package.json** `build` script: runs i18n patch before `medusa build` so the Spanish default is baked into the admin assets
+
 ## [0.2.2.0] - 2026-04-19
 
 ### Added
