@@ -24,7 +24,11 @@ services:
       sh -c "
         npx medusa db:migrate &&
         npx medusa exec ./src/scripts/bootstrap.ts &&
-        npx medusa user -e ${MEDUSA_ADMIN_EMAIL:-admin@aurelia.com} -p ${MEDUSA_ADMIN_PASSWORD} >/dev/null 2>&1 || true
+        npx medusa user -e ${MEDUSA_ADMIN_EMAIL:-admin@aurelia.com} -p ${MEDUSA_ADMIN_PASSWORD} >/dev/null 2>&1 || true &&
+        if [ \"${SEED_DEMO_DATA:-false}\" = \"true\" ]; then
+          echo 'Seeding demo data...' &&
+          npx medusa exec ./src/scripts/seed-aurelia.ts
+        fi
       "
     environment:
       NODE_ENV: production
@@ -42,6 +46,7 @@ services:
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       RESEND_FROM: ${RESEND_FROM:-Aurelia <invitaciones@mail.aurelia.gleeze.com>}
       MEDUSA_ADMIN_URL: ${MEDUSA_ADMIN_URL:-http://localhost:9000}
+      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-false}
     depends_on:
       db:
         condition: service_healthy
