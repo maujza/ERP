@@ -9,6 +9,24 @@ module.exports = defineConfig({
     { resolve: "./src/modules/purchaseDepartment" },
     { resolve: "./src/modules/taskBoard" },
     {
+      resolve: "@medusajs/medusa/file",
+      options: {
+        providers: [
+          {
+            resolve: "./src/modules/image-upload",
+            id: "r2",
+            options: {
+              bucket: process.env.R2_BUCKET,
+              endpoint: process.env.R2_ENDPOINT,
+              publicUrl: process.env.R2_PUBLIC_URL,
+              accessKeyId: process.env.R2_ACCESS_KEY_ID,
+              secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+            },
+          },
+        ],
+      },
+    },
+    {
       resolve: "@medusajs/medusa/notification",
       options: {
         providers: [

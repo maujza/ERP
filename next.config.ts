@@ -32,6 +32,10 @@ const nextConfig: NextConfig = {
         hostname: "localhost",
         port: "9000",
       },
+      {
+        protocol: "https",
+        hostname: "pub-*.r2.dev",
+      },
     ],
   },
 };

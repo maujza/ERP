@@ -28,7 +28,12 @@ ENV NODE_ENV=production \
     SENDGRID_API_KEY= \
     SENDGRID_FROM=no-reply@aurelia.com \
     RESEND_API_KEY= \
-    RESEND_FROM="Aurelia <invitaciones@mail.aurelia.gleeze.com>"
+    RESEND_FROM="Aurelia <invitaciones@mail.aurelia.gleeze.com>" \
+    R2_BUCKET= \
+    R2_ENDPOINT= \
+    R2_PUBLIC_URL= \
+    R2_ACCESS_KEY_ID= \
+    R2_SECRET_ACCESS_KEY=
 
 RUN node ./scripts/patch-dashboard-i18n.mjs \
   && npm run build \
