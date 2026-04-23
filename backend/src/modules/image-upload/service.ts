@@ -74,23 +74,26 @@ class ImageUploadService extends AbstractFileProviderService {
       )
     }
 
-    let buffer = Buffer.from(file.content, "base64")
+    const raw = Buffer.from(file.content, "base64")
 
     const isGif = file.mimeType === "image/gif"
     const needsProcessing =
       !isGif &&
-      (buffer.byteLength > SIZE_THRESHOLD || (await this.exceedsMaxWidth(buffer)))
+      (raw.byteLength > SIZE_THRESHOLD || (await this.exceedsMaxWidth(raw)))
 
+    let body: Uint8Array
     let mimeType = file.mimeType
     let ext = path.extname(file.filename).replace(".", "") || "jpg"
 
     if (needsProcessing) {
-      buffer = await sharp(buffer)
+      body = await sharp(raw)
         .resize({ width: MAX_WIDTH, withoutEnlargement: true })
         .webp({ quality: WEBP_QUALITY })
         .toBuffer()
       mimeType = "image/webp"
       ext = "webp"
+    } else {
+      body = raw
     }
 
     const key = `${randomUUID()}.${ext}`
@@ -99,7 +102,7 @@ class ImageUploadService extends AbstractFileProviderService {
       new PutObjectCommand({
         Bucket: this.bucket,
         Key: key,
-        Body: buffer,
+        Body: body,
         ContentType: mimeType,
       })
     )
@@ -169,7 +172,7 @@ class ImageUploadService extends AbstractFileProviderService {
     return { writeStream: passThrough, promise, url, fileKey: key }
   }
 
-  private async exceedsMaxWidth(buffer: Buffer): Promise<boolean> {
+  private async exceedsMaxWidth(buffer: Uint8Array): Promise<boolean> {
     try {
       const { width = 0 } = await sharp(buffer).metadata()
       return width > MAX_WIDTH
