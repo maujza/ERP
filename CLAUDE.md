@@ -119,6 +119,10 @@ The full stack runs at: frontend → `localhost:7358`, backend → `localhost:90
   - `notifications/` — notification preferences
 - **Tests**: Jest with 172+ unit tests; pattern: `*.unit.spec.ts` inside `__tests__/` directories
 
+### File Storage (`backend/src/modules/image-upload/`)
+
+Custom Medusa file provider that uploads product images to **Cloudflare R2** (S3-compatible). Sharp processes images before upload: anything >500 KB or >1400 px wide is resized to max 1400 px and converted to WebP at quality 82. GIFs and already-small images are uploaded as-is. Non-image uploads are rejected with a clear error. Configured via `R2_*` env vars; registered in `medusa-config.ts` under `@medusajs/medusa/file`.
+
 ### Medusa Config (`backend/medusa-config.ts`)
 
 Auth uses `emailpass` for both customers and admin users. CORS origins are configured separately for store, admin, and auth endpoints.
@@ -184,6 +188,13 @@ Available gstack skills:
 - `RESEND_FROM` — sender address for Resend emails (e.g. `Aurelia <invitaciones@...>`)
 - `WHATSAPP_NOTIFICATION_RECIPIENTS` — comma-separated admin emails eligible for WhatsApp notifications
 - `WHATSAPP_NOTIFICATION_ROLES` — comma-separated roles eligible for WhatsApp notifications
+- `R2_ACCOUNT_ID` — Cloudflare account ID
+- `R2_ACCESS_KEY_ID` — R2 API token access key
+- `R2_SECRET_ACCESS_KEY` — R2 API token secret key
+- `R2_BUCKET` — R2 bucket name
+- `R2_ENDPOINT` — R2 S3-compatible endpoint (`https://<account-id>.r2.cloudflarestorage.com`)
+- `R2_PUBLIC_URL` — public URL for the bucket (enable "Public Development URL" in R2 settings)
+- `SEED_DEMO_DATA` — set to `true` to seed the demo jewelry catalog on startup (idempotent)
 
 **Next.js server-side** (not `NEXT_PUBLIC_*`, not baked into bundle):
 - `MEDUSA_INTERNAL_BACKEND_URL` — URL used by `next.config.ts` to rewrite `/api/medusa` requests server-side (defaults to `http://localhost:9000`)
