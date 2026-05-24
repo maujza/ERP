@@ -6,13 +6,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Aurelia is a bilingual (Spanish/Korean) jewelry e-commerce platform targeting the Argentine market. It is a monorepo with three main applications:
 
-- **Frontend**: Next.js 16 App Router storefront + backoffice (`/src`)
+- **Frontend**: Next.js 16 App Router storefront + backoffice (`/storefront`)
 - **Backend**: Medusa 2.x headless commerce (`/backend`)
 - **POS**: Expo 54 / React Native point-of-sale app (`/pos`)
 
+See [`docs/local-dev.md`](docs/local-dev.md) for setup and [`docs/deploy.md`](docs/deploy.md) for production.
+
 ## Commands
 
-### Frontend (run from repo root)
+### Frontend (run from `storefront/`)
 
 ```bash
 npm run dev          # local dev server (port 3000)

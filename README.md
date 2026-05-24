@@ -4,10 +4,16 @@ Repositorio monorepo para la operación comercial de Aurelia. El stack combina s
 
 ## Qué incluye
 
-- `./`: storefront y backoffice en Next.js 16.
+- `storefront/`: storefront y backoffice en Next.js 16.
 - `backend/`: backend Medusa v2 con seeds, migraciones y módulo custom `purchaseDepartment`.
 - `pos/`: POS web/mobile basado en Expo.
 - `docker-compose.yml`: stack local con `db`, `backend-init`, `backend`, `web` y `pos`.
+
+## Documentación
+
+- [Guía de desarrollo local](docs/local-dev.md) — setup inicial, modos de trabajo, tests, env files
+- [Guía de despliegue](docs/deploy.md) — producción en RPI, GitHub Actions, rollback
+- [Medusa auth & keys](docs/medusa-auth-keys.md) — publishable key, JWT, diagnóstico post-rebuild
 
 ## Servicios locales
 
