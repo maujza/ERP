@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-ENV_FILE="$ROOT_DIR/.env"
+ENV_FILE="$ROOT_DIR/storefront/.env"
 
 if ! command -v docker >/dev/null 2>&1; then
   echo "docker is required" >&2

@@ -31,9 +31,8 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)
+.env
 .env*
-!.env.example
-!backend/.env.template
 
 # vercel
 .vercel
@@ -45,3 +44,6 @@ backend/.env
 backend/node_modules
 .gstack/
 .deploy-state/
+
+# service-specific env files (gitignored, each service has its own)
+storefront/.env
