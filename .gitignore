@@ -46,4 +46,9 @@ backend/node_modules
 .deploy-state/
 
 # service-specific env files (gitignored, each service has its own)
-storefront/.env
+backend/.env.dev
+storefront/.env.development
+!backend/.env.example
+!backend/.env.dev.example
+!storefront/.env.example
+!storefront/.env.development.example
