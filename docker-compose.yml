@@ -94,11 +94,11 @@ services:
   web:
     image: erp-web:local
     build:
-      context: .
+      context: ./storefront
     ports:
       - "7358:3000"
     env_file:
-      - .env.local
+      - ./storefront/.env.local
     environment:
       - MEDUSA_INTERNAL_BACKEND_URL=http://backend:9000
       - NODE_ENV=production

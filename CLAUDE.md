@@ -145,21 +145,6 @@ Auth uses `emailpass` for both customers and admin users. CORS origins are confi
 - **Component organization**: files under 800 lines; extract utilities and reusable components.
 - **i18n**: bilingual (Spanish/Korean) via `useLanguage` hook and `t` translation object; product metadata fields `name_ko`/`description_ko` for Korean names.
 
-## gstack
-
-Use the `/browse` skill from gstack for **all web browsing**. Never use `mcp__claude-in-chrome__*` tools.
-
-Available gstack skills:
-
-- `/plan-ceo-review` — review a plan from a CEO/product perspective
-- `/plan-eng-review` — review a plan from an engineering perspective
-- `/review` — code review
-- `/ship` — ship a feature end-to-end
-- `/browse` — browse the web with a real browser
-- `/qa` — QA a feature
-- `/setup-browser-cookies` — configure browser session cookies
-- `/retro` — run a retrospective
-
 ## Environment Variables
 
 <!-- AUTO-GENERATED: Last updated from .env.example -->

@@ -29,7 +29,7 @@ describe("patch-dashboard-i18n script", () => {
     fs.writeFileSync(srcEs, '{"label":"Checkout"}', "utf8");
     fs.writeFileSync(distChunk, "checkout", "utf8");
 
-    const scriptPath = path.resolve(process.cwd(), "backend/scripts/patch-dashboard-i18n.mjs");
+    const scriptPath = path.resolve(__dirname, "../../../backend/scripts/patch-dashboard-i18n.mjs");
 
     execFileSync("node", [scriptPath], {
       cwd: tmpDir,
