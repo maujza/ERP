@@ -4,11 +4,8 @@ loadEnv(process.env.NODE_ENV || 'development', process.cwd())
 
 const forceInsecureCookies = process.env.MEDUSA_FORCE_INSECURE_COOKIES === "true"
 
-module.exports = defineConfig({
-  modules: [
-    { resolve: "./src/modules/purchaseDepartment" },
-    { resolve: "./src/modules/taskBoard" },
-    {
+const r2FileModule = process.env.R2_BUCKET
+  ? {
       resolve: "@medusajs/medusa/file",
       options: {
         providers: [
@@ -25,7 +22,14 @@ module.exports = defineConfig({
           },
         ],
       },
-    },
+    }
+  : null
+
+module.exports = defineConfig({
+  modules: [
+    { resolve: "./src/modules/purchaseDepartment" },
+    { resolve: "./src/modules/taskBoard" },
+    ...(r2FileModule ? [r2FileModule] : []),
     {
       resolve: "@medusajs/medusa/notification",
       options: {

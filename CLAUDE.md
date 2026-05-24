@@ -149,7 +149,7 @@ Auth uses `emailpass` for both customers and admin users. CORS origins are confi
 
 <!-- AUTO-GENERATED: Last updated from .env.example -->
 
-**Frontend** (`.env.local`):
+**Frontend** (`storefront/.env` for Docker/prod + `storefront/.env.development` for local dev):
 - `NEXT_PUBLIC_MEDUSA_BACKEND_URL` — optional; defaults to `/api/medusa` (the internal proxy)
 - `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` — Medusa storefront publishable key (auto-synced by `scripts/sync-medusa-env.sh`)
 - `NEXT_PUBLIC_MEDUSA_REGION_ID` — region identifier

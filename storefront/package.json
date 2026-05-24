@@ -11,8 +11,8 @@
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:admin": "vitest run --config vitest.admin.config.ts",
-    "compose:up": "./scripts/compose-up.sh",
-    "medusa:sync-env": "./scripts/sync-medusa-env.sh"
+    "compose:up": "../scripts/compose-up.sh",
+    "medusa:sync-env": "../scripts/sync-medusa-env.sh"
   },
   "dependencies": {
     "@medusajs/js-sdk": "^2.13.1",

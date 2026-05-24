@@ -83,8 +83,7 @@ hash_web() {
     storefront/eslint.config.mjs \
     storefront/Dockerfile \
     storefront/.dockerignore \
-    .env \
-    storefront/.env.local
+    storefront/.env
 }
 
 build_backend_images() {
