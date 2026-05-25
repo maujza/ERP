@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-ENV_FILE="$ROOT_DIR/.env.local"
+ENV_FILE="$ROOT_DIR/storefront/.env.development"
 
 if ! command -v docker >/dev/null 2>&1; then
   echo "docker is required" >&2
@@ -69,6 +69,6 @@ upsert_env_var "NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY" "$PUBLISHABLE_KEY"
 upsert_env_var "NEXT_PUBLIC_MEDUSA_REGION_ID" "$REGION_ID"
 upsert_env_var "NEXT_PUBLIC_MEDUSA_COUNTRY_CODE" "ar"
 
-echo "Synced .env.local"
+echo "Synced storefront/.env.development"
 echo "  NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=${PUBLISHABLE_KEY}"
 echo "  NEXT_PUBLIC_MEDUSA_REGION_ID=${REGION_ID}"

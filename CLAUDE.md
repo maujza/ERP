@@ -6,13 +6,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Aurelia is a bilingual (Spanish/Korean) jewelry e-commerce platform targeting the Argentine market. It is a monorepo with three main applications:
 
-- **Frontend**: Next.js 16 App Router storefront + backoffice (`/src`)
+- **Frontend**: Next.js 16 App Router storefront + backoffice (`/storefront`)
 - **Backend**: Medusa 2.x headless commerce (`/backend`)
 - **POS**: Expo 54 / React Native point-of-sale app (`/pos`)
 
+See [`docs/local-dev.md`](docs/local-dev.md) for setup and [`docs/deploy.md`](docs/deploy.md) for production.
+
 ## Commands
 
-### Frontend (run from repo root)
+### Frontend (run from `storefront/`)
 
 ```bash
 npm run dev          # local dev server (port 3000)
@@ -145,26 +147,11 @@ Auth uses `emailpass` for both customers and admin users. CORS origins are confi
 - **Component organization**: files under 800 lines; extract utilities and reusable components.
 - **i18n**: bilingual (Spanish/Korean) via `useLanguage` hook and `t` translation object; product metadata fields `name_ko`/`description_ko` for Korean names.
 
-## gstack
-
-Use the `/browse` skill from gstack for **all web browsing**. Never use `mcp__claude-in-chrome__*` tools.
-
-Available gstack skills:
-
-- `/plan-ceo-review` — review a plan from a CEO/product perspective
-- `/plan-eng-review` — review a plan from an engineering perspective
-- `/review` — code review
-- `/ship` — ship a feature end-to-end
-- `/browse` — browse the web with a real browser
-- `/qa` — QA a feature
-- `/setup-browser-cookies` — configure browser session cookies
-- `/retro` — run a retrospective
-
 ## Environment Variables
 
 <!-- AUTO-GENERATED: Last updated from .env.example -->
 
-**Frontend** (`.env.local`):
+**Frontend** (`storefront/.env` for Docker/prod + `storefront/.env.development` for local dev):
 - `NEXT_PUBLIC_MEDUSA_BACKEND_URL` — optional; defaults to `/api/medusa` (the internal proxy)
 - `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` — Medusa storefront publishable key (auto-synced by `scripts/sync-medusa-env.sh`)
 - `NEXT_PUBLIC_MEDUSA_REGION_ID` — region identifier

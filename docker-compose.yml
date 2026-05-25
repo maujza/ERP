@@ -30,28 +30,10 @@ services:
           npx medusa exec ./src/scripts/seed-aurelia.ts
         fi
       "
+    env_file: ./backend/.env
     environment:
       NODE_ENV: production
       DATABASE_URL: postgres://medusa:medusa@db:5432/medusa?sslmode=disable
-      STORE_CORS: ${STORE_CORS:-http://localhost:7358,http://127.0.0.1:7358,http://localhost:8081,http://127.0.0.1:8081,http://localhost:9000,http://127.0.0.1:9000,http://pione:7358,http://pione:8081,http://pione:9000}
-      ADMIN_CORS: ${ADMIN_CORS:-http://localhost:8081,http://127.0.0.1:8081,http://localhost:9000,http://127.0.0.1:9000,http://pione:8081,http://pione:9000}
-      AUTH_CORS: ${AUTH_CORS:-http://localhost:7358,http://127.0.0.1:7358,http://localhost:8081,http://127.0.0.1:8081,http://localhost:9000,http://127.0.0.1:9000,http://pione:7358,http://pione:8081,http://pione:9000}
-      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
-      COOKIE_SECRET: ${COOKIE_SECRET:?COOKIE_SECRET is required}
-      MEDUSA_FORCE_INSECURE_COOKIES: ${MEDUSA_FORCE_INSECURE_COOKIES:-true}
-      MEDUSA_ADMIN_EMAIL: ${MEDUSA_ADMIN_EMAIL:-admin@aurelia.com}
-      MEDUSA_ADMIN_PASSWORD: ${MEDUSA_ADMIN_PASSWORD:?MEDUSA_ADMIN_PASSWORD is required}
-      SENDGRID_API_KEY: ${SENDGRID_API_KEY:-}
-      SENDGRID_FROM: ${SENDGRID_FROM:-no-reply@aurelia.com}
-      RESEND_API_KEY: ${RESEND_API_KEY:-}
-      RESEND_FROM: ${RESEND_FROM:-Aurelia <invitaciones@mail.aurelia.gleeze.com>}
-      MEDUSA_ADMIN_URL: ${MEDUSA_ADMIN_URL:-http://localhost:9000}
-      SEED_DEMO_DATA: ${SEED_DEMO_DATA:-false}
-      R2_BUCKET: ${R2_BUCKET:-}
-      R2_ENDPOINT: ${R2_ENDPOINT:-}
-      R2_PUBLIC_URL: ${R2_PUBLIC_URL:-}
-      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
-      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}
     depends_on:
       db:
         condition: service_healthy
@@ -65,27 +47,10 @@ services:
     command: npm run start
     ports:
       - "9000:9000"
+    env_file: ./backend/.env
     environment:
       NODE_ENV: production
       DATABASE_URL: postgres://medusa:medusa@db:5432/medusa?sslmode=disable
-      STORE_CORS: ${STORE_CORS:-http://localhost:7358,http://127.0.0.1:7358,http://localhost:8081,http://127.0.0.1:8081,http://localhost:9000,http://127.0.0.1:9000,http://pione:7358,http://pione:8081,http://pione:9000}
-      ADMIN_CORS: ${ADMIN_CORS:-http://localhost:8081,http://127.0.0.1:8081,http://localhost:9000,http://127.0.0.1:9000,http://pione:8081,http://pione:9000}
-      AUTH_CORS: ${AUTH_CORS:-http://localhost:7358,http://127.0.0.1:7358,http://localhost:8081,http://127.0.0.1:8081,http://localhost:9000,http://127.0.0.1:9000,http://pione:7358,http://pione:8081,http://pione:9000}
-      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
-      COOKIE_SECRET: ${COOKIE_SECRET:?COOKIE_SECRET is required}
-      MEDUSA_FORCE_INSECURE_COOKIES: ${MEDUSA_FORCE_INSECURE_COOKIES:-true}
-      MEDUSA_ADMIN_EMAIL: ${MEDUSA_ADMIN_EMAIL:-admin@aurelia.com}
-      MEDUSA_ADMIN_PASSWORD: ${MEDUSA_ADMIN_PASSWORD:?MEDUSA_ADMIN_PASSWORD is required}
-      SENDGRID_API_KEY: ${SENDGRID_API_KEY:-}
-      SENDGRID_FROM: ${SENDGRID_FROM:-no-reply@aurelia.com}
-      RESEND_API_KEY: ${RESEND_API_KEY:-}
-      RESEND_FROM: ${RESEND_FROM:-Aurelia <invitaciones@mail.aurelia.gleeze.com>}
-      MEDUSA_ADMIN_URL: ${MEDUSA_ADMIN_URL:-http://localhost:9000}
-      R2_BUCKET: ${R2_BUCKET:-}
-      R2_ENDPOINT: ${R2_ENDPOINT:-}
-      R2_PUBLIC_URL: ${R2_PUBLIC_URL:-}
-      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
-      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}
     depends_on:
       db:
         condition: service_healthy
@@ -94,15 +59,14 @@ services:
   web:
     image: erp-web:local
     build:
-      context: .
+      context: ./storefront
     ports:
       - "7358:3000"
-    env_file:
-      - .env.local
+    env_file: ./storefront/.env
     environment:
-      - MEDUSA_INTERNAL_BACKEND_URL=http://backend:9000
-      - NODE_ENV=production
-      - NEXT_TELEMETRY_DISABLED=1
+      MEDUSA_INTERNAL_BACKEND_URL: http://backend:9000
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: "1"
     restart: unless-stopped
     depends_on:
       - backend

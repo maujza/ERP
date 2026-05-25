@@ -21,10 +21,11 @@
     "seed:cleanup-orders": "medusa exec ./src/scripts/cleanup-seeded-orders.ts",
     "seed:reset-demo": "medusa exec ./src/scripts/reset-demo-data.ts",
     "start": "medusa start",
-    "dev": "medusa develop",
+    "dev": "sh -c 'set -a; [ -f .env ] && . ./.env; [ -f .env.dev ] && . ./.env.dev; set +a; exec medusa develop'",
     "test:integration:http": "TEST_TYPE=integration:http NODE_OPTIONS=--experimental-vm-modules jest --silent=false --runInBand --forceExit",
     "test:integration:modules": "TEST_TYPE=integration:modules NODE_OPTIONS=--experimental-vm-modules jest --silent=false --runInBand --forceExit",
-    "test:unit": "TEST_TYPE=unit NODE_OPTIONS=--experimental-vm-modules jest --silent --runInBand --forceExit"
+    "test:unit": "TEST_TYPE=unit NODE_OPTIONS=--experimental-vm-modules jest --silent --runInBand --forceExit",
+    "test:e2e": "playwright test --config=e2e/playwright.config.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.782.0",
@@ -36,6 +37,7 @@
   },
   "devDependencies": {
     "@medusajs/test-utils": "2.13.1",
+    "@playwright/test": "^1.60.0",
     "@swc/core": "^1.7.28",
     "@swc/jest": "^0.2.36",
     "@types/jest": "^29.5.13",

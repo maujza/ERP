@@ -73,18 +73,17 @@ hash_pos() {
 
 hash_web() {
   hash_targets \
-    src \
-    public \
-    package.json \
-    package-lock.json \
-    next.config.ts \
-    tsconfig.json \
-    postcss.config.mjs \
-    eslint.config.mjs \
-    Dockerfile \
-    .dockerignore \
-    .env \
-    .env.local
+    storefront/src \
+    storefront/public \
+    storefront/package.json \
+    storefront/package-lock.json \
+    storefront/next.config.ts \
+    storefront/tsconfig.json \
+    storefront/postcss.config.mjs \
+    storefront/eslint.config.mjs \
+    storefront/Dockerfile \
+    storefront/.dockerignore \
+    storefront/.env
 }
 
 build_backend_images() {
@@ -93,7 +92,7 @@ build_backend_images() {
 }
 
 build_web_image() {
-  docker build -t erp-web:local .
+  docker build -t erp-web:local storefront/
 }
 
 build_pos_image() {

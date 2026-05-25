@@ -11,10 +11,10 @@ A `pk_...` token that the **storefront** sends on every request to identify whic
 
 ### Where it lives
 - **Database** — created automatically during `db:migrate` / seeding, stored in the `api_key` table.
-- **Frontend** — `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` in `.env.local` (and injected into the Docker `web` container at build time).
+- **Frontend** — `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` in `storefront/.env.development` (local dev) or `storefront/.env` (Docker build).
 
 ### The stale-key problem
-Every time the Postgres volume is wiped and the stack is rebuilt, a **new** publishable key is generated. The old value in `.env.local` becomes invalid, causing the storefront to receive `400` on every product fetch and show "0 resultados".
+Every time the Postgres volume is wiped and the stack is rebuilt, a **new** publishable key is generated. The old value in `storefront/.env.development` becomes invalid, causing the storefront to receive `400` on every product fetch and show "0 resultados".
 
 ### How to refresh after a DB rebuild
 
@@ -43,7 +43,7 @@ print('Region ID  :', r['id'])
 print('Region name:', r['name'])
 "
 
-# 4. Update .env.local with the new values, then rebuild the web container
+# 4. Update storefront/.env.development with the new values, then rebuild the web container
 docker compose up --build web -d
 ```
 
@@ -115,8 +115,8 @@ Like the publishable key, it is regenerated on every fresh DB build.
 
 | # | What to update | Where |
 |---|----------------|-------|
-| 1 | `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` | `.env.local` |
-| 2 | `NEXT_PUBLIC_MEDUSA_REGION_ID` | `.env.local` |
+| 1 | `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` | `storefront/.env.development` |
+| 2 | `NEXT_PUBLIC_MEDUSA_REGION_ID` | `storefront/.env.development` |
 | 3 | Rebuild web container | `docker compose up --build web -d` |
 
 The backend does **not** need a rebuild — it reads secrets from environment variables, not from the DB.
@@ -128,7 +128,7 @@ The backend does **not** need a rebuild — it reads secrets from environment va
 ```bash
 # Is the key valid?
 curl -s "http://localhost:9000/store/products?limit=1" \
-  -H "x-publishable-api-key: $(grep PUBLISHABLE .env.local | cut -d= -f2)" | python3 -c "import sys,json; d=json.load(sys.stdin); print('OK, count=' + str(d.get('count','?')) if 'count' in d else 'FAIL: ' + d.get('message','?'))"
+  -H "x-publishable-api-key: $(grep PUBLISHABLE storefront/.env.development | cut -d= -f2)" | python3 -c "import sys,json; d=json.load(sys.stdin); print('OK, count=' + str(d.get('count','?')) if 'count' in d else 'FAIL: ' + d.get('message','?'))"
 
 # Can admin authenticate?
 curl -s -X POST http://localhost:9000/auth/user/emailpass \

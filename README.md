@@ -4,10 +4,16 @@ Repositorio monorepo para la operación comercial de Aurelia. El stack combina s
 
 ## Qué incluye
 
-- `./`: storefront y backoffice en Next.js 16.
+- `storefront/`: storefront y backoffice en Next.js 16.
 - `backend/`: backend Medusa v2 con seeds, migraciones y módulo custom `purchaseDepartment`.
 - `pos/`: POS web/mobile basado en Expo.
 - `docker-compose.yml`: stack local con `db`, `backend-init`, `backend`, `web` y `pos`.
+
+## Documentación
+
+- [Guía de desarrollo local](docs/local-dev.md) — setup inicial, modos de trabajo, tests, env files
+- [Guía de despliegue](docs/deploy.md) — producción en RPI, GitHub Actions, rollback
+- [Medusa auth & keys](docs/medusa-auth-keys.md) — publishable key, JWT, diagnóstico post-rebuild
 
 ## Servicios locales
 
@@ -32,7 +38,7 @@ Ese script hace lo siguiente:
 1. levanta PostgreSQL
 2. construye solo las imágenes que cambiaron
 3. corre `backend-init` para migraciones y bootstrap
-4. resincroniza `.env.local` con publishable key + región actual
+4. resincroniza `storefront/.env.development` con publishable key + región actual
 5. recompila `web` solo si cambió su fingerprint
 6. levanta `backend`, `web` y `pos`
 
@@ -48,7 +54,7 @@ Eso evita rebuilds innecesarios incluso si el árbol de trabajo tiene cambios lo
 
 ## Variables importantes del storefront
 
-El storefront depende de estas variables en `.env.local`:
+El storefront depende de estas variables en `storefront/.env` (Docker/prod) o `storefront/.env.development` (local dev):
 
 - `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY`
 - `NEXT_PUBLIC_MEDUSA_REGION_ID`
@@ -119,7 +125,7 @@ Eso mantiene alineado el flujo local y el de deploy.
 - Storefront sin productos:
   suele ser una publishable key/región desactualizada o un bundle de `web` viejo.
 
-- Cambié `.env.local` y no impactó:
+- Cambié `storefront/.env` y no impactó:
   si tocaste una variable `NEXT_PUBLIC_*`, rebuild de `web`.
 
 - El backend tarda mucho en frío:
