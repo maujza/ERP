@@ -15,18 +15,33 @@ test.describe("Home page", () => {
   });
 
   test("featured products load", async ({ page }) => {
-    // products fetched client-side — wait for at least one card to appear
     const productCards = page.locator("a[href^='/product/']");
     await expect(productCards.first()).toBeVisible({ timeout: 10000 });
     expect(await productCards.count()).toBeGreaterThan(0);
   });
 
-  test("language toggle is available", async ({ page }) => {
-    // Language toggle lives in the mobile side-menu; open it and click
+  test("language toggle switches to Korean", async ({ page }) => {
     await page.getByRole("button", { name: /abrir menú/i }).click();
     const toggle = page.getByRole("button", { name: "한국어" });
     await expect(toggle).toBeVisible({ timeout: 3000 });
     await toggle.click();
     await expect(page.getByRole("button", { name: "Español" })).toBeVisible({ timeout: 3000 });
+  });
+
+  test("footer is visible", async ({ page }) => {
+    const footer = page.locator("footer");
+    await expect(footer).toBeVisible({ timeout: 5000 });
+  });
+
+  test("featured product cards link to product pages", async ({ page }) => {
+    const firstCard = page.locator("a[href^='/product/']").first();
+    await expect(firstCard).toBeVisible({ timeout: 10000 });
+    const href = await firstCard.getAttribute("href");
+    expect(href).toMatch(/^\/product\/.+/);
+  });
+
+  test("cart icon is visible in header", async ({ page }) => {
+    const cartBtn = page.locator("header").getByRole("button", { name: /carrito|cart/i });
+    await expect(cartBtn).toBeVisible({ timeout: 5000 });
   });
 });
