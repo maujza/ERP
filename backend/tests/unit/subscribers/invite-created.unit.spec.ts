@@ -56,7 +56,26 @@ const validInvite: InviteRecord = {
 // ─── tests ───────────────────────────────────────────────────────────────────
 
 describe("inviteCreatedHandler", () => {
-  describe("happy path", () => {
+  // Resend is disabled for these tests so the code falls through to the
+  // Medusa notification module — which is what the mock verifies.
+  let savedResendKey: string | undefined
+  let savedResendFrom: string | undefined
+
+  beforeEach(() => {
+    savedResendKey = process.env.RESEND_API_KEY
+    savedResendFrom = process.env.RESEND_FROM
+    delete process.env.RESEND_API_KEY
+    delete process.env.RESEND_FROM
+  })
+
+  afterEach(() => {
+    if (savedResendKey !== undefined) process.env.RESEND_API_KEY = savedResendKey
+    else delete process.env.RESEND_API_KEY
+    if (savedResendFrom !== undefined) process.env.RESEND_FROM = savedResendFrom
+    else delete process.env.RESEND_FROM
+  })
+
+  describe("notification module fallback (Resend not configured)", () => {
     it("calls createNotifications once when invite is found", async () => {
       const { container, createNotifications } = makeContainer({ invite: validInvite })
       await run(container)
@@ -99,6 +118,47 @@ describe("inviteCreatedHandler", () => {
       const call = createNotifications.mock.calls[0][0]
       expect(call.content.html).toMatch(/\/app\/invite\?token=/)
     })
+
+    it("propagates errors thrown by createNotifications", async () => {
+      const { container, createNotifications } = makeContainer({ invite: validInvite })
+      createNotifications.mockRejectedValueOnce(new Error("SendGrid unavailable"))
+      await expect(run(container)).rejects.toThrow("SendGrid unavailable")
+    })
+  })
+
+  describe("Resend path (RESEND_API_KEY + RESEND_FROM configured)", () => {
+    beforeEach(() => {
+      process.env.RESEND_API_KEY = "re_test_key"
+      process.env.RESEND_FROM = "noreply@aurelia.com"
+    })
+
+    it("does not call createNotifications when Resend succeeds", async () => {
+      global.fetch = jest.fn().mockResolvedValue({ ok: true }) as any
+      const { container, createNotifications } = makeContainer({ invite: validInvite })
+      await run(container)
+      expect(createNotifications).not.toHaveBeenCalled()
+    })
+
+    it("calls Resend API with correct recipient and subject", async () => {
+      global.fetch = jest.fn().mockResolvedValue({ ok: true }) as any
+      const { container } = makeContainer({ invite: validInvite })
+      await run(container)
+      const [url, opts] = (global.fetch as jest.Mock).mock.calls[0]
+      expect(url).toBe("https://api.resend.com/emails")
+      const body = JSON.parse(opts.body)
+      expect(body.to).toContain("staff@aurelia.com")
+      expect(body.subject).toContain("invitaron")
+    })
+
+    it("throws when Resend returns a non-ok response", async () => {
+      global.fetch = jest.fn().mockResolvedValue({
+        ok: false,
+        status: 500,
+        text: jest.fn().mockResolvedValue("Internal Server Error"),
+      }) as any
+      const { container } = makeContainer({ invite: validInvite })
+      await expect(run(container)).rejects.toThrow("Resend invite email failed")
+    })
   })
 
   describe("when invite is not found", () => {
@@ -118,12 +178,6 @@ describe("inviteCreatedHandler", () => {
   })
 
   describe("error handling", () => {
-    it("propagates errors thrown by createNotifications", async () => {
-      const { container, createNotifications } = makeContainer({ invite: validInvite })
-      createNotifications.mockRejectedValueOnce(new Error("SendGrid unavailable"))
-      await expect(run(container)).rejects.toThrow("SendGrid unavailable")
-    })
-
     it("propagates errors thrown by query.graph", async () => {
       const container = {
         resolve: jest.fn(() => ({
