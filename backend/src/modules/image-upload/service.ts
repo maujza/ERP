@@ -1,15 +1,58 @@
+/**
+ * service.ts — Cloudflare R2 image upload provider for Medusa
+ *
+ * This class implements Medusa's file provider contract so that product image
+ * uploads go to Cloudflare R2 (an S3-compatible object store) instead of the
+ * local filesystem.
+ *
+ * Before uploading, images pass through a Sharp processing pipeline:
+ *   - GIFs are uploaded as-is (Sharp cannot re-encode animated GIFs)
+ *   - Any image over 500 KB or wider than 1400 px is resized and converted
+ *     to WebP at quality 82 — reducing bandwidth without visible quality loss
+ *   - Non-image files (PDF, video, etc.) are rejected with a clear error
+ *
+ * Required env vars (set via medusa-config.ts → r2FileModule options):
+ *   R2_BUCKET, R2_ENDPOINT, R2_PUBLIC_URL, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY
+ */
+
+// AbstractFileProviderService — Medusa's base class for file providers.
+//   Subclassing it registers this class as a valid provider in Medusa's file module.
+//   We must implement: upload, delete, getPresignedDownloadUrl, getDownloadStream, getUploadStream
 import { AbstractFileProviderService } from "@medusajs/framework/utils"
+
+// FileTypes — TypeScript type definitions for file provider method parameters and return values
 import { FileTypes } from "@medusajs/framework/types"
+
+// MedusaError — Medusa's standard error class. Throwing it sends a structured JSON
+//   error response to the API client with an appropriate HTTP status code.
 import { MedusaError } from "@medusajs/framework/utils"
+
+// AWS SDK v3 — Cloudflare R2 is S3-compatible, so the standard AWS S3 client works.
+//   S3Client           — HTTP client that signs requests with AWS Signature v4 and sends them to R2
+//   PutObjectCommand   — upload (create or overwrite) a file in the bucket
+//   DeleteObjectCommand — remove a file from the bucket
+//   GetObjectCommand   — download a file from the bucket as a stream
 import {
   S3Client,
   PutObjectCommand,
   DeleteObjectCommand,
   GetObjectCommand,
 } from "@aws-sdk/client-s3"
+
+// sharp — high-performance image processing library (resize, convert formats, read metadata)
+//   Used here to downscale large images and convert them to WebP before upload
 import sharp from "sharp"
+
+// Node.js built-in stream types:
+//   Readable    — a stream you can read data from (used when downloading files)
+//   PassThrough — a stream that passes data through unchanged (used for streaming uploads)
+//   Writable    — a stream you can write data to (exposed to callers for streaming uploads)
 import { Readable, PassThrough, Writable } from "stream"
+
+// randomUUID — generates a unique v4 UUID used as the storage key / filename in R2
 import { randomUUID } from "crypto"
+
+// path — Node.js built-in for manipulating file paths and extracting extensions
 import path from "path"
 
 const SUPPORTED_TYPES = new Set([

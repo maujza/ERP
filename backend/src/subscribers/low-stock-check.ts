@@ -1,5 +1,28 @@
+/**
+ * low-stock-check.ts — Subscriber: sends an in-app alert when a product variant runs low on stock
+ *
+ * Listens for "inventory.updated" events, which Medusa emits whenever inventory
+ * levels change (sales, manual adjustments, receiving purchase orders, etc.).
+ *
+ * If stocked_quantity drops to or below LOW_STOCK_THRESHOLD (default: 5 units),
+ * it sends an in-app "feed" notification to all admin users with the
+ * "purchasing" or "inventory" role.
+ *
+ * All errors are silently logged — a missed stock alert must never crash an
+ * inventory update operation.
+ *
+ * Optional env var: LOW_STOCK_THRESHOLD (integer, default 5)
+ */
+
+// SubscriberArgs, SubscriberConfig — Medusa event bus types (see invite-created.ts for details)
 import { SubscriberArgs, SubscriberConfig } from "@medusajs/framework"
+
+// Modules — enum of Medusa built-in module keys; used to resolve services from the DI container
+//   Modules.INVENTORY — resolves the inventory service (stock level queries)
+//   Modules.NOTIFICATION — resolves the notification module (sends alerts)
 import { Modules } from "@medusajs/framework/utils"
+
+// getRecipientsByRole — looks up admin user IDs that hold a given role (cached for 60 s)
 import { getRecipientsByRole } from "../lib/notification-recipients"
 
 // Default threshold (units). Override via LOW_STOCK_THRESHOLD env var.

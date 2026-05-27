@@ -1,4 +1,28 @@
+# docker-compose.yml — Full stack orchestration for local development and production
+#
+# Services and startup order:
+#   db → backend-init → backend → web / pos
+#
+# To start everything:
+#   ./scripts/compose-up.sh        # smart script with selective rebuilds
+#   docker compose up --build -d   # rebuild and start all services
+#
+# Useful individual rebuilds:
+#   docker compose up --build backend -d   # rebuild only the Medusa backend
+#   docker compose up --build web -d       # rebuild only the Next.js storefront
+#
+# Ports exposed on the host machine:
+#   5433 → PostgreSQL (connect with: psql postgres://medusa:medusa@localhost:5433/medusa)
+#   9000 → Medusa backend API + admin UI
+#   7358 → Next.js storefront (production build, no hot reload)
+#   8081 → POS web app
+
 services:
+
+  # ── db ──────────────────────────────────────────────────────────────────────
+  # PostgreSQL 16 database shared by the backend and backend-init services.
+  # Data is persisted in the `postgres_data` named volume (survives container restarts).
+  # The healthcheck ensures dependent services only start once Postgres accepts connections.
   db:
     image: postgres:16
     environment:
@@ -6,7 +30,7 @@ services:
       POSTGRES_USER: medusa
       POSTGRES_PASSWORD: medusa
     ports:
-      - "5433:5432"
+      - "5433:5432"   # host:container — 5433 avoids conflict with a local Postgres on 5432
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -15,11 +39,20 @@ services:
       timeout: 5s
       retries: 20
 
+  # ── backend-init ─────────────────────────────────────────────────────────────
+  # One-shot initialization container — runs once on every `docker compose up`, then exits.
+  # Uses the same image as `backend` but runs migrations and seed scripts instead of the server.
+  #
+  # What it does (in order):
+  #   1. npx medusa db:migrate       — applies any pending database migrations
+  #   2. npx medusa exec bootstrap   — creates sales channels, regions, etc. (idempotent)
+  #   3. medusa user -e ... -p ...   — creates/updates the admin user (|| true = safe if exists)
+  #   4. seed-aurelia.ts             — seeds demo jewelry catalog (only if SEED_DEMO_DATA=true)
   backend-init:
     image: erp-backend-init:local
     build:
       context: ./backend
-      target: builder
+      target: builder   # "builder" Dockerfile stage includes dev tools like npx
     command: >
       sh -c "
         npx medusa db:migrate &&
@@ -30,20 +63,27 @@ services:
           npx medusa exec ./src/scripts/seed-aurelia.ts
         fi
       "
-    env_file: ./backend/.env
+    env_file: ./backend/.env   # reads secrets like JWT_SECRET, COOKIE_SECRET, etc.
     environment:
       NODE_ENV: production
+      # Override DATABASE_URL to use the Docker-internal hostname "db" (not localhost)
       DATABASE_URL: postgres://medusa:medusa@db:5432/medusa?sslmode=disable
     depends_on:
       db:
-        condition: service_healthy
-    restart: "no"
+        condition: service_healthy   # wait for Postgres healthcheck before running
+    restart: "no"   # run once and exit — do not restart on failure
 
+  # ── backend ──────────────────────────────────────────────────────────────────
+  # The Medusa headless commerce API server.
+  # Exposes port 9000 for:
+  #   - Store API:  http://localhost:9000/store/*
+  #   - Admin API:  http://localhost:9000/admin/*
+  #   - Admin UI:   http://localhost:9000/app (Medusa's built-in admin dashboard)
   backend:
     image: erp-backend:local
     build:
       context: ./backend
-      target: runner
+      target: runner   # "runner" stage is a slimmer production image without build tools
     command: npm run start
     ports:
       - "9000:9000"
@@ -54,23 +94,35 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    restart: unless-stopped
+    restart: unless-stopped   # restart automatically on crash or host reboot
 
+  # ── web ──────────────────────────────────────────────────────────────────────
+  # The Next.js storefront (customer-facing shop + backoffice UI).
+  # Runs a production build — there is NO hot reload. After changing storefront code,
+  # rebuild with: docker compose up --build web -d
+  #
+  # MEDUSA_INTERNAL_BACKEND_URL is the Docker-internal hostname so Next.js's
+  # server-side /api/medusa proxy rewrite reaches the backend without going
+  # through the host machine's localhost.
   web:
     image: erp-web:local
     build:
       context: ./storefront
     ports:
-      - "7358:3000"
+      - "7358:3000"   # storefront accessible at http://localhost:7358
     env_file: ./storefront/.env
     environment:
+      # Docker-internal URL used by Next.js's server-side /api/medusa proxy rewrite
       MEDUSA_INTERNAL_BACKEND_URL: http://backend:9000
       NODE_ENV: production
-      NEXT_TELEMETRY_DISABLED: "1"
+      NEXT_TELEMETRY_DISABLED: "1"   # opt out of Next.js anonymous usage telemetry
     restart: unless-stopped
     depends_on:
       - backend
 
+  # ── pos ──────────────────────────────────────────────────────────────────────
+  # The Expo/React Native point-of-sale app compiled for web.
+  # Accessible at http://localhost:8081
   pos:
     image: erp-pos:local
     build:
@@ -83,4 +135,6 @@ services:
       - backend
 
 volumes:
+  # Named volume — stores Postgres data files outside the container so data
+  # persists across `docker compose down` and container rebuilds.
   postgres_data:

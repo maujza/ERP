@@ -2,26 +2,7 @@ import { AuthenticatedMedusaRequest, MedusaResponse } from "@medusajs/framework/
 import { TASK_BOARD_MODULE } from "../../../modules/taskBoard"
 import TaskBoardModuleService from "../../../modules/taskBoard/service"
 import { type CreateTaskSchema } from "../../middlewares"
-import { type TaskStatus } from "../../../lib/task-board"
-
-function normalizeDate(value?: string | null): Date | null | undefined {
-  if (value === undefined) return undefined
-  if (value === null) return null
-  return new Date(value)
-}
-
-async function getNextPosition(
-  taskBoardService: TaskBoardModuleService,
-  status: TaskStatus
-): Promise<number> {
-  const tasks = await taskBoardService.listTasks({ status })
-  const maxPosition = tasks.reduce((max, task) => {
-    const current = typeof task.position === "number" ? task.position : 0
-    return Math.max(max, current)
-  }, -1)
-
-  return maxPosition + 1
-}
+import { normalizeDate, getNextPosition } from "../../../lib/task-board-helpers"
 
 export async function GET(
   req: AuthenticatedMedusaRequest,
@@ -72,4 +53,3 @@ export async function POST(
 
   res.status(201).json({ task })
 }
-

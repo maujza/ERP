@@ -1,4 +1,28 @@
+/**
+ * invite-created.ts — Subscriber: sends an invitation email when an admin user is invited
+ *
+ * A "subscriber" in Medusa is a background event handler. Medusa emits events after
+ * certain actions (e.g., creating an invite) and subscribers run asynchronously —
+ * the API response is already sent before this code runs.
+ *
+ * This subscriber fires on two events:
+ *   - "invite.created" — a new invite was just created via the admin UI
+ *   - "invite.resent"  — an existing invite was resent
+ *
+ * Email delivery strategy (tried in order):
+ *   1. Resend HTTP API — used if RESEND_API_KEY and RESEND_FROM are set in .env
+ *   2. Medusa Notification module (e.g., SendGrid) — fallback if Resend is not configured
+ *
+ * Required env vars: MEDUSA_ADMIN_URL (for the invite link), RESEND_API_KEY, RESEND_FROM
+ */
+
+// SubscriberArgs — the typed argument object Medusa injects into every subscriber function:
+//   { event: { data: T }, container }  where `container` is the DI service locator
+// SubscriberConfig — the exported config object that tells Medusa which event(s) to listen for
 import { SubscriberArgs, SubscriberConfig } from "@medusajs/framework"
+
+// Modules — an enum of Medusa's built-in module keys
+//   Modules.NOTIFICATION resolves the notification module (email/feed/SMS provider hub)
 import { Modules } from "@medusajs/framework/utils"
 
 type InviteRecord = {

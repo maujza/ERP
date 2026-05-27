@@ -1,6 +1,7 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 import { getRecipientsByRole } from "../../../lib/notification-recipients"
+import { isMissingFeedProviderError, ROLES } from "../../../lib/notification-helpers"
 
 type NotifyAgentBody = {
   order_id?: string
@@ -13,17 +14,10 @@ type OrderRecord = {
   customer_id?: string | null
 }
 
-const CUSTOMER_SERVICE_ROLE = "customer_service"
-
 // Simple in-memory rate limiter: max 3 requests per order_id per hour
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
 const RATE_LIMIT_MAX = 3
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000
-
-function isMissingFeedProviderError(error: unknown): boolean {
-  return error instanceof Error &&
-    error.message.includes("Could not find a notification provider for channel: feed")
-}
 
 /** Clear the rate limit state. Intended for use in tests only. */
 export function clearRateLimitForTesting(): void {
@@ -38,7 +32,7 @@ function checkRateLimit(key: string): boolean {
     return true
   }
   if (entry.count >= RATE_LIMIT_MAX) return false
-  entry.count++
+  rateLimitMap.set(key, { ...entry, count: entry.count + 1 })
   return true
 }
 
@@ -95,7 +89,7 @@ export async function POST(req: MedusaRequest, res: MedusaResponse) {
 
   const csUserIds = await getRecipientsByRole(
     req.scope as Parameters<typeof getRecipientsByRole>[0],
-    [CUSTOMER_SERVICE_ROLE]
+    [ROLES.CUSTOMER_SERVICE]
   )
 
   const recipients = csUserIds.length > 0 ? csUserIds : ["system"]

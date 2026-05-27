@@ -1,3 +1,25 @@
+/**
+ * shop-data.ts — Product data types, catalog constants, and mapping utilities
+ *
+ * This file is the bridge between the raw Medusa API response and the simplified
+ * Product shape used throughout the storefront UI. It contains no SDK calls —
+ * it is pure data transformation and static catalog configuration.
+ *
+ * Key exports:
+ *   Product / ProductVariant — TypeScript types for the UI-layer product object
+ *   navCategories / subcategories / brands — static filter lists shown in the sidebar
+ *   mapMedusaProduct    — converts a raw Medusa API product into a Product
+ *   formatArs           — formats a number as Argentine Peso (ARS) currency string
+ *   translateLabel      — returns the Spanish or Korean version of a category label
+ *   getProductName /
+ *   getProductDescription — language-aware accessors (reads nameKo/descriptionKo from metadata)
+ *   isJewelryProduct    — filters out non-jewelry items (e.g., branded merch)
+ *   calculateDiscountPercent — computes % off given original vs. sale price
+ *
+ * Korean product names/descriptions come from Medusa product metadata fields:
+ *   metadata.name_ko and metadata.description_ko — set these in the Medusa admin panel.
+ */
+
 // Typed subset of the Medusa store product response used by mapMedusaProduct.
 // Fields match what is requested via the `fields` query param in product list calls.
 type MedusaProductVariant = {
