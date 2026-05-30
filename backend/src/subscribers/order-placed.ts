@@ -1,19 +1,34 @@
+/**
+ * order-placed.ts — Subscriber: notifies customer-service staff when a WhatsApp order arrives
+ *
+ * Listens for the "order.placed" event. Only acts when the order has
+ * `metadata.whatsapp_required = true`, which is set during checkout when the
+ * customer chooses "pay via WhatsApp" instead of a card.
+ *
+ * Sends an in-app feed notification to every admin user with the
+ * "customer_service" role so they know to follow up via WhatsApp.
+ *
+ * If no feed notification provider is configured (common in fresh installs),
+ * the error is logged as a warning instead of crashing.
+ */
+
+// SubscriberArgs, SubscriberConfig — Medusa event bus types (see invite-created.ts for details)
 import { SubscriberArgs, SubscriberConfig } from "@medusajs/framework"
+
+// ContainerRegistrationKeys — named constants for Medusa's built-in DI container keys
+//   e.g., ContainerRegistrationKeys.LOGGER resolves the server logger
+// Modules — enum of Medusa module keys (Modules.NOTIFICATION = notification module)
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
+
+// getRecipientsByRole — returns admin user IDs matching a given role (cached 60 s)
 import { getRecipientsByRole } from "../lib/notification-recipients"
+import { isMissingFeedProviderError, ROLES } from "../lib/notification-helpers"
 
 type OrderRecord = {
   id: string
   display_id?: number
   email?: string
   metadata?: Record<string, unknown>
-}
-
-const CUSTOMER_SERVICE_ROLE = "customer_service"
-
-function isMissingFeedProviderError(error: unknown): boolean {
-  return error instanceof Error &&
-    error.message.includes("Could not find a notification provider for channel: feed")
 }
 
 export default async function orderPlacedHandler({
@@ -35,7 +50,7 @@ export default async function orderPlacedHandler({
 
   const csUserIds = await getRecipientsByRole(
     container as Parameters<typeof getRecipientsByRole>[0],
-    [CUSTOMER_SERVICE_ROLE]
+    [ROLES.CUSTOMER_SERVICE]
   )
 
   const phone = order.metadata.customer_phone as string | undefined

@@ -1,4 +1,5 @@
 import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk"
+import { MedusaContainer } from "@medusajs/framework/types"
 import { MedusaError } from "@medusajs/framework/utils"
 import { PURCHASE_DEPARTMENT_MODULE } from "../../modules/purchaseDepartment"
 import PurchaseDepartmentModuleService from "../../modules/purchaseDepartment/service"
@@ -8,7 +9,7 @@ type CompensationData = { order_id: string }
 
 export async function submitOrderHandler(
   input: Input,
-  { container }: { container: any }
+  { container }: { container: MedusaContainer }
 ) {
   const purchaseService = container.resolve(
     PURCHASE_DEPARTMENT_MODULE
@@ -33,7 +34,7 @@ export async function submitOrderHandler(
 
 async function compensateSubmitOrder(
   data: CompensationData | undefined,
-  { container }: { container: any }
+  { container }: { container: MedusaContainer }
 ) {
   if (!data) return
   const purchaseService = container.resolve(

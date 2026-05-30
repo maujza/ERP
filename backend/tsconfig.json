@@ -1,29 +1,49 @@
 {
+  // TypeScript compiler settings for the Medusa backend.
+  // TypeScript reads this file automatically when you run tsc or ts-node.
   "compilerOptions": {
+    // Compile down to ES2021 syntax — supported by Node.js 16+ without polyfills
     "target": "ES2021",
+    // esModuleInterop — lets you write `import Foo from 'foo'` for CommonJS modules
+    //   (without this you'd need `import * as Foo from 'foo'` for non-ESM packages)
     "esModuleInterop": true,
+    // Use Node16 module format — supports both require() and ESM import statements
     "module": "Node16",
     "moduleResolution": "Node16",
+    // emitDecoratorMetadata + experimentalDecorators — required for Medusa's data model
+    //   decorators (e.g., @Entity(), @Column()). Without these, DI and ORM annotations fail.
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
+    // Skip type-checking third-party .d.ts files — dramatically speeds up compilation
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
+    // Don't generate .d.ts declaration files (not needed for an application, only for libraries)
     "declaration": false,
+    // Inline source maps inside the JS output instead of separate .map files
     "sourceMap": false,
     "inlineSourceMap": true,
+    // Compiled JS goes into .medusa/server/ (where Medusa's start script looks for it)
     "outDir": "./.medusa/server",
     "rootDir": "./",
+    // jsx: react-jsx — transforms JSX in admin UI widgets without needing `import React`
     "jsx": "react-jsx",
+    // Prevent bugs on case-insensitive filesystems (macOS) from silently breaking Linux builds
     "forceConsistentCasingInFileNames": true,
+    // Allow importing JSON files with `import data from './data.json'`
     "resolveJsonModule": true,
+    // Don't type-check plain .js files (only .ts files)
     "checkJs": false,
+    // Catch null/undefined bugs at compile time — recommended for all new TypeScript projects
     "strictNullChecks": true
   },
   "ts-node": {
+    // Use SWC (Rust-based transpiler) instead of the TypeScript compiler for ts-node —
+    // much faster for running scripts like seed files and migrations
     "swc": true
   },
   "include": [
     "**/*",
+    // Include Medusa's generated type stubs (created by `medusa build`)
     ".medusa/types/*"
   ],
   "exclude": [

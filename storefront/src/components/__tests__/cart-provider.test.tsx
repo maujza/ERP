@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, act, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, renderHook, act, waitFor } from "@testing-library/react";
 import React from "react";
 
 // ─── hoisted mocks (must be defined before vi.mock factory runs) ──────────────
 
-const { mockPush, mockCartApi } = vi.hoisted(() => {
+const { mockPush, mockCartApi, mockCustomerRetrieve } = vi.hoisted(() => {
   const mockPush = vi.fn();
   const mockCartApi = {
     retrieve: vi.fn(),
@@ -13,7 +13,8 @@ const { mockPush, mockCartApi } = vi.hoisted(() => {
     updateLineItem: vi.fn(),
     deleteLineItem: vi.fn(),
   };
-  return { mockPush, mockCartApi };
+  const mockCustomerRetrieve = vi.fn();
+  return { mockPush, mockCartApi, mockCustomerRetrieve };
 });
 
 // ─── module mocks ─────────────────────────────────────────────────────────────
@@ -22,11 +23,15 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush }),
 }));
 
+vi.mock("next/image", () => ({
+  default: ({ src, alt }: { src: string; alt: string }) => <img src={src} alt={alt} />,
+}));
+
 vi.mock("@/lib/medusa", () => ({
   sdk: {
     store: {
       cart: mockCartApi,
-      customer: { retrieve: vi.fn() },
+      customer: { retrieve: mockCustomerRetrieve },
     },
   },
   MEDUSA_COUNTRY_CODE: "ar",
@@ -75,6 +80,11 @@ import { CartProvider, useCart } from "../cart-provider";
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
 const CART_ID_KEY = "aurelia-cart-id";
+
+function DrawerHarness() {
+  const { openDrawer } = useCart();
+  return <button type="button" onClick={openDrawer}>Open Drawer</button>;
+}
 
 function makeRawItem(overrides: Record<string, unknown> = {}) {
   return {
@@ -479,5 +489,139 @@ describe("CartProvider – removeFromCart", () => {
     });
 
     expect(result.current.cartId).toBeNull();
+  });
+
+  it("leaves other items intact", async () => {
+    localStorage.setItem(CART_ID_KEY, "cart_01");
+    const items = [
+      makeRawItem({ id: "item_01", variant_id: "var_01", title: "Ring", quantity: 1 }),
+      makeRawItem({ id: "item_02", variant_id: "var_02", title: "Necklace", quantity: 1 }),
+    ];
+    mockCartApi.retrieve.mockResolvedValueOnce({ cart: makeRawCart(items) });
+    mockCartApi.deleteLineItem.mockResolvedValueOnce({ parent: makeRawCart([items[1]]) });
+
+    const { result } = renderHook(() => useCart(), { wrapper: Wrapper });
+    await waitFor(() => expect(result.current.items).toHaveLength(2));
+
+    await act(async () => {
+      await result.current.removeFromCart("item_01");
+    });
+
+    expect(result.current.items).toHaveLength(1);
+    expect(result.current.items[0].id).toBe("item_02");
+  });
+});
+
+// ─── updateQuantity: negative quantity ───────────────────────────────────────
+
+describe("CartProvider – updateQuantity (negative quantity)", () => {
+  it("calls deleteLineItem when quantity is negative", async () => {
+    localStorage.setItem(CART_ID_KEY, "cart_01");
+    mockCartApi.retrieve.mockResolvedValueOnce({ cart: makeRawCart([makeRawItem()]) });
+    mockCartApi.deleteLineItem.mockResolvedValueOnce({ parent: makeRawCart([]) });
+
+    const { result } = renderHook(() => useCart(), { wrapper: Wrapper });
+    await waitFor(() => expect(result.current.items).toHaveLength(1));
+
+    await act(async () => {
+      await result.current.updateQuantity("item_01", -1);
+    });
+
+    expect(mockCartApi.deleteLineItem).toHaveBeenCalled();
+    expect(result.current.items).toHaveLength(0);
+  });
+});
+
+// ─── addToCart: does NOT open drawer by default ───────────────────────────────
+
+describe("CartProvider – addToCart (no openDrawer by default)", () => {
+  it("does NOT open drawer by default", async () => {
+    mockCartApi.create.mockResolvedValueOnce({ cart: makeRawCart() });
+    mockCartApi.createLineItem.mockResolvedValueOnce({ cart: makeRawCart([makeRawItem()]) });
+
+    const { result } = renderHook(() => useCart(), { wrapper: Wrapper });
+    await act(async () => {
+      await result.current.addToCart("variant_01");
+    });
+
+    expect(result.current.isDrawerOpen).toBe(false);
+  });
+});
+
+// ─── drawer: closeDrawer no-op when already closed ───────────────────────────
+
+describe("CartProvider – drawer (closeDrawer no-op)", () => {
+  it("closeDrawer has no effect if drawer is already closed", () => {
+    const { result } = renderHook(() => useCart(), { wrapper: Wrapper });
+    act(() => { result.current.closeDrawer(); });
+    expect(result.current.isDrawerOpen).toBe(false);
+  });
+});
+
+// ─── MiniCartDrawer smoke tests ───────────────────────────────────────────────
+
+describe("CartProvider – MiniCartDrawer renders", () => {
+  beforeEach(() => {
+    mockCustomerRetrieve.mockRejectedValue(new Error("Unauthorized"));
+  });
+
+  it("renders children inside CartProvider", () => {
+    render(
+      <CartProvider>
+        <span data-testid="child">child</span>
+      </CartProvider>
+    );
+    expect(screen.getByTestId("child")).toBeInTheDocument();
+  });
+
+  it("shows 'Carrito' heading in the drawer", () => {
+    render(<CartProvider><span /></CartProvider>);
+    expect(screen.getByText("Carrito")).toBeInTheDocument();
+  });
+
+  it("shows empty cart message when cart is empty", async () => {
+    render(<CartProvider><span /></CartProvider>);
+    await act(async () => {});
+    expect(screen.getByText("Tu carrito esta vacio.")).toBeInTheDocument();
+  });
+});
+
+// ─── checkout choice from drawer ──────────────────────────────────────────────
+
+describe("CartProvider – checkout choice from drawer", () => {
+  beforeEach(() => {
+    mockCustomerRetrieve.mockRejectedValue(new Error("Unauthorized"));
+    mockPush.mockReset();
+  });
+
+  it("shows account-choice popup for unauthenticated users", async () => {
+    render(
+      <CartProvider>
+        <DrawerHarness />
+      </CartProvider>
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Open Drawer" }));
+    fireEvent.click(screen.getByRole("button", { name: "Finalizar compra" }));
+
+    expect(await screen.findByText("¿Cómo querés finalizar?")).toBeInTheDocument();
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it("continues to checkout directly when authenticated", async () => {
+    mockCustomerRetrieve.mockResolvedValue({ customer: { id: "cus_1" } });
+
+    render(
+      <CartProvider>
+        <DrawerHarness />
+      </CartProvider>
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Open Drawer" }));
+    fireEvent.click(screen.getByRole("button", { name: "Finalizar compra" }));
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith("/checkout");
+    });
   });
 });

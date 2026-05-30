@@ -1,117 +1,71 @@
-# Custom Module
+# backend/src/modules — Custom Medusa Modules
 
-A module is a package of reusable functionalities. It can be integrated into your Medusa application without affecting the overall system. You can create a module as part of a plugin.
+A **module** in Medusa 2.x is a self-contained package of business logic and database models. It has its own database tables, service methods, and migrations — fully isolated from other modules.
 
-> Learn more about modules in [this documentation](https://docs.medusajs.com/learn/fundamentals/modules).
+Each module directory must export a default from its `index.ts` that tells Medusa how to load it. Modules are registered in `medusa-config.ts` under the `modules[]` array.
 
-To create a module:
+## Modules in this project
 
-## 1. Create a Data Model
+### `purchaseDepartment/`
 
-A data model represents a table in the database. You create a data model in a TypeScript or JavaScript file under the `models` directory of a module.
+Manages the procurement and fulfillment lifecycle.
 
-For example, create the file `src/modules/blog/models/post.ts` with the following content:
+**What it does:**
+- Tracks **Suppliers** (contact info, lead time, fill rate)
+- Manages **Purchase Orders** and their line items
+- Records **Fulfillment** steps: pick → pack → dispatch
+- Logs stock adjustments in **StockAdjustmentLog**
 
-```ts
-import { model } from "@medusajs/framework/utils"
+**Key files:**
+- `models/` — database table definitions (Supplier, PurchaseOrder, PurchaseOrderItem, FulfillmentRecord, StockAdjustmentLog)
+- `service.ts` — business logic methods exposed to API routes and workflows
+- `migrations/` — SQL migration files run by `npx medusa db:migrate`
 
-const Post = model.define("post", {
-  id: model.id().primaryKey(),
-  title: model.text(),
-})
+**API routes that use it:** `/api/admin/purchase/`, `/api/admin/fulfillment/`
 
-export default Post
-```
+---
 
-## 2. Create a Service
+### `taskBoard/`
 
-A module must define a service. A service is a TypeScript or JavaScript class holding methods related to a business logic or commerce functionality.
+A simple team task board (kanban-style) for internal operations.
 
-For example, create the file `src/modules/blog/service.ts` with the following content:
+**What it does:**
+- Creates and manages **Tasks** with title, description, status, priority, area, assignee, and due date
 
-```ts
-import { MedusaService } from "@medusajs/framework/utils"
-import Post from "./models/post"
+**Key files:**
+- `models/Task.ts` — database model
+- `service.ts` — CRUD methods
+- `migrations/Migration20260406000001.ts`
 
-class BlogModuleService extends MedusaService({
-  Post,
-}){
-}
+**API routes that use it:** `/api/admin/team-tasks/`
 
-export default BlogModuleService
-```
+---
 
-## 3. Export Module Definition
+### `image-upload/`
 
-A module must have an `index.ts` file in its root directory that exports its definition. The definition specifies the main service of the module.
+A custom Medusa file provider that stores product images in **Cloudflare R2** instead of the local filesystem.
 
-For example, create the file `src/modules/blog/index.ts` with the following content:
+**What it does:**
+- Implements `AbstractFileProviderService` (Medusa's file provider interface)
+- Processes images with **Sharp** before upload: images >500 KB or >1400 px wide are resized and converted to WebP (quality 82)
+- Rejects non-image file types with a clear error
+- Registered in `medusa-config.ts` only when `R2_BUCKET` env var is set
 
-```ts
-import BlogModuleService from "./service"
-import { Module } from "@medusajs/framework/utils"
+**Key files:**
+- `index.ts` — exports the module definition (tells Medusa this is a file provider)
+- `service.ts` — the upload/delete/download implementation using `@aws-sdk/client-s3` and `sharp`
 
-export const BLOG_MODULE = "blog"
+**Required env vars:** `R2_BUCKET`, `R2_ENDPOINT`, `R2_PUBLIC_URL`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`
 
-export default Module(BLOG_MODULE, {
-  service: BlogModuleService,
-})
-```
+---
 
-## 4. Add Module to Medusa's Configurations
+## Adding a new module
 
-To start using the module, add it to `medusa-config.ts`:
+1. Create `src/modules/<name>/`
+2. Add a data model in `models/`
+3. Add `service.ts` extending `MedusaService`
+4. Add `index.ts` exporting `Module("<name>", { service: YourService })`
+5. Register in `medusa-config.ts`: `{ resolve: "./src/modules/<name>" }`
+6. Generate and run migrations: `npx medusa db:generate <name>` then `npx medusa db:migrate`
 
-```ts
-module.exports = defineConfig({
-  projectConfig: {
-    // ...
-  },
-  modules: [
-    {
-      resolve: "./src/modules/blog",
-    },
-  ],
-})
-```
-
-## 5. Generate and Run Migrations
-
-To generate migrations for your module, run the following command:
-
-```bash
-npx medusa db:generate blog
-```
-
-Then, to run migrations, run the following command:
-
-```bash
-npx medusa db:migrate
-```
-
-## Use Module
-
-You can use the module in customizations within the Medusa application, such as workflows and API routes.
-
-For example, to use the module in an API route:
-
-```ts
-import { MedusaRequest, MedusaResponse } from "@medusajs/framework"
-import BlogModuleService from "../../../modules/blog/service"
-import { BLOG_MODULE } from "../../../modules/blog"
-
-export async function GET(
-  req: MedusaRequest,
-  res: MedusaResponse
-): Promise<void> {
-  const blogModuleService: BlogModuleService = req.scope.resolve(
-    BLOG_MODULE
-  )
-
-  const posts = await blogModuleService.listPosts()
-
-  res.json({
-    posts
-  })
-}
-```
+See [Medusa docs — Modules](https://docs.medusajs.com/learn/fundamentals/modules) for the full reference.

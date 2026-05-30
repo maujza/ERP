@@ -1,3 +1,21 @@
+/**
+ * whatsapp.ts — WhatsApp deep-link builder and draft persistence helpers
+ *
+ * When a customer chooses "pay via WhatsApp" at checkout, the storefront:
+ *   1. Builds a wa.me deep link with a pre-filled message (buildWhatsAppLink)
+ *   2. Saves a draft of the pending order to localStorage (saveWhatsAppDraft)
+ *   3. Opens the link in a new tab (openWhatsAppDraft)
+ *
+ * The draft is saved to localStorage so it survives a page refresh — the customer
+ * can return to the site later and the order details are still available.
+ *
+ * Server-side note: localStorage is only available in the browser.
+ * Every function that touches localStorage guards with `typeof window === "undefined"`
+ * to safely run in Next.js server-side rendering (SSR) without crashing.
+ *
+ * No external SDK or API calls are made here — this file is pure utility functions.
+ */
+
 export const WHATSAPP_DRAFT_KEY = "aurelia-whatsapp-draft";
 
 export type WhatsAppDraft = {

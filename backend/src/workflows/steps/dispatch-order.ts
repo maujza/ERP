@@ -1,4 +1,5 @@
 import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk"
+import { MedusaContainer } from "@medusajs/framework/types"
 import {
   ContainerRegistrationKeys,
   MedusaError,
@@ -17,9 +18,11 @@ export type DispatchOrderInput = z.infer<typeof DispatchOrderInputSchema>
 
 type CompensationData = { record_id: string } | null
 
+type NativeFulfillment = { id: string; canceled_at?: string | null }
+
 export async function dispatchOrderHandler(
   input: DispatchOrderInput,
-  { container }: { container: any }
+  { container }: { container: MedusaContainer }
 ) {
   const validated = DispatchOrderInputSchema.safeParse(input)
   if (!validated.success) {
@@ -59,23 +62,24 @@ export async function dispatchOrderHandler(
   // Best-effort: sync dispatch to Medusa's native fulfillment service.
   // Our FulfillmentRecord is the source of truth — never block dispatch on failure.
   {
-    const logger = container.resolve("logger")
-    const query = container.resolve(ContainerRegistrationKeys.QUERY)
-    // Retrieve the Medusa order with fulfillments; log + skip on any error.
+    const logger = container.resolve("logger") as { warn: (msg: string) => void }
+    const query = container.resolve(ContainerRegistrationKeys.QUERY) as {
+      graph: (input: Record<string, unknown>) => Promise<{ data: Array<{ fulfillments?: NativeFulfillment[] }> }>
+    }
     const { data: orders } = await query
       .graph({
         entity: "order",
         fields: ["id", "fulfillments.id", "fulfillments.canceled_at"],
         filters: { id: input.order_id },
       })
-      .catch((err: any) => {
+      .catch((err: unknown) => {
         logger.warn(
-          `dispatch-order: Medusa native fulfillment sync skipped for ${input.order_id}: ${err?.message}`
+          `dispatch-order: Medusa native fulfillment sync skipped for ${input.order_id}: ${err instanceof Error ? err.message : String(err)}`
         )
         return { data: [] }
       })
     const nativeFulfillmentId = (orders[0]?.fulfillments ?? []).find(
-      (fulfillment: any) => !fulfillment?.canceled_at
+      (f) => !f.canceled_at
     )?.id
 
     if (nativeFulfillmentId) {
@@ -92,9 +96,9 @@ export async function dispatchOrderHandler(
             ],
           },
         })
-        .catch((err: any) => {
+        .catch((err: unknown) => {
           logger.warn(
-            `dispatch-order: createShipmentWorkflow failed for ${input.order_id}: ${err?.message}`
+            `dispatch-order: createShipmentWorkflow failed for ${input.order_id}: ${err instanceof Error ? err.message : String(err)}`
           )
         })
     }
@@ -111,7 +115,7 @@ export async function dispatchOrderHandler(
 
 export async function compensateDispatchOrder(
   data: CompensationData | undefined,
-  { container }: { container: any }
+  { container }: { container: MedusaContainer }
 ) {
   if (!data) return // no-op case (was already dispatched) — nothing to revert
   const fulfillmentService = container.resolve(

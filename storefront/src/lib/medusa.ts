@@ -1,3 +1,30 @@
+/**
+ * medusa.ts — Medusa JS SDK client singleton for the storefront
+ *
+ * This file creates and exports a single `sdk` instance used by all storefront
+ * pages and components to call the Medusa backend API.
+ *
+ * How the connection works:
+ *   Browser → /api/medusa/* → (Next.js server-side rewrite) → Medusa backend
+ *   The actual backend URL never appears in the browser bundle; only /api/medusa
+ *   is visible to clients. The proxy rewrite is configured in next.config.ts.
+ *
+ * The publishable key identifies which Medusa sales channel the storefront belongs to.
+ * It is NOT a secret — it is safe to expose in the browser bundle.
+ *
+ * Exports:
+ *   sdk                    — the configured Medusa SDK instance (use for all API calls)
+ *   MEDUSA_REGION_ID       — Argentina region identifier (starts with "reg_...")
+ *   MEDUSA_COUNTRY_CODE    — "ar" by default (used for tax/shipping region resolution)
+ *   withStorePricingContext — adds region_id or country_code to API query params
+ *                             so the backend returns the correct prices for Argentina
+ *   validateMedusaEnv      — startup check that env vars look structurally valid;
+ *                             call at app boot to catch stale keys before they cause
+ *                             silent "0 results" failures in the storefront
+ */
+
+// Medusa — the official Medusa JS SDK. Provides typed methods for all store API calls:
+//   sdk.store.product.list(), sdk.store.cart.create(), sdk.auth.login(), etc.
 import Medusa from "@medusajs/js-sdk"
 
 const MEDUSA_BACKEND_URL =

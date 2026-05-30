@@ -1,10 +1,23 @@
 /**
- * Shared helper for resolving notification recipients by role.
+ * notification-recipients.ts — Shared helper: resolve admin user IDs by role
  *
- * Reads metadata.role only (consistent with rbac.ts and whatsapp-notifications route).
+ * Used by subscribers and jobs to find which admin users should receive a
+ * notification (e.g., "who has the purchasing role?").
+ *
+ * How it works:
+ *   1. Queries all admin users from the database via Medusa's `query` service
+ *   2. Filters to those whose metadata.role matches one of the requested roles
+ *   3. Returns their user IDs, which the caller passes to the notification module
+ *
+ * Results are cached per role-set for 60 seconds to avoid a DB query on every
+ * event. Role changes take effect within 60 s — acceptable for notifications.
+ *
+ * Role lookup reads metadata.role only (consistent with rbac.ts).
  * The legacy metadata.notification_roles key is no longer supported.
  *
- * Includes a simple TTL cache (60s) to avoid querying all users on every event/job/request.
+ * Exports:
+ *   getRecipientsByRole  — main function, returns string[] of user IDs
+ *   clearRecipientsCache — empties the TTL cache (used in tests for isolation)
  */
 
 type QueryContainer = {

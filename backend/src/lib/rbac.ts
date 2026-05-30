@@ -1,3 +1,26 @@
+/**
+ * rbac.ts — Role-Based Access Control (RBAC) middleware and helpers
+ *
+ * Roles are stored as a single string in `user.metadata.role` (e.g., "purchasing").
+ * Set a user's role via: PATCH /admin/users/:id  { metadata: { role: "purchasing" } }
+ *
+ * Exports:
+ *   ROLES / Role         — the set of valid role strings (re-exported from admin/lib/roles.ts)
+ *   getRoleFromMetadata  — parses and validates a role from raw user metadata
+ *   getUserRole          — fetches a user's role from the DB (with 60 s TTL cache)
+ *   requireRole          — Express middleware factory that enforces role access on a route
+ *   clearRoleCache       — empties the TTL cache (used in tests for isolation)
+ *
+ * The "admin" role always bypasses requireRole checks regardless of allowedRoles.
+ * Users with no role set receive a 403 (explicit deny, not silent pass-through).
+ */
+
+// Medusa's HTTP request/response types — required for typing the middleware factory
+// and accessing auth_context on the request object
+//   AuthenticatedMedusaRequest — extends MedusaRequest with auth_context.actor_id
+//   MedusaNextFunction         — the Express "next()" function to call the next middleware
+//   MedusaRequest              — base request type enriched with Medusa's DI container
+//   MedusaResponse             — base response type (standard Express res + Medusa extras)
 import type {
   AuthenticatedMedusaRequest,
   MedusaNextFunction,

@@ -1,4 +1,5 @@
 import { createStep, StepResponse } from "@medusajs/framework/workflows-sdk"
+import { MedusaContainer } from "@medusajs/framework/types"
 import { MedusaError } from "@medusajs/framework/utils"
 import { z } from "zod"
 import { PURCHASE_DEPARTMENT_MODULE } from "../../modules/purchaseDepartment"
@@ -20,7 +21,7 @@ type CompensationData = {
 
 export async function confirmPackHandler(
   input: ConfirmPackInput,
-  { container }: { container: any }
+  { container }: { container: MedusaContainer }
 ) {
   const validated = ConfirmPackInputSchema.safeParse(input)
   if (!validated.success) {
@@ -68,7 +69,7 @@ export async function confirmPackHandler(
 
 export async function compensateConfirmPack(
   data: CompensationData | undefined,
-  { container }: { container: any }
+  { container }: { container: MedusaContainer }
 ) {
   if (!data) return
   const fulfillmentService = container.resolve(
