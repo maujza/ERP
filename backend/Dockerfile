@@ -59,7 +59,6 @@ WORKDIR /app
 COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/.medusa/server/medusa-config.js ./medusa-config.js
-COPY --from=builder /app/.medusa/server/instrumentation.js ./instrumentation.js
 COPY --from=builder /app/.medusa ./.medusa
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.medusa/server/src ./src
