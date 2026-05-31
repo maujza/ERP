@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans } from "next/font/google";
+import { IBM_Plex_Sans, IBM_Plex_Serif } from "next/font/google";
 
 import { AppChrome } from "@/components/app-chrome";
 import { CartProvider } from "@/components/cart-provider";
@@ -14,16 +14,24 @@ for (const warning of validateMedusaEnv()) {
   console.warn("[medusa-env]", warning)
 }
 
-const plusJakarta = Plus_Jakarta_Sans({
+const ibmPlexSans = IBM_Plex_Sans({
   subsets: ["latin"],
-  variable: "--font-plus-jakarta",
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-ibm-plex-sans",
+  display: "swap",
+});
+
+const ibmPlexSerif = IBM_Plex_Serif({
+  subsets: ["latin"],
+  weight: ["400", "600", "700"],
+  variable: "--font-ibm-plex-serif",
   display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Aurelia | Biyuterie mayorista",
+  title: "AURORA Shop | Mayorista de accesorios",
   description:
-    "Catálogo mayorista de Biyuterie moderna: colecciones listas para vender, envíos rápidos y packs curados.",
+    "Comprás hoy. Vendés esta semana. Colecciones mayoristas de accesorios con alta rotación, envíos rápidos y packs curados.",
 };
 
 export default function RootLayout({
@@ -32,8 +40,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className="bg-slate-50">
-      <body className={`${plusJakarta.variable} antialiased`}>
+    <html lang="es" className="bg-[#f2e6f7]">
+      <body className={`${ibmPlexSans.variable} ${ibmPlexSerif.variable} antialiased`}>
         <LanguageProvider>
           <CartProvider>
             <AppChrome>

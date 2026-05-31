@@ -33,7 +33,7 @@ export function SiteFooter() {
         {
           title: "회사",
           links: [
-            { href: "mailto:hola@aurelia.com", label: "문의" },
+            { href: "mailto:hola@aurora.com", label: "문의" },
             { href: "https://wa.me/5491112345678", label: "WhatsApp" },
             { href: "/order-confirmation", label: "주문 확인" },
           ],
@@ -59,7 +59,7 @@ export function SiteFooter() {
         {
           title: "Empresa",
           links: [
-            { href: "mailto:hola@aurelia.com", label: "Contacto" },
+            { href: "mailto:hola@aurora.com", label: "Contacto" },
             { href: "https://wa.me/5491112345678", label: "WhatsApp" },
             { href: "/order-confirmation", label: "Confirmacion" },
           ],

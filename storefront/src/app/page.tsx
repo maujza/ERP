@@ -244,7 +244,7 @@ export default function HomePage() {
           </div>
           <div className="no-scrollbar -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2">
             {navCategories.slice(0, 6).map((category, idx) => {
-              const accents = ["#ff174f", "#111111", "#2b2b2b", "#ff6b8f", "#8f8f89", "#d8d6d1"];
+              const accents = ["#4660bc", "#6c5baa", "#9595db", "#92c9ff", "#ffd7fb", "#f2e6f7"];
               const accent = accents[idx % accents.length];
               return (
                 <Link

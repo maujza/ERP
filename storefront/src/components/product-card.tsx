@@ -73,7 +73,7 @@ export function ProductCard({ product, language, soldOutLabel, variant = "catalo
         >
           <Heart
             className={`h-4 w-4 transition-colors ${
-              favorited ? "fill-[#ff174f] stroke-[#ff174f]" : "stroke-[#555555]"
+              favorited ? "fill-[#6c5baa] stroke-[#6c5baa]" : "stroke-[#9595db]"
             }`}
           />
         </button>

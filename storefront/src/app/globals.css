@@ -1,17 +1,19 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f6f5f2;
-  --foreground: #111111;
+  --background: #f2e6f7;
+  --foreground: #1a1a2e;
   --surface: #ffffff;
-  --muted: #deddd8;
-  --brand-red: #ff174f;
-  --brand-red-dark: #e3043c;
-  --brand-red-soft: #ff6b8f;
-  --brand-red-tint: #ffd9e3;
-  --card-btn-add: rgba(17, 17, 17, 0.72);
+  --muted: #e8daf2;
+  --aurora-blue: #4660bc;
+  --aurora-purple: #6c5baa;
+  --aurora-lavender: #9595db;
+  --aurora-sky: #92c9ff;
+  --aurora-pink: #ffd7fb;
+  --aurora-bg: #f2e6f7;
+  --card-btn-add: rgba(70, 96, 188, 0.85);
   --card-btn-add-icon: #ffffff;
-  --card-btn-qv: rgba(105, 105, 105, 0.72);
+  --card-btn-qv: rgba(108, 91, 170, 0.72);
   --card-btn-qv-icon: #ffffff;
 }
 
@@ -20,19 +22,20 @@
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
   --color-card: var(--surface);
-  --color-primary: var(--brand-red);
-  --color-primary-foreground: #fff1f5;
-  --font-sans: var(--font-plus-jakarta);
+  --color-primary: var(--aurora-blue);
+  --color-primary-foreground: #ffffff;
+  --font-sans: var(--font-ibm-plex-sans);
+  --font-serif: var(--font-ibm-plex-serif);
 }
 
 body {
   color: var(--foreground);
   background:
-    radial-gradient(circle at 12% 16%, rgba(255, 23, 79, 0.1), transparent 30%),
-    radial-gradient(circle at 84% 8%, rgba(17, 17, 17, 0.06), transparent 24%),
-    linear-gradient(180deg, #faf9f7 0%, #ffffff 45%, #f4f2ee 100%);
-  font-family: var(--font-plus-jakarta), "Inter", system-ui, -apple-system,
-    sans-serif;
+    radial-gradient(circle at 12% 16%, rgba(149, 149, 219, 0.18), transparent 35%),
+    radial-gradient(circle at 84% 8%, rgba(146, 201, 255, 0.15), transparent 30%),
+    radial-gradient(circle at 50% 90%, rgba(255, 215, 251, 0.2), transparent 40%),
+    linear-gradient(180deg, #f2e6f7 0%, #ffffff 45%, #ede8f8 100%);
+  font-family: var(--font-ibm-plex-sans), "Inter", system-ui, -apple-system, sans-serif;
   min-height: 100vh;
 }
 
@@ -42,8 +45,8 @@ a {
 }
 
 ::selection {
-  background-color: rgba(255, 23, 79, 0.22);
-  color: #111111;
+  background-color: rgba(149, 149, 219, 0.28);
+  color: #1a1a2e;
 }
 
 .no-scrollbar {
