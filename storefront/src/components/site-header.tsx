@@ -75,7 +75,7 @@ export function SiteHeader() {
             href="/"
             className="text-lg font-black tracking-[0.12em] text-black max-[360px]:max-w-[108px] max-[360px]:truncate min-[361px]:text-xl min-[361px]:tracking-[0.16em] md:text-2xl md:tracking-[0.18em]"
           >
-            AURELIA
+            AURORA
           </Link>
 
           <nav className="ml-2 hidden items-center gap-5 text-sm md:flex">
@@ -179,7 +179,7 @@ export function SiteHeader() {
         }`}
       >
         <div className="mb-6 flex items-center justify-between">
-          <p className="text-lg font-bold tracking-[0.18em]">AURELIA</p>
+          <p className="text-lg font-bold tracking-[0.18em]">AURORA</p>
           <button onClick={() => setMobileMenuOpen(false)} className="rounded-full border border-black/15 p-2">
             <X className="h-4 w-4" />
           </button>

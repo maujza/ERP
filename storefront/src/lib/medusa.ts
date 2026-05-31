@@ -27,8 +27,18 @@
 //   sdk.store.product.list(), sdk.store.cart.create(), sdk.auth.login(), etc.
 import Medusa from "@medusajs/js-sdk"
 
-const MEDUSA_BACKEND_URL =
-  process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL || "/api/medusa"
+// Medusa SDK requires an absolute URL. When NEXT_PUBLIC_MEDUSA_BACKEND_URL is
+// not set, construct one from window.location.origin in the browser, or fall
+// back to the internal Docker URL on the server side.
+const MEDUSA_BACKEND_URL = (() => {
+  if (process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL) {
+    return process.env.NEXT_PUBLIC_MEDUSA_BACKEND_URL
+  }
+  if (typeof window !== "undefined") {
+    return `${window.location.origin}/api/medusa`
+  }
+  return process.env.MEDUSA_INTERNAL_BACKEND_URL ?? "http://localhost:9000"
+})()
 const MEDUSA_PUBLISHABLE_KEY =
   process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY || ""
 export const MEDUSA_REGION_ID = process.env.NEXT_PUBLIC_MEDUSA_REGION_ID || ""

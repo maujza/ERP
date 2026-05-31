@@ -63,7 +63,7 @@ describe("medusa lib", () => {
     await import("../medusa")
 
     expect(lastConfig).toEqual({
-      baseUrl: "/api/medusa",
+      baseUrl: `${window.location.origin}/api/medusa`,
       publishableKey: "pk_valid_key",
     })
   })
@@ -75,7 +75,7 @@ describe("medusa lib", () => {
     const mod = await import("../medusa")
 
     await expect(mod.sdk.client.fetch("/store/products/prod_123")).rejects.toThrow(
-      "Check storefront env (backend=/api/medusa, publishableKey=pk_1234...)"
+      `Check storefront env (backend=${window.location.origin}/api/medusa, publishableKey=pk_1234...)`
     )
     expect(consoleSpy).toHaveBeenCalledTimes(1)
   })
