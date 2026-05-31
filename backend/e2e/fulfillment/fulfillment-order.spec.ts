@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { createFreshOrder } from "../_seed";
 
 test.describe("Fulfillment — Order lifecycle", () => {
   test("navigates to fulfillment orders list", async ({ page }) => {
@@ -19,111 +20,59 @@ test.describe("Fulfillment — Order lifecycle", () => {
     expect([200, 401].includes(response.status())).toBeTruthy();
   });
 
-  test("single fulfillment order page loads", async ({ page }) => {
-    await page.goto("/app/fulfillment/orders");
+  // The fulfillment list shows orders that have a fulfillment record. Seed a
+  // fresh order and start picking it so the list has a non-terminal row with an
+  // inline lifecycle action button (the board has no separate detail page —
+  // pick/pack/dispatch happen inline per row).
+  test.describe("with a freshly picked order", () => {
+    test.beforeEach(async ({ request }) => {
+      const orderId = await createFreshOrder(request);
+      const pick = await request.post(`/admin/fulfillment/orders/${orderId}/pick`);
+      expect(pick.status(), `start picking failed: ${await pick.text()}`).toBe(200);
+    });
 
-    const firstRow = page.locator("table tbody tr").first();
-    const hasRows = await firstRow.isVisible().catch(() => false);
+    test("picked order appears in the fulfillment list", async ({ page }) => {
+      await page.goto("/app/fulfillment/orders");
+      const firstRow = page.locator("table tbody tr").first();
+      await expect(firstRow).toBeVisible({ timeout: 10000 });
+      await expect(page.locator("body")).not.toContainText("500");
+    });
 
-    if (!hasRows) {
-      test.skip();
-      return;
-    }
-
-    await firstRow.click();
-    await expect(page).toHaveURL(/\/fulfillment\/orders\//, { timeout: 5000 });
-    await expect(page.locator("body")).not.toContainText("500");
+    test("inline lifecycle action button is present on a picked order", async ({ page }) => {
+      await page.goto("/app/fulfillment/orders");
+      const actionBtn = page
+        .getByRole("button", {
+          name: /start picking|confirm pack|despach|embal|pick|pack|dispatch/i,
+        })
+        .first();
+      await expect(actionBtn).toBeVisible({ timeout: 10000 });
+    });
   });
 
-  test("pick action button is present on a pending fulfillment order", async ({ page }) => {
-    await page.goto("/app/fulfillment/orders");
+  // Happy-path lifecycle on a single fresh order: pick → pack → dispatch must
+  // each return 200. Serial so the order advances through the state machine in
+  // order; if a step fails the rest are skipped (a real failure, not empty data).
+  test.describe.serial("lifecycle steps on a fresh order", () => {
+    let orderId: string;
 
-    const firstRow = page.locator("table tbody tr").first();
-    const hasRows = await firstRow.isVisible().catch(() => false);
+    test("startPickingWorkflow returns 200", async ({ request }) => {
+      orderId = await createFreshOrder(request);
+      const response = await request.post(`/admin/fulfillment/orders/${orderId}/pick`);
+      expect(response.status(), await response.text()).toBe(200);
+    });
 
-    if (!hasRows) {
-      test.skip();
-      return;
-    }
+    test("confirmPackWorkflow returns 200", async ({ request }) => {
+      const response = await request.post(`/admin/fulfillment/orders/${orderId}/pack`, {
+        data: { packed_weight: 1.5, packed_dimensions: "20x15x10" },
+      });
+      expect(response.status(), await response.text()).toBe(200);
+    });
 
-    await firstRow.click();
-    await expect(page).toHaveURL(/\/fulfillment\/orders\//, { timeout: 5000 });
-
-    const actionBtn = page
-      .getByRole("button", { name: /pick|pack|dispatch|despachar|embalar/i })
-      .first();
-    await expect(actionBtn).toBeVisible({ timeout: 5000 });
-  });
-
-  test("startPickingWorkflow API step returns non-500", async ({ page }) => {
-    await page.goto("/app/fulfillment/orders");
-
-    const firstRow = page.locator("table tbody tr").first();
-    const hasRows = await firstRow.isVisible().catch(() => false);
-
-    if (!hasRows) {
-      test.skip();
-      return;
-    }
-
-    await firstRow.click();
-    const url = page.url();
-    const orderId = url.split("/fulfillment/orders/")[1]?.split("/")[0];
-
-    if (!orderId) {
-      test.skip();
-      return;
-    }
-
-    const response = await page.request.post(`/admin/fulfillment/orders/${orderId}/pick`);
-    expect([200, 400, 422].includes(response.status())).toBeTruthy();
-  });
-
-  test("confirmPackWorkflow API step returns non-500", async ({ page }) => {
-    await page.goto("/app/fulfillment/orders");
-
-    const firstRow = page.locator("table tbody tr").first();
-    const hasRows = await firstRow.isVisible().catch(() => false);
-
-    if (!hasRows) {
-      test.skip();
-      return;
-    }
-
-    await firstRow.click();
-    const url = page.url();
-    const orderId = url.split("/fulfillment/orders/")[1]?.split("/")[0];
-
-    if (!orderId) {
-      test.skip();
-      return;
-    }
-
-    const response = await page.request.post(`/admin/fulfillment/orders/${orderId}/pack`);
-    expect([200, 400, 422].includes(response.status())).toBeTruthy();
-  });
-
-  test("dispatchOrderWorkflow API step returns non-500", async ({ page }) => {
-    await page.goto("/app/fulfillment/orders");
-
-    const firstRow = page.locator("table tbody tr").first();
-    const hasRows = await firstRow.isVisible().catch(() => false);
-
-    if (!hasRows) {
-      test.skip();
-      return;
-    }
-
-    await firstRow.click();
-    const url = page.url();
-    const orderId = url.split("/fulfillment/orders/")[1]?.split("/")[0];
-
-    if (!orderId) {
-      test.skip();
-      return;
-    }
-
-    const response = await page.request.post(`/admin/fulfillment/orders/${orderId}/dispatch`);
-    expect([200, 400, 422].includes(response.status())).toBeTruthy();
+    test("dispatchOrderWorkflow returns 200", async ({ request }) => {
+      const response = await request.post(`/admin/fulfillment/orders/${orderId}/dispatch`, {
+        data: { tracking_number: `E2E-${Date.now()}` },
+      });
+      expect(response.status(), await response.text()).toBe(200);
+    });
   });
 });

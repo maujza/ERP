@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { createTask } from "../_seed";
 
 test.describe("Team Tasks — board CRUD", () => {
   test("navigates to team tasks board", async ({ page }) => {
@@ -48,50 +49,27 @@ test.describe("Team Tasks — board CRUD", () => {
     await expect(page.getByText(uniqueTitle)).toBeVisible({ timeout: 10000 });
   });
 
-  test("task detail opens from board", async ({ page }) => {
+  test("task edit dialog opens from the card menu", async ({ page }) => {
+    // Seed a task so the board always has a card to act on, then open its
+    // edit dialog via the card's "⋯" menu (the board is a kanban — there is
+    // no clickable row, the detail/edit form opens from the dropdown).
+    const { title } = await createTask(page.request);
     await page.goto("/app/team-tasks");
 
-    const taskItem = page
-      .locator("[data-testid='task-row'], table tbody tr")
-      .first();
-    const hasTask = await taskItem.isVisible({ timeout: 8000 }).catch(() => false);
+    const card = page.locator("div.rounded-xl", { hasText: title }).first();
+    await expect(card).toBeVisible({ timeout: 10000 });
 
-    if (!hasTask) {
-      test.skip();
-      return;
-    }
+    await card.getByRole("button").first().click();
+    await page.getByRole("menuitem", { name: "Editar" }).click();
 
-    await taskItem.click();
-
-    await expect(
-      page.getByRole("dialog").or(page.getByLabel(/title|título/i)).first()
-    ).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole("button", { name: "Guardar" })).toBeVisible({ timeout: 5000 });
   });
 
-  test("can delete a task via API", async ({ page }) => {
-    // Create via API then delete to verify the DELETE endpoint works
-    const createRes = await page.request.post("/admin/team-tasks", {
-      data: {
-        title: `E2E Delete Test ${Date.now()}`,
-        status: "pending",
-        priority: "low",
-      },
-    });
+  test("can delete a task via API", async ({ request }) => {
+    // Create via API then delete to verify the DELETE endpoint works.
+    const { id } = await createTask(request, `E2E Delete Test ${Date.now()}`);
 
-    if (createRes.status() !== 200 && createRes.status() !== 201) {
-      test.skip();
-      return;
-    }
-
-    const body = await createRes.json();
-    const taskId = body?.task?.id || body?.id;
-
-    if (!taskId) {
-      test.skip();
-      return;
-    }
-
-    const deleteRes = await page.request.delete(`/admin/team-tasks/${taskId}`);
+    const deleteRes = await request.delete(`/admin/team-tasks/${id}`);
     expect([200, 204].includes(deleteRes.status())).toBeTruthy();
   });
 });

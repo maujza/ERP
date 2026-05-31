@@ -1,6 +1,15 @@
 import { test, expect } from "@playwright/test";
+import { ensureDraftPurchaseOrder } from "../_seed";
 
 test.describe("Purchase — Order lifecycle", () => {
+  // Guarantee a draft purchase order exists (and capture its id) so the
+  // detail-page tests below run for real instead of skipping on an empty list.
+  let draftPoId: string;
+
+  test.beforeEach(async ({ request }) => {
+    draftPoId = await ensureDraftPurchaseOrder(request);
+  });
+
   test("navigates to purchase orders list", async ({ page }) => {
     await page.goto("/app/purchase/orders");
     await expect(page.locator("body")).not.toContainText("404", { timeout: 10000 });
@@ -27,39 +36,22 @@ test.describe("Purchase — Order lifecycle", () => {
   });
 
   test("single purchase order page loads", async ({ page }) => {
-    await page.goto("/app/purchase/orders");
-
-    const firstRow = page.locator("table tbody tr").first();
-    const hasRows = await firstRow.isVisible().catch(() => false);
-
-    if (!hasRows) {
-      test.skip();
-      return;
-    }
-
-    await firstRow.click();
-    await expect(page).toHaveURL(/\/purchase\/orders\//, { timeout: 5000 });
+    // Navigate to the detail page directly by id — the list uses a DataTable
+    // whose rows are not plain navigable links.
+    await page.goto(`/app/purchase/orders/${draftPoId}`);
+    await expect(page).toHaveURL(/\/purchase\/orders\/[^/]+$/, { timeout: 10000 });
     await expect(page.locator("body")).not.toContainText("500");
   });
 
   test("submit action button is present on a draft order", async ({ page }) => {
-    await page.goto("/app/purchase/orders");
-
-    const firstRow = page.locator("table tbody tr").first();
-    const hasRows = await firstRow.isVisible().catch(() => false);
-
-    if (!hasRows) {
-      test.skip();
-      return;
-    }
-
-    await firstRow.click();
-    await expect(page).toHaveURL(/\/purchase\/orders\//, { timeout: 5000 });
+    // The "Submit Order" action is only offered on draft orders, so target the
+    // seeded draft specifically (the most recent PO may be received/cancelled).
+    await page.goto(`/app/purchase/orders/${draftPoId}`);
 
     const actionBtn = page
       .getByRole("button", { name: /submit|enviar|receive|recibir|cancel|cancelar/i })
       .first();
-    await expect(actionBtn).toBeVisible({ timeout: 5000 });
+    await expect(actionBtn).toBeVisible({ timeout: 10000 });
   });
 
   test("purchase orders API returns non-500", async ({ page }) => {
