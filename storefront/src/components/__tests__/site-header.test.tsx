@@ -89,10 +89,10 @@ describe("SiteHeader – rendering", () => {
     vi.clearAllMocks();
   });
 
-  it("renders the AURELIA logo link inside the header", () => {
+  it("renders the AURORA logo link inside the header", () => {
     render(<SiteHeader />);
     const header = screen.getByRole("banner");
-    expect(within(header).getByText("AURELIA")).toBeInTheDocument();
+    expect(within(header).getByText("AURORA")).toBeInTheDocument();
   });
 
   it("renders the hamburger button with accessible label (Spanish, with accent)", () => {

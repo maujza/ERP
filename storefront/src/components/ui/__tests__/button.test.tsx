@@ -17,7 +17,7 @@ describe("Button", () => {
   // --- default variant ---
   it("applies default variant background color", () => {
     render(<Button>Default</Button>);
-    expect(screen.getByRole("button")).toHaveClass("bg-[#ff174f]");
+    expect(screen.getByRole("button")).toHaveClass("bg-[#4660bc]");
   });
 
   it("applies default variant text-white", () => {
@@ -55,7 +55,7 @@ describe("Button", () => {
   // --- muted variant ---
   it("applies muted variant background color", () => {
     render(<Button variant="muted">Muted</Button>);
-    expect(screen.getByRole("button")).toHaveClass("bg-[#ff6b8f]");
+    expect(screen.getByRole("button")).toHaveClass("bg-[#9595db]");
   });
 
   // --- sizes ---
@@ -167,7 +167,7 @@ describe("buttonVariants", () => {
   });
 
   it("includes default bg class", () => {
-    expect(buttonVariants({ variant: "default" })).toContain("bg-[#ff174f]");
+    expect(buttonVariants({ variant: "default" })).toContain("bg-[#4660bc]");
   });
 
   it("includes outline border class", () => {
@@ -179,7 +179,7 @@ describe("buttonVariants", () => {
   });
 
   it("includes muted bg class", () => {
-    expect(buttonVariants({ variant: "muted" })).toContain("bg-[#ff6b8f]");
+    expect(buttonVariants({ variant: "muted" })).toContain("bg-[#9595db]");
   });
 
   it("includes sm height class", () => {
@@ -193,7 +193,7 @@ describe("buttonVariants", () => {
   it("works with no arguments (uses defaults)", () => {
     const classes = buttonVariants();
     expect(typeof classes).toBe("string");
-    expect(classes).toContain("bg-[#ff174f]"); // default variant
+    expect(classes).toContain("bg-[#4660bc]"); // default variant
     expect(classes).toContain("h-11"); // default size
   });
 });
