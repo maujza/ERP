@@ -3,6 +3,7 @@
 .env.*
 !.env.template
 !.env.example
+!.env.test.example
 .DS_Store
 /uploads
 /node_modules

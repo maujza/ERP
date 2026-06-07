@@ -64,17 +64,14 @@ test.describe("Cart", () => {
   test("can remove item from cart", async ({ page }) => {
     await addFirstProductToCart(page);
     await page.goto("/");
+    // Wait for localStorage cart hydration before opening the drawer
+    await page.waitForTimeout(1500);
     await page.getByRole("button", { name: /abrir carrito/i }).click();
 
     const removeBtn = page
       .getByRole("button", { name: /remove|eliminar|quitar|delete/i })
       .first();
-    const hasRemove = await removeBtn.isVisible({ timeout: 3000 }).catch(() => false);
-
-    if (!hasRemove) {
-      test.skip();
-      return;
-    }
+    await expect(removeBtn).toBeVisible({ timeout: 5000 });
 
     await removeBtn.click();
     await expect(

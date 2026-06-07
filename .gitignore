@@ -50,5 +50,6 @@ backend/.env.dev
 storefront/.env.development
 !backend/.env.example
 !backend/.env.dev.example
+!backend/.env.test.example
 !storefront/.env.example
 !storefront/.env.development.example
