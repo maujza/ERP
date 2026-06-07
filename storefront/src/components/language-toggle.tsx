@@ -24,7 +24,7 @@ export function LanguageToggle({ className = "", iconOnly }: { className?: strin
   }
 
   const baseClass =
-    "h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-black/15 bg-white px-3 text-sm font-medium text-[#111111] transition-colors hover:bg-[#f7f7f7]";
+    "h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-[#9595db]/35 bg-white px-3 text-sm font-medium text-[#2a2148] transition-colors hover:bg-[#f2e6f7]";
 
   if (SUPPORTED_LANGUAGES.length === 2) {
     const other = SUPPORTED_LANGUAGES.find((l) => l.code !== language);
@@ -42,11 +42,11 @@ export function LanguageToggle({ className = "", iconOnly }: { className?: strin
   // 3+ languages: dropdown
   return (
     <div className={`relative inline-flex items-center ${className}`}>
-      <Languages className="pointer-events-none absolute left-3 h-4 w-4 text-[#111111]" />
+      <Languages className="pointer-events-none absolute left-3 h-4 w-4 text-[#2a2148]" />
       <select
         value={language}
         onChange={(e) => setLanguage(e.target.value as typeof language)}
-        className="h-10 appearance-none rounded-full border border-black/15 bg-white py-0 pl-9 pr-4 text-sm font-medium text-[#111111] hover:bg-[#f7f7f7]"
+        className="h-10 appearance-none rounded-full border border-[#9595db]/35 bg-white py-0 pl-9 pr-4 text-sm font-medium text-[#2a2148] hover:bg-[#f2e6f7]"
       >
         {SUPPORTED_LANGUAGES.map((l) => (
           <option key={l.code} value={l.code}>

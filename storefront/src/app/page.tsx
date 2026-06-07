@@ -143,17 +143,17 @@ export default function HomePage() {
 
 
   return (
-    <div className="relative isolate overflow-hidden bg-[#f6f5f2]">
+    <div className="relative isolate overflow-hidden bg-[#f2e6f7]">
       <main className="mx-auto flex w-full max-w-[1400px] flex-col gap-8 px-4 py-6 md:gap-10 md:px-6 md:py-10">
         {/* 1. Hero */}
-        <section className="overflow-hidden rounded-3xl border border-black/10 bg-white">
+        <section className="overflow-hidden rounded-3xl border border-[#9595db]/25 bg-white">
           <div className="grid gap-0 md:grid-cols-2">
             <div className="order-1 space-y-4 p-5 md:p-8">
               <Badge variant="glow">{t.heroBadge}</Badge>
-              <h1 className="text-3xl font-semibold leading-tight text-[#111111] md:text-5xl">
+              <h1 className="text-3xl font-semibold leading-tight text-[#2a2148] md:text-5xl">
                 {t.heroSlides[slideIndex].title}
               </h1>
-              <p className="text-sm text-[#444444] md:text-base">{t.heroSlides[slideIndex].description}</p>
+              <p className="text-sm text-[#5a4f7a] md:text-base">{t.heroSlides[slideIndex].description}</p>
               <div className="flex flex-wrap gap-2">
                 <Button asChild>
                   <Link href="/catalog">
@@ -171,7 +171,7 @@ export default function HomePage() {
                     key={idx}
                     onClick={() => setSlideIndex(idx)}
                     className={`h-2 rounded-full transition ${
-                      idx === slideIndex ? "w-8 bg-[#111111]" : "w-4 bg-black/25"
+                      idx === slideIndex ? "w-8 bg-[#4660bc]" : "w-4 bg-[#9595db]/40"
                     }`}
                     aria-label={`Slide ${idx + 1}`}
                   />
@@ -195,7 +195,7 @@ export default function HomePage() {
         <section className="space-y-3">
           <div className="flex items-center justify-between">
             <Badge variant="outline">{t.featured}</Badge>
-            <Link href="/catalog" className="text-sm font-semibold text-[#111111]">
+            <Link href="/catalog" className="text-sm font-semibold text-[#2a2148]">
               {t.ctaMore}
             </Link>
           </div>
@@ -227,7 +227,7 @@ export default function HomePage() {
               <Link
                 key={action.title}
                 href={action.href}
-                className="rounded-2xl border border-black/10 bg-white p-4 text-sm font-semibold text-[#111111]"
+                className="rounded-2xl border border-[#9595db]/25 bg-white p-4 text-sm font-semibold text-[#2a2148]"
               >
                 {action.title}
               </Link>
@@ -238,7 +238,7 @@ export default function HomePage() {
         <section className="space-y-3">
           <div className="flex items-center justify-between">
             <Badge variant="outline">{t.collections}</Badge>
-            <Link href="/catalog" className="text-sm font-semibold text-[#111111]">
+            <Link href="/catalog" className="text-sm font-semibold text-[#2a2148]">
               {t.ctaMore}
             </Link>
           </div>
@@ -250,12 +250,12 @@ export default function HomePage() {
                 <Link
                   key={category}
                   href={`/catalog?subcategory=${encodeURIComponent(category)}`}
-                  className="shrink-0 snap-start basis-[78%] overflow-hidden rounded-2xl border border-black/10 bg-white sm:basis-[45%] md:basis-[30%]"
+                  className="shrink-0 snap-start basis-[78%] overflow-hidden rounded-2xl border border-[#9595db]/25 bg-white sm:basis-[45%] md:basis-[30%]"
                 >
                   <div className="h-20 w-full" style={{ backgroundColor: accent }} />
                   <div className="p-4">
-                    <p className="text-xs uppercase tracking-[0.2em] text-[#6b6b6b]">{t.collection}</p>
-                    <p className="mt-1 text-lg font-semibold text-[#111111]">{translateLabel(category, language)}</p>
+                    <p className="text-xs uppercase tracking-[0.2em] text-[#5a4f7a]">{t.collection}</p>
+                    <p className="mt-1 text-lg font-semibold text-[#2a2148]">{translateLabel(category, language)}</p>
                   </div>
                 </Link>
               );
@@ -264,10 +264,10 @@ export default function HomePage() {
         </section>
 
         {/* 5. Shop the Look */}
-        <section className="rounded-3xl border border-black/10 bg-white p-4 md:p-6">
+        <section className="rounded-3xl border border-[#9595db]/25 bg-white p-4 md:p-6">
           <div className="mb-4 flex items-center justify-between">
             <Badge variant="outline">{t.shopLook}</Badge>
-            <p className="text-xs uppercase tracking-[0.2em] text-[#666666]">{t.tapDots}</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-[#5a4f7a]">{t.tapDots}</p>
           </div>
           <div className="relative mx-auto h-[360px] max-w-[780px] overflow-hidden rounded-2xl md:h-[520px]">
             <SafeImage

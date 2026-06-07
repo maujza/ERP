@@ -31,20 +31,20 @@ describe("Button", () => {
     expect(screen.getByRole("button")).toHaveClass("border");
   });
 
-  it("applies outline variant bg-white class", () => {
+  it("applies outline variant bg-white/60 class", () => {
     render(<Button variant="outline">Outline</Button>);
-    expect(screen.getByRole("button")).toHaveClass("bg-white");
+    expect(screen.getByRole("button")).toHaveClass("bg-white/60");
   });
 
-  it("applies outline variant text-[#111111] class", () => {
+  it("applies outline variant text-[#2a2148] class", () => {
     render(<Button variant="outline">Outline</Button>);
-    expect(screen.getByRole("button")).toHaveClass("text-[#111111]");
+    expect(screen.getByRole("button")).toHaveClass("text-[#2a2148]");
   });
 
   // --- ghost variant ---
-  it("applies ghost variant text-[#111111] class", () => {
+  it("applies ghost variant text-[#2a2148] class", () => {
     render(<Button variant="ghost">Ghost</Button>);
-    expect(screen.getByRole("button")).toHaveClass("text-[#111111]");
+    expect(screen.getByRole("button")).toHaveClass("text-[#2a2148]");
   });
 
   it("ghost variant does not have border class", () => {
@@ -175,7 +175,7 @@ describe("buttonVariants", () => {
   });
 
   it("includes ghost hover class", () => {
-    expect(buttonVariants({ variant: "ghost" })).toContain("hover:bg-[#f0f0f0]");
+    expect(buttonVariants({ variant: "ghost" })).toContain("hover:bg-[#9595db]/15");
   });
 
   it("includes muted bg class", () => {

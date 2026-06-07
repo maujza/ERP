@@ -96,7 +96,7 @@ export default function ProductDetailPage() {
     return (
       <main className="mx-auto w-full max-w-[1000px] px-4 py-8">
         <Card className="p-6">
-          <p className="text-lg font-semibold text-[#666666]">...</p>
+          <p className="text-lg font-semibold text-[#5a4f7a]">...</p>
         </Card>
       </main>
     );
@@ -106,7 +106,7 @@ export default function ProductDetailPage() {
     return (
       <main className="mx-auto w-full max-w-[1000px] px-4 py-8">
         <Card className="p-6 space-y-4">
-          <p className="text-lg font-semibold text-[#111111]">{t.notFound}</p>
+          <p className="text-lg font-semibold text-[#2a2148]">{t.notFound}</p>
           <Button asChild variant="outline">
             <Link href="/catalog">{t.backCollection}</Link>
           </Button>
@@ -126,20 +126,20 @@ export default function ProductDetailPage() {
 
   return (
     <main className="mx-auto w-full max-w-[1200px] px-4 py-6 md:px-6 md:py-8">
-      <div className="mb-4 text-sm text-[#666666]">
-        <Link href="/" className="hover:text-[#111111]">
+      <div className="mb-4 text-sm text-[#5a4f7a]">
+        <Link href="/" className="hover:text-[#2a2148]">
           {t.home}
         </Link>
         <span className="mx-2">/</span>
-        <Link href="/catalog" className="hover:text-[#111111]">
+        <Link href="/catalog" className="hover:text-[#2a2148]">
           {t.collection}
         </Link>
         <span className="mx-2">/</span>
-        <span className="text-[#111111]">{getProductName(product, language)}</span>
+        <span className="text-[#2a2148]">{getProductName(product, language)}</span>
       </div>
 
       <section className="grid gap-5 md:grid-cols-2">
-        <div className="relative h-[420px] overflow-hidden rounded-3xl border border-black/10 bg-white md:h-[560px]">
+        <div className="relative h-[420px] overflow-hidden rounded-3xl border border-[#9595db]/25 bg-white md:h-[560px]">
           <SafeImage src={product.image} alt={getProductName(product, language)} fill className="object-cover" priority />
           <div className="absolute left-3 top-3 flex gap-2">
             <Badge variant="outline" className="bg-white/90">
@@ -150,14 +150,14 @@ export default function ProductDetailPage() {
         </div>
 
         <Card className="space-y-4 p-5 md:p-6">
-          <h1 className="text-2xl font-semibold text-[#111111] md:text-3xl">{getProductName(product, language)}</h1>
-          <p className="text-sm text-[#555555]">{getProductDescription(product, language)}</p>
+          <h1 className="text-2xl font-semibold text-[#2a2148] md:text-3xl">{getProductName(product, language)}</h1>
+          <p className="text-sm text-[#5a4f7a]">{getProductDescription(product, language)}</p>
 
           <div className="flex flex-wrap items-end gap-3">
-            <p className="text-3xl font-semibold text-[#111111]">{formatArs(product.price, language)}</p>
+            <p className="text-3xl font-semibold text-[#2a2148]">{formatArs(product.price, language)}</p>
             {product.originalPrice && product.originalPrice > product.price && (
               <>
-                <p className="text-sm text-[#777777] line-through">{formatArs(product.originalPrice, language)}</p>
+                <p className="text-sm text-[#6f6593] line-through">{formatArs(product.originalPrice, language)}</p>
                 <Badge variant="outline">
                   -{calculateDiscountPercent(product.price, product.originalPrice)}%
                 </Badge>
@@ -167,7 +167,7 @@ export default function ProductDetailPage() {
 
           {hasVariants && (
             <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#666666]">{t.variants}</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#5a4f7a]">{t.variants}</p>
               <div className="flex flex-wrap gap-2">
                 {product.variants?.map((variant) => (
                   <button
@@ -175,8 +175,8 @@ export default function ProductDetailPage() {
                     onClick={() => setSelectedVariant(variant.id)}
                     className={`rounded-full border px-4 py-2 text-sm ${
                       selectedVariant === variant.id
-                        ? "border-[#111111] bg-[#111111] text-white"
-                        : "border-black/15 bg-white"
+                        ? "border-[#4660bc] bg-[#4660bc] text-white"
+                        : "border-[#9595db]/35 bg-white"
                     }`}
                   >
                     {translateLabel(variant.label, language)}
@@ -186,7 +186,7 @@ export default function ProductDetailPage() {
             </div>
           )}
 
-          <div className="rounded-2xl bg-[#f5f5f5] p-3 text-sm text-[#555555]">
+          <div className="rounded-2xl bg-[#f2e6f7] p-3 text-sm text-[#5a4f7a]">
             {outOfStock && <p>{t.noStock}</p>}
             {!outOfStock && !hasValidPrice && <p>{language === "ko" ? "가격이 설정되지 않았습니다." : "Este producto no tiene precio configurado."}</p>}
             {!outOfStock && hasVariants && !selectedVariantData && <p>{t.selectVariant}</p>}
@@ -196,7 +196,7 @@ export default function ProductDetailPage() {
 
           {canAdd && (
             <div className="flex items-center gap-3">
-              <span className="text-sm font-medium text-[#555555]">{t.qty}:</span>
+              <span className="text-sm font-medium text-[#5a4f7a]">{t.qty}:</span>
               <QuantitySelector
                 qty={qty}
                 max={maxQty}

@@ -1,16 +1,43 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f2e6f7;
-  --foreground: #1a1a2e;
-  --surface: #ffffff;
+  /* Brand palette (exact values) */
+  --aurora-blue: #4660bc; /* deep indigo — primary / CTA */
+  --aurora-purple: #6c5baa; /* violet — secondary / hover / links */
+  --aurora-lavender: #9595db; /* periwinkle — borders / muted accents */
+  --aurora-sky: #92c9ff; /* sky blue — gradient highlight / info */
+  --aurora-pink: #ffd7fb; /* pink — highlights / soft fills */
+  --aurora-bg: #f2e6f7; /* lilac white — page / card base */
+
+  /* Semantic surface tokens */
+  --background: var(--aurora-bg);
+  --surface: rgba(242, 230, 247, 0.72); /* frosted lilac glass */
+  --surface-solid: #fbf6fd; /* opaque fallback for glass */
   --muted: #e8daf2;
-  --aurora-blue: #4660bc;
-  --aurora-purple: #6c5baa;
-  --aurora-lavender: #9595db;
-  --aurora-sky: #92c9ff;
-  --aurora-pink: #ffd7fb;
-  --aurora-bg: #f2e6f7;
+
+  /* Text tokens — high contrast on light surfaces */
+  --foreground: #2a2148; /* near-black plum — body text (AA on lilac) */
+  --foreground-muted: #5a4f7a; /* muted plum — secondary text */
+  --on-dark: #f2e6f7; /* text on dark/indigo surfaces */
+
+  /* Interactive tokens */
+  --primary: var(--aurora-blue);
+  --primary-hover: var(--aurora-purple);
+  --border: rgba(149, 149, 219, 0.45); /* periwinkle border */
+  --border-strong: rgba(149, 149, 219, 0.7);
+
+  /* Functional status colors (preserved, off-palette by design) */
+  --status-success: #1fb558;
+  --status-success-strong: #1a7a3a;
+  --status-error: #b00020;
+  --whatsapp: #25d366;
+
+  /* Glow tints */
+  --glow-lavender: rgba(149, 149, 219, 0.35);
+  --glow-pink: rgba(255, 215, 251, 0.45);
+  --glow-primary: rgba(70, 96, 188, 0.3);
+
+  /* Product card overlay buttons */
   --card-btn-add: rgba(70, 96, 188, 0.85);
   --card-btn-add-icon: #ffffff;
   --card-btn-qv: rgba(108, 91, 170, 0.72);
@@ -20,21 +47,34 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-foreground-muted: var(--foreground-muted);
+  --color-on-dark: var(--on-dark);
   --color-muted: var(--muted);
-  --color-card: var(--surface);
-  --color-primary: var(--aurora-blue);
+  --color-card: var(--surface-solid);
+  --color-surface: var(--surface);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
   --color-primary-foreground: #ffffff;
+  --color-border: var(--border);
+  --color-aurora-blue: var(--aurora-blue);
+  --color-aurora-purple: var(--aurora-purple);
+  --color-aurora-lavender: var(--aurora-lavender);
+  --color-aurora-sky: var(--aurora-sky);
+  --color-aurora-pink: var(--aurora-pink);
   --font-sans: var(--font-ibm-plex-sans);
   --font-serif: var(--font-ibm-plex-serif);
 }
 
 body {
   color: var(--foreground);
+  /* Dreamy low-saturation iridescent mesh: pink → lilac → periwinkle → sky */
   background:
-    radial-gradient(circle at 12% 16%, rgba(149, 149, 219, 0.18), transparent 35%),
-    radial-gradient(circle at 84% 8%, rgba(146, 201, 255, 0.15), transparent 30%),
-    radial-gradient(circle at 50% 90%, rgba(255, 215, 251, 0.2), transparent 40%),
-    linear-gradient(180deg, #f2e6f7 0%, #ffffff 45%, #ede8f8 100%);
+    radial-gradient(circle at 14% 12%, rgba(255, 215, 251, 0.55), transparent 42%),
+    radial-gradient(circle at 86% 10%, rgba(146, 201, 255, 0.4), transparent 40%),
+    radial-gradient(circle at 78% 82%, rgba(149, 149, 219, 0.4), transparent 45%),
+    radial-gradient(circle at 22% 88%, rgba(255, 215, 251, 0.45), transparent 45%),
+    linear-gradient(160deg, #ffd7fb 0%, #f2e6f7 38%, #e9e3f9 68%, #dfeaff 100%);
+  background-attachment: fixed;
   font-family: var(--font-ibm-plex-sans), "Inter", system-ui, -apple-system, sans-serif;
   min-height: 100vh;
 }
@@ -45,8 +85,8 @@ a {
 }
 
 ::selection {
-  background-color: rgba(149, 149, 219, 0.28);
-  color: #1a1a2e;
+  background-color: rgba(149, 149, 219, 0.32);
+  color: #2a2148;
 }
 
 .no-scrollbar {
@@ -55,6 +95,89 @@ a {
 }
 .no-scrollbar::-webkit-scrollbar {
   display: none;
+}
+
+/* ---------- Holographic Y2K Dreamcore utilities ---------- */
+
+/* Frosted translucent panel with periwinkle border + soft tinted glow */
+.glass-panel {
+  background-color: var(--surface);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border: 1px solid var(--border);
+  box-shadow:
+    0 18px 48px -16px var(--glow-lavender),
+    0 4px 18px -8px var(--glow-pink),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+
+/* Opaque fallback where backdrop-filter is unsupported */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass-panel {
+    background-color: var(--surface-solid);
+  }
+}
+
+/* Soft, diffuse holographic glow (no hard gray) */
+.holo-glow {
+  box-shadow:
+    0 16px 40px -14px var(--glow-lavender),
+    0 6px 20px -10px var(--glow-primary);
+}
+
+/* Gradient text fill for headings (keep readable; solid fallback via color) */
+.gradient-text {
+  color: var(--aurora-blue);
+  background-image: linear-gradient(
+    100deg,
+    var(--aurora-blue) 0%,
+    var(--aurora-purple) 50%,
+    var(--aurora-lavender) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Gradient accent border / divider */
+.gradient-border {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--surface-solid), var(--surface-solid)) padding-box,
+    linear-gradient(100deg, var(--aurora-sky), var(--aurora-lavender), var(--aurora-pink)) border-box;
+}
+
+.gradient-divider {
+  height: 1px;
+  border: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--aurora-sky),
+    var(--aurora-lavender),
+    var(--aurora-pink),
+    transparent
+  );
+}
+
+/* Subtle shimmer on key accents — motion-gated */
+@keyframes holo-shimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+.holo-shimmer {
+  background-size: 200% 100%;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .holo-shimmer {
+    animation: holo-shimmer 6s linear infinite;
+  }
 }
 
 @keyframes toast-enter {
@@ -70,4 +193,10 @@ a {
 
 .toast-enter {
   animation: toast-enter 0.2s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast-enter {
+    animation: none;
+  }
 }

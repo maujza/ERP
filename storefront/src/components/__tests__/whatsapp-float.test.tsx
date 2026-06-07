@@ -3,7 +3,7 @@
  *
  * Key behaviours under test:
  *  - Renders on the home page
- *  - Hidden on /backoffice, /catalog, /search, /product/*, /checkout   ← bug fix
+ *  - Hidden on /catalog, /search, /product/*, /checkout   ← bug fix
  *  - Shows "WhatsApp" in Spanish and "왓츠앱" in Korean
  *  - Link target, href, and bottom positioning
  */
@@ -83,8 +83,6 @@ describe("WhatsAppFloat – renders on home", () => {
 // ---------------------------------------------------------------------------
 describe("WhatsAppFloat – hidden on specific routes", () => {
   const hiddenRoutes = [
-    "/backoffice",
-    "/backoffice/settings",
     "/catalog",
     "/catalog?category=Aros",
     "/search",

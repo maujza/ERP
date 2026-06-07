@@ -38,8 +38,8 @@ export function ShippingForm({
 
   return (
     <>
-      <div className={`rounded-3xl border border-black/10 bg-white p-5 ${contactComplete ? "" : "opacity-60"}`}>
-        <p className="text-xs uppercase tracking-[0.2em] text-[#3f3f3f]">{t.step2}</p>
+      <div className={`rounded-3xl border border-[#9595db]/25 bg-white p-5 ${contactComplete ? "" : "opacity-60"}`}>
+        <p className="text-xs uppercase tracking-[0.2em] text-[#4a4068]">{t.step2}</p>
         <div className="mt-3 grid grid-cols-1 gap-3">
           {fields.map(({ key, label }) => (
             <Field
@@ -53,7 +53,7 @@ export function ShippingForm({
             />
           ))}
         </div>
-        <label className="mt-3 inline-flex items-center gap-2 text-sm text-[#444444]">
+        <label className="mt-3 inline-flex items-center gap-2 text-sm text-[#5a4f7a]">
           <input
             type="checkbox"
             checked={shipping.saveInfo}
@@ -64,17 +64,17 @@ export function ShippingForm({
         </label>
       </div>
 
-      <div className={`rounded-3xl border border-black/10 bg-white p-5 ${allShippingRequiredComplete ? "" : "opacity-60"}`}>
-        <p className="text-xs uppercase tracking-[0.2em] text-[#3f3f3f]">{t.step3}</p>
+      <div className={`rounded-3xl border border-[#9595db]/25 bg-white p-5 ${allShippingRequiredComplete ? "" : "opacity-60"}`}>
+        <p className="text-xs uppercase tracking-[0.2em] text-[#4a4068]">{t.step3}</p>
         <div className="mt-3 space-y-2">
           {loadingShippingMethods && (
             <div className="space-y-2">
-              <div className="h-12 animate-pulse rounded-2xl bg-[#ececec]" />
-              <div className="h-12 animate-pulse rounded-2xl bg-[#ececec]" />
+              <div className="h-12 animate-pulse rounded-2xl bg-[#e8daf2]" />
+              <div className="h-12 animate-pulse rounded-2xl bg-[#e8daf2]" />
             </div>
           )}
           {!loadingShippingMethods && shippingMethods.length === 0 && (
-            <p className="text-sm text-[#666666]">{t.completeAddress}</p>
+            <p className="text-sm text-[#5a4f7a]">{t.completeAddress}</p>
           )}
           {!loadingShippingMethods && shippingMethods.map((method) => (
             <button
@@ -83,8 +83,8 @@ export function ShippingForm({
               onClick={() => setSelectedShippingMethod(method.id)}
               className={`flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left text-sm ${
                 selectedShippingMethod === method.id
-                  ? "border-[#111111] bg-[#111111] text-white"
-                  : "border-black/15 bg-white text-[#111111]"
+                  ? "border-[#4660bc] bg-[#4660bc] text-white"
+                  : "border-[#9595db]/35 bg-white text-[#2a2148]"
               }`}
             >
               <span>{method.label} · {method.eta}</span>

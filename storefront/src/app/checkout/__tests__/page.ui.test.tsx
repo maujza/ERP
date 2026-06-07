@@ -101,7 +101,7 @@ describe("CheckoutPage", () => {
       "Paso 4 - Pago",
     ].forEach((step) => {
       const heading = screen.getByText(step);
-      expect(heading).toHaveClass("text-[#3f3f3f]");
+      expect(heading).toHaveClass("text-[#4a4068]");
     });
   });
 
@@ -257,11 +257,11 @@ describe("CheckoutPage – progress bar DOM", () => {
     expect(screen.getByText("4")).toBeInTheDocument();
   });
 
-  it("first step node (index 0) has border-2 border-[#111111] class when currentStep=0", () => {
+  it("first step node (index 0) has border-2 border-[#4660bc] class when currentStep=0", () => {
     render(<CheckoutPage />);
-    // Step "1" is in the active state (border-2 border-[#111111]) because nothing is filled
+    // Step "1" is in the active state (border-2 border-[#4660bc]) because nothing is filled
     const step1 = screen.getByText("1");
     expect(step1).toHaveClass("border-2");
-    expect(step1).toHaveClass("border-[#111111]");
+    expect(step1).toHaveClass("border-[#4660bc]");
   });
 });

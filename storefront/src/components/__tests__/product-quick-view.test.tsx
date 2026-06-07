@@ -135,10 +135,10 @@ describe("ProductQuickView – dotMode", () => {
     expect(innerSpan).toHaveClass("rounded-full");
   });
 
-  it("dot button has a dark background (bg-[#111111])", () => {
+  it("dot button has an aurora-blue background (bg-[#4660bc])", () => {
     render(<ProductQuickView productId="prod_1" dotMode />);
     const btn = screen.getByRole("button", { name: "Vista rapida" });
-    expect(btn).toHaveClass("bg-[#111111]");
+    expect(btn).toHaveClass("bg-[#4660bc]");
   });
 });
 

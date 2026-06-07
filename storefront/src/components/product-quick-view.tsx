@@ -174,11 +174,11 @@ export function ProductQuickView({ productId, className, dotMode, renderTrigger 
         type="button"
         aria-label={t.close}
         onClick={closeQuickView}
-        className="absolute inset-0 bg-black/55 backdrop-blur-sm"
+        className="absolute inset-0 bg-[#2a2148]/55 backdrop-blur-sm"
       />
 
       <aside
-        className={`absolute right-0 top-0 h-full w-full max-w-md border-l border-black/10 bg-white p-5 shadow-2xl transition-transform duration-300 ${
+        className={`absolute right-0 top-0 h-full w-full max-w-md border-l border-[#9595db]/25 bg-white p-5 shadow-2xl transition-transform duration-300 ${
           isOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
@@ -186,57 +186,57 @@ export function ProductQuickView({ productId, className, dotMode, renderTrigger 
           type="button"
           onClick={closeQuickView}
           aria-label={t.close}
-          className="absolute -left-5 top-6 hidden h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-white text-[#111111] shadow-lg md:inline-flex"
+          className="absolute -left-5 top-6 hidden h-10 w-10 items-center justify-center rounded-full border border-[#9595db]/25 bg-white text-[#2a2148] shadow-lg md:inline-flex"
         >
           <ChevronLeft className="h-5 w-5" />
         </button>
         <div className="mb-4 flex items-center justify-between">
-          <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#666666]">{t.quickView}</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.16em] text-[#5a4f7a]">{t.quickView}</p>
           <button
             type="button"
             onClick={closeQuickView}
             aria-label={t.close}
-            className="rounded-full border border-black/15 p-2"
+            className="rounded-full border border-[#9595db]/35 p-2"
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
-        {isLoading && <p className="text-sm text-[#555555]">{t.loading}</p>}
+        {isLoading && <p className="text-sm text-[#5a4f7a]">{t.loading}</p>}
 
-        {!isLoading && error && <p className="text-sm text-[#555555]">{error}</p>}
+        {!isLoading && error && <p className="text-sm text-[#5a4f7a]">{error}</p>}
 
         {!isLoading && !error && detail && (
           <div className="flex h-[calc(100%-40px)] flex-col gap-4">
-            <div className="relative mb-4 h-64 w-full overflow-hidden rounded-2xl bg-[#f2f2f2]">
+            <div className="relative mb-4 h-64 w-full overflow-hidden rounded-2xl bg-[#f2e6f7]">
               <SafeImage src={detail.product.image} alt={detail.product.name} fill className="object-cover" />
             </div>
 
             <div className="space-y-3 overflow-y-auto pr-1">
-              <h3 className="text-xl font-semibold text-[#111111]">{detail.product.name}</h3>
+              <h3 className="text-xl font-semibold text-[#2a2148]">{detail.product.name}</h3>
               {detail.product.description && (
-                <p className="text-sm text-[#555555]">{detail.product.description}</p>
+                <p className="text-sm text-[#5a4f7a]">{detail.product.description}</p>
               )}
               <div className="flex flex-wrap items-end gap-2">
-                <p className="text-lg font-semibold text-[#111111]">{formatArs(detail.product.price, language)}</p>
+                <p className="text-lg font-semibold text-[#2a2148]">{formatArs(detail.product.price, language)}</p>
                 {detail.product.originalPrice && detail.product.originalPrice > detail.product.price && (
                   <>
-                    <p className="text-sm text-[#777777] line-through">
+                    <p className="text-sm text-[#6f6593] line-through">
                       {formatArs(detail.product.originalPrice, language)}
                     </p>
-                    <span className="rounded-full border border-black/15 px-2 py-0.5 text-xs font-semibold text-[#111111]">
+                    <span className="rounded-full border border-[#9595db]/35 px-2 py-0.5 text-xs font-semibold text-[#2a2148]">
                       -{calculateDiscountPercent(detail.product.price, detail.product.originalPrice)}%
                     </span>
                   </>
                 )}
               </div>
-              <div className="rounded-2xl border border-black/10 bg-[#fafafa] p-3">
-                <p className="text-xs uppercase tracking-[0.16em] text-[#666666]">{t.dimensions}</p>
-                <p className="mt-1 text-sm text-[#222222]">{detail.dimensions}</p>
+              <div className="rounded-2xl border border-[#9595db]/25 bg-[#faf6fd] p-3">
+                <p className="text-xs uppercase tracking-[0.16em] text-[#5a4f7a]">{t.dimensions}</p>
+                <p className="mt-1 text-sm text-[#2a2148]">{detail.dimensions}</p>
               </div>
               {hasVariants && (
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#666666]">{t.variants}</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#5a4f7a]">{t.variants}</p>
                   <div className="flex flex-wrap gap-2">
                     {detail.product.variants?.map((variant) => (
                       <button
@@ -247,8 +247,8 @@ export function ProductQuickView({ productId, className, dotMode, renderTrigger 
                         }}
                         className={`rounded-full border px-3 py-1.5 text-sm ${
                           selectedVariant === variant.id
-                            ? "border-[#111111] bg-[#111111] text-white"
-                            : "border-black/15 bg-white"
+                            ? "border-[#4660bc] bg-[#4660bc] text-white"
+                            : "border-[#9595db]/35 bg-white"
                         }`}
                       >
                         {variant.label}
@@ -257,7 +257,7 @@ export function ProductQuickView({ productId, className, dotMode, renderTrigger 
                   </div>
                 </div>
               )}
-              <div className="rounded-2xl bg-[#f5f5f5] p-3 text-sm text-[#555555]">
+              <div className="rounded-2xl bg-[#f2e6f7] p-3 text-sm text-[#5a4f7a]">
                 {outOfStock && <p>{t.noStock}</p>}
                 {!outOfStock && hasVariants && !selectedVariantData && <p>{t.selectVariant}</p>}
                 {!outOfStock && selectedVariantOutOfStock && <p>{t.outOfStockVariant}</p>}
@@ -266,7 +266,7 @@ export function ProductQuickView({ productId, className, dotMode, renderTrigger 
               </div>
               {canAdd && (
                 <div className="flex items-center gap-3">
-                  <span className="text-sm font-medium text-[#555555]">{t.qty}:</span>
+                  <span className="text-sm font-medium text-[#5a4f7a]">{t.qty}:</span>
                   <QuantitySelector
                     qty={qty}
                     max={maxQty}
@@ -313,7 +313,7 @@ export function ProductQuickView({ productId, className, dotMode, renderTrigger 
           type="button"
           onClick={openQuickView}
           className={cn(
-            "relative inline-flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-[#111111]",
+            "relative inline-flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-[#4660bc]",
             className,
           )}
           aria-label={t.quickView}
@@ -331,7 +331,7 @@ export function ProductQuickView({ productId, className, dotMode, renderTrigger 
         type="button"
         onClick={openQuickView}
         className={cn(
-          "inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-black/20 bg-white px-3 text-sm font-semibold text-[#111111] transition hover:bg-[#f7f7f7]",
+          "inline-flex h-10 items-center justify-center gap-1.5 rounded-xl border border-[#9595db]/45 bg-white px-3 text-sm font-semibold text-[#2a2148] transition hover:bg-[#f2e6f7]",
           className,
         )}
         aria-label={t.quickView}

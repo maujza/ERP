@@ -16,12 +16,12 @@ describe("Badge", () => {
   // --- default variant ---
   it("applies default variant bg class", () => {
     const { container } = render(<Badge>Default</Badge>);
-    expect(container.firstChild).toHaveClass("bg-[#ff174f]");
+    expect(container.firstChild).toHaveClass("bg-[#ffd7fb]");
   });
 
-  it("applies default variant text-white class", () => {
+  it("applies default variant text class", () => {
     const { container } = render(<Badge>Default</Badge>);
-    expect(container.firstChild).toHaveClass("text-white");
+    expect(container.firstChild).toHaveClass("text-[#4660bc]");
   });
 
   // --- outline variant ---
@@ -30,20 +30,20 @@ describe("Badge", () => {
     expect(container.firstChild).toHaveClass("border");
   });
 
-  it("applies outline variant bg-white class", () => {
+  it("applies outline variant bg-white/70 class", () => {
     const { container } = render(<Badge variant="outline">Outline</Badge>);
-    expect(container.firstChild).toHaveClass("bg-white");
+    expect(container.firstChild).toHaveClass("bg-white/70");
   });
 
   it("outline variant does NOT have default bg class", () => {
     const { container } = render(<Badge variant="outline">Outline</Badge>);
-    expect(container.firstChild).not.toHaveClass("bg-[#ff174f]");
+    expect(container.firstChild).not.toHaveClass("bg-[#ffd7fb]");
   });
 
   // --- glow variant ---
   it("applies glow variant bg class", () => {
     const { container } = render(<Badge variant="glow">Glow</Badge>);
-    expect(container.firstChild).toHaveClass("bg-[#111111]/90");
+    expect(container.firstChild).toHaveClass("bg-[#4660bc]/90");
   });
 
   it("applies glow variant text-white class", () => {

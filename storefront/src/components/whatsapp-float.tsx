@@ -10,7 +10,7 @@ export function WhatsAppFloat() {
   const { language } = useLanguage();
   const { totalItems } = useCart();
 
-  const hiddenRoutes = ["/backoffice", "/catalog", "/search", "/product", "/checkout"];
+  const hiddenRoutes = ["/catalog", "/search", "/product", "/checkout"];
   if (hiddenRoutes.some((route) => pathname.startsWith(route))) {
     return null;
   }

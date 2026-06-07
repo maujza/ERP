@@ -35,8 +35,8 @@ export default function CheckoutPage() {
     return (
       <main className="mx-auto w-full max-w-[900px] px-4 py-8">
         <Card className="p-6 text-center">
-          <h1 className="text-2xl font-semibold text-[#111111]">{t.emptyCartTitle}</h1>
-          <p className="mt-2 text-sm text-[#555555]">{t.emptyCartDesc}</p>
+          <h1 className="text-2xl font-semibold text-[#2a2148]">{t.emptyCartTitle}</h1>
+          <p className="mt-2 text-sm text-[#5a4f7a]">{t.emptyCartDesc}</p>
           <Button asChild className="mt-5">
             <Link href="/">{t.backHome}</Link>
           </Button>
@@ -46,18 +46,18 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="bg-[#f4f4f4] pb-28 md:pb-10">
+    <div className="bg-[#f2e6f7] pb-28 md:pb-10">
       <main className="mx-auto grid w-full max-w-[1300px] gap-5 px-4 py-6 md:grid-cols-[1fr_360px] md:px-6 md:py-8">
         <div className="md:col-span-2">
           <div className="flex items-center gap-2 mb-4">
             {steps.map((step, i) => (
               <React.Fragment key={i}>
                 <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
-                  i < currentStep ? "bg-[#111111] text-white" :
-                  i === currentStep ? "border-2 border-[#111111] text-[#111111]" :
-                  "border border-black/20 text-[#999999]"
+                  i < currentStep ? "bg-[#4660bc] text-white" :
+                  i === currentStep ? "border-2 border-[#4660bc] text-[#2a2148]" :
+                  "border border-[#9595db]/45 text-[#8a80ab]"
                 }`}>{i + 1}</div>
-                {i < steps.length - 1 && <div className={`h-px flex-1 ${i < currentStep ? "bg-[#111111]" : "bg-black/15"}`} />}
+                {i < steps.length - 1 && <div className={`h-px flex-1 ${i < currentStep ? "bg-[#4660bc]" : "bg-[#9595db]/30"}`} />}
               </React.Fragment>
             ))}
           </div>
@@ -119,7 +119,7 @@ export default function CheckoutPage() {
       </main>
 
       {/* Mobile submit */}
-      <div className="fixed inset-x-0 bottom-0 z-45 border-t border-black/10 bg-white p-3 md:hidden">
+      <div className="fixed inset-x-0 bottom-0 z-45 border-t border-[#9595db]/25 bg-white p-3 md:hidden">
         <Button
           disabled={isSubmitting}
           className={`w-full ${isWhatsAppPaymentMethod ? "bg-[#25d366] hover:bg-[#1fb558]" : ""}`}

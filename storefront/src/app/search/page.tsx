@@ -68,20 +68,20 @@ function SearchContent() {
 
   return (
     <main className="mx-auto w-full max-w-[1300px] px-4 py-6 md:px-6 md:py-8">
-      <div className="mb-4 text-sm text-[#666666]">
-        <Link href="/" className="hover:text-[#111111]">
+      <div className="mb-4 text-sm text-[#5a4f7a]">
+        <Link href="/" className="hover:text-[#2a2148]">
           {t.home}
         </Link>
         <span className="mx-2">/</span>
-        <span className="text-[#111111]">{t.search}</span>
+        <span className="text-[#2a2148]">{t.search}</span>
       </div>
 
-      <section className="mb-5 rounded-3xl border border-black/10 bg-white p-4 md:p-6">
+      <section className="mb-5 rounded-3xl border border-[#9595db]/25 bg-white p-4 md:p-6">
         <Badge variant="outline">{t.results}</Badge>
-        <h1 className="mt-3 text-2xl font-semibold text-[#111111] md:text-3xl">
+        <h1 className="mt-3 text-2xl font-semibold text-[#2a2148] md:text-3xl">
           {query ? `${t.searchFor}: "${rawQuery}"` : t.typeToSearch}
         </h1>
-        <p className="mt-2 text-sm text-[#555555]">{results.length} {t.productsFound}</p>
+        <p className="mt-2 text-sm text-[#5a4f7a]">{results.length} {t.productsFound}</p>
       </section>
 
       {searchError && (
@@ -93,7 +93,7 @@ function SearchContent() {
       )}
       {!searchError && results.length === 0 ? (
         <Card className="p-6">
-          <p className="text-sm text-[#555555]">{t.noResults}</p>
+          <p className="text-sm text-[#5a4f7a]">{t.noResults}</p>
           <Button asChild className="mt-4 w-full md:w-auto">
             <Link href="/catalog">{t.goCollection}</Link>
           </Button>
