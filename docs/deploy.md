@@ -2,7 +2,8 @@
 
 ## Arquitectura de producción
 
-El stack corre en una **Raspberry Pi** (`pione`) con Docker Compose. El deploy es automático via GitHub Actions con un runner self-hosted.
+El stack corre en un servidor con Docker Compose. Nginx Proxy Manager forma parte
+del mismo stack y publica los servicios del ERP por HTTP/HTTPS.
 
 | Servicio | Dominio |
 |---|---|
@@ -62,7 +63,16 @@ cp backend/.env.example backend/.env
 | `RESEND_FROM` | `Aurelia <invitaciones@mail.aurelia.gleeze.com>` |
 | `SEED_DEMO_DATA` | `false` |
 
-### 3. Configurar `storefront/.env`
+### 3. Configurar el `.env` raíz
+
+```bash
+cp .env.example .env
+```
+
+Definir `NGINX_DB_PASSWORD` con una contraseña larga y aleatoria. Este archivo
+es consumido por Docker Compose y no se versiona.
+
+### 4. Configurar `storefront/.env`
 
 ```bash
 cp storefront/.env.example storefront/.env
@@ -80,7 +90,7 @@ NEXT_PUBLIC_SHIPPING_EXPRESS_ARS=7200
 
 > `MEDUSA_INTERNAL_BACKEND_URL` ya es sobreescrito por `docker-compose.yml` a `http://backend:9000` — no es crítico en este archivo.
 
-### 4. Primer levante
+### 5. Primer levante
 
 ```bash
 ./scripts/compose-up.sh
@@ -88,10 +98,32 @@ NEXT_PUBLIC_SHIPPING_EXPRESS_ARS=7200
 
 En el primer levante: migraciones, bootstrap, creación del admin, sincronización de claves y build de todas las imágenes.
 
-### 5. Registrar el runner de GitHub Actions
+### 6. Configurar Nginx Proxy Manager
 
-En la RPI, instalar el runner self-hosted siguiendo la guía oficial de GitHub:
-**Settings → Actions → Runners → New self-hosted runner** (elegir Linux ARM64).
+El panel de administración escucha solamente en localhost. Abrir un túnel desde
+la máquina local:
+
+```bash
+ssh -L 8181:127.0.0.1:81 <usuario>@<vps>
+```
+
+Luego entrar a `http://localhost:8181` y crear estos Proxy Hosts:
+
+| Dominio | Forward hostname | Forward port |
+|---|---|---|
+| `aurelia.gleeze.com` | `web` | `3000` |
+| `backoffice.aurelia.gleeze.com` | `backend` | `9000` |
+| `pos.aurelia.gleeze.com` | `pos` | `3000` |
+
+Para cada host, solicitar el certificado SSL desde el panel y habilitar
+`Force SSL`. Los puertos públicos de la VPS son `80` y `443`; los servicios
+internos quedan ligados a localhost.
+
+### 7. Registrar el runner de GitHub Actions
+
+En la VPS, instalar el runner self-hosted siguiendo la guía oficial de GitHub:
+**Settings → Actions → Runners → New self-hosted runner** y elegir la
+arquitectura correspondiente al servidor.
 
 El runner necesita acceso al directorio del repo y permisos para ejecutar Docker.
 
@@ -112,7 +144,7 @@ Solo se reconstruyen las imágenes cuyo fingerprint cambió.
 Los archivos `.env` son gitignoreados — no se sobreescriben con `git pull`. Para actualizar:
 
 ```bash
-# En la RPI
+# En la VPS
 nano /home/akwiek/code/ERP/backend/.env
 
 # Si cambió una variable de backend
