@@ -19,9 +19,9 @@ export function PaymentMethodPicker({ paymentMethod, setPaymentMethod, t, langua
   ];
 
   return (
-    <div className="space-y-3 rounded-3xl border border-black/10 bg-white p-5">
-      <p className="text-xs uppercase tracking-[0.2em] text-[#3f3f3f]">{t.step4}</p>
-      <p className="text-sm font-semibold text-[#111111]">{t.paymentTitle}</p>
+    <div className="space-y-3 rounded-3xl border border-[#9595db]/25 bg-white p-5">
+      <p className="text-xs uppercase tracking-[0.2em] text-[#4a4068]">{t.step4}</p>
+      <p className="text-sm font-semibold text-[#2a2148]">{t.paymentTitle}</p>
       <div className="grid gap-2">
         {options.map(({ value, label }) => (
           <button
@@ -29,8 +29,8 @@ export function PaymentMethodPicker({ paymentMethod, setPaymentMethod, t, langua
             onClick={() => setPaymentMethod(value)}
             className={`rounded-2xl border px-4 py-3 text-left text-sm font-medium ${
               paymentMethod === value
-                ? "border-[#111111] bg-[#111111] text-white"
-                : "border-black/15 bg-white"
+                ? "border-[#4660bc] bg-[#4660bc] text-white"
+                : "border-[#9595db]/35 bg-white"
             }`}
           >
             {label}

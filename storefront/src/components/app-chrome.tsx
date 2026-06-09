@@ -17,16 +17,16 @@ function MobileStickyCheckout() {
   const { language } = useLanguage();
   const pathname = usePathname();
 
-  // Hide on checkout and backoffice routes to avoid duplication
-  if (!totalItems || pathname.startsWith("/checkout") || pathname.startsWith("/backoffice")) {
+  // Hide on checkout routes to avoid duplication
+  if (!totalItems || pathname.startsWith("/checkout")) {
     return null;
   }
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-black/10 bg-white/90 backdrop-blur-md p-3 md:hidden">
+    <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#9595db]/25 bg-white/90 backdrop-blur-md p-3 md:hidden">
       <Link
         href="/checkout"
-        className="flex w-full items-center justify-between rounded-2xl bg-[#111111] px-4 py-3"
+        className="flex w-full items-center justify-between rounded-2xl bg-[#4660bc] px-4 py-3"
       >
         <span className="text-sm font-medium text-white">
           {totalItems} art. · {formatArs(subtotal, language)}
@@ -38,13 +38,10 @@ function MobileStickyCheckout() {
 }
 
 export function AppChrome({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-  const isBackoffice = pathname.startsWith("/backoffice");
-
   return (
     <ToastProvider>
       <SiteHeader />
-      <div className={isBackoffice ? "" : "pt-[72px]"}>{children}</div>
+      <div className="pt-[72px]">{children}</div>
       <SiteFooter />
       <WhatsAppFloat />
       <ToastList />

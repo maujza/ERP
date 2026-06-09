@@ -130,16 +130,6 @@ describe("MobileStickyCheckout", () => {
     expect(checkoutLinks).toHaveLength(0);
   });
 
-  it("renders nothing on /backoffice path even with items in cart", () => {
-    mockTotalItems = 1;
-    mockPathname = "/backoffice/orders";
-    render(<AppChrome><div>Content</div></AppChrome>);
-    const checkoutLinks = screen
-      .queryAllByRole("link")
-      .filter((el) => el.getAttribute("href") === "/checkout");
-    expect(checkoutLinks).toHaveLength(0);
-  });
-
   it("shows item count and subtotal in the sticky bar", () => {
     mockTotalItems = 3;
     mockSubtotal = 36000;

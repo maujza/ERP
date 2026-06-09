@@ -53,7 +53,7 @@ function QuantityInput({
       onBlur={commit}
       onKeyDown={onKeyDown}
       aria-label={ariaLabel}
-      className="h-8 w-16 rounded-xl border border-black/15 px-2 text-center text-sm font-semibold"
+      className="h-8 w-16 rounded-xl border border-[#9595db]/35 px-2 text-center text-sm font-semibold"
     />
   );
 }
@@ -71,24 +71,24 @@ export function CartToast({
     : { added: "Agregado al carrito", dismiss: "Cerrar" };
 
   return (
-    <div className="toast-enter fixed left-4 right-4 top-20 z-[90] rounded-2xl border border-black/10 bg-white p-3 shadow-xl md:left-auto md:right-5 md:w-72">
+    <div className="toast-enter fixed left-4 right-4 top-20 z-[90] rounded-2xl border border-[#9595db]/25 bg-white p-3 shadow-xl md:left-auto md:right-5 md:w-72">
       <div className="flex items-start gap-3">
-        <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-[#f3f3f3]">
+        <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-[#f2e6f7]">
           {item.thumbnail && (
             <SafeImage src={item.thumbnail} alt={item.title} fill className="object-cover" />
           )}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold text-[#ff2d55]">{t.added}</p>
-          <p className="line-clamp-2 text-sm font-semibold text-[#111111]">{item.title}</p>
+          <p className="text-xs font-semibold text-[#4660bc]">{t.added}</p>
+          <p className="line-clamp-2 text-sm font-semibold text-[#2a2148]">{item.title}</p>
           {item.variantTitle && (
-            <p className="text-xs text-[#666666]">{item.variantTitle}</p>
+            <p className="text-xs text-[#5a4f7a]">{item.variantTitle}</p>
           )}
-          <p className="text-sm font-medium text-[#111111]">{formatArs(item.unitPrice, language)}</p>
+          <p className="text-sm font-medium text-[#2a2148]">{formatArs(item.unitPrice, language)}</p>
         </div>
         <button
           onClick={onDismiss}
-          className="shrink-0 rounded-full p-1 text-[#666666] hover:bg-[#f3f3f3]"
+          className="shrink-0 rounded-full p-1 text-[#5a4f7a] hover:bg-[#f2e6f7]"
           aria-label={t.dismiss}
         >
           <X className="h-4 w-4" />
@@ -152,21 +152,21 @@ export function MiniCartDrawer() {
   return (
     <>
       <div
-        className={`fixed inset-0 z-[70] bg-black/45 transition ${
+        className={`fixed inset-0 z-[70] bg-[#2a2148]/45 transition ${
           isDrawerOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
         }`}
         onClick={closeDrawer}
       />
       <aside
-        className={`fixed right-0 top-0 z-[75] flex h-full w-full max-w-md flex-col border-l border-black/10 bg-white shadow-2xl transition-transform ${
+        className={`fixed right-0 top-0 z-[75] flex h-full w-full max-w-md flex-col border-l border-[#9595db]/25 bg-white shadow-2xl transition-transform ${
           isDrawerOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
-        <div className="flex items-center justify-between border-b border-black/10 px-5 py-4">
-          <h2 className="text-lg font-semibold text-[#111111]">{t.cart}</h2>
+        <div className="flex items-center justify-between border-b border-[#9595db]/25 px-5 py-4">
+          <h2 className="text-lg font-semibold text-[#2a2148]">{t.cart}</h2>
           <button
             onClick={closeDrawer}
-            className="rounded-full border border-black/15 p-2 text-[#111111]"
+            className="rounded-full border border-[#9595db]/35 p-2 text-[#2a2148]"
             aria-label={t.closeCart}
           >
             <X className="h-4 w-4" />
@@ -174,7 +174,7 @@ export function MiniCartDrawer() {
         </div>
         <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
           {items.length === 0 ? (
-            <div className="space-y-4 rounded-2xl border border-dashed border-black/20 p-5 text-sm text-[#666666]">
+            <div className="space-y-4 rounded-2xl border border-dashed border-[#9595db]/45 p-5 text-sm text-[#5a4f7a]">
               <p>{t.empty}</p>
               <Button asChild className="w-full">
                 <Link href="/" onClick={closeDrawer}>
@@ -184,22 +184,22 @@ export function MiniCartDrawer() {
             </div>
           ) : (
             items.map((line) => (
-              <div key={line.id} className="rounded-2xl border border-black/10 p-3">
+              <div key={line.id} className="rounded-2xl border border-[#9595db]/25 p-3">
                 <div className="flex gap-3">
-                  <div className="relative h-16 w-16 overflow-hidden rounded-xl bg-[#f3f3f3]">
+                  <div className="relative h-16 w-16 overflow-hidden rounded-xl bg-[#f2e6f7]">
                     {line.thumbnail && (
                       <SafeImage src={line.thumbnail} alt={line.title} fill className="object-cover" />
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="line-clamp-2 text-sm font-semibold text-[#111111]">{line.title}</p>
+                    <p className="line-clamp-2 text-sm font-semibold text-[#2a2148]">{line.title}</p>
                     {line.variantTitle && (
-                      <p className="text-xs text-[#666666]">{line.variantTitle}</p>
+                      <p className="text-xs text-[#5a4f7a]">{line.variantTitle}</p>
                     )}
-                    <p className="text-sm font-medium text-[#111111]">{formatArs(line.unitPrice, language)}</p>
+                    <p className="text-sm font-medium text-[#2a2148]">{formatArs(line.unitPrice, language)}</p>
                   </div>
                   <button
-                    className="h-fit rounded-full p-1 text-[#666666] hover:bg-[#f3f3f3]"
+                    className="h-fit rounded-full p-1 text-[#5a4f7a] hover:bg-[#f2e6f7]"
                     onClick={() => removeFromCart(line.id)}
                     aria-label={t.removeProduct}
                   >
@@ -209,7 +209,7 @@ export function MiniCartDrawer() {
                 <div className="mt-2 flex items-center gap-2">
                   <button
                     onClick={() => updateQuantity(line.id, line.quantity - 1)}
-                    className="h-7 w-7 rounded-full border border-black/15"
+                    className="h-7 w-7 rounded-full border border-[#9595db]/35"
                   >
                     -
                   </button>
@@ -221,7 +221,7 @@ export function MiniCartDrawer() {
                   />
                   <button
                     onClick={() => updateQuantity(line.id, line.quantity + 1)}
-                    className="h-7 w-7 rounded-full border border-black/15"
+                    className="h-7 w-7 rounded-full border border-[#9595db]/35"
                   >
                     +
                   </button>
@@ -230,10 +230,10 @@ export function MiniCartDrawer() {
             ))
           )}
         </div>
-        <div className="border-t border-black/10 px-5 py-4">
-          <div className="mb-4 flex items-center justify-between text-sm text-[#555555]">
+        <div className="border-t border-[#9595db]/25 px-5 py-4">
+          <div className="mb-4 flex items-center justify-between text-sm text-[#5a4f7a]">
             <span>{t.subtotal}</span>
-            <span className="font-semibold text-[#111111]">{formatArs(subtotal, language)}</span>
+            <span className="font-semibold text-[#2a2148]">{formatArs(subtotal, language)}</span>
           </div>
           <div className="grid gap-2">
             <Button variant="outline" onClick={clearCart} disabled={items.length === 0}>
@@ -250,11 +250,11 @@ export function MiniCartDrawer() {
       </aside>
       {showCheckoutChoice && (
         <>
-          <div className="fixed inset-0 z-[80] bg-black/50" onClick={() => setShowCheckoutChoice(false)} />
+          <div className="fixed inset-0 z-[80] bg-[#2a2148]/50" onClick={() => setShowCheckoutChoice(false)} />
           <div className="fixed inset-0 z-[85] flex items-center justify-center p-4">
-            <div className="w-full max-w-md rounded-3xl border border-black/10 bg-white p-6 shadow-2xl">
+            <div className="w-full max-w-md rounded-3xl border border-[#9595db]/25 bg-white p-6 shadow-2xl">
               <h3 className="text-xl font-bold text-black">{t.checkoutChoiceTitle}</h3>
-              <p className="mt-2 text-sm text-slate-600">{t.checkoutChoiceBody}</p>
+              <p className="mt-2 text-sm text-[#5a4f7a]">{t.checkoutChoiceBody}</p>
               <div className="mt-5 grid gap-2">
                 <button
                   type="button"
@@ -263,7 +263,7 @@ export function MiniCartDrawer() {
                     closeDrawer();
                     router.push("/checkout?guest=1");
                   }}
-                  className="rounded-xl border border-black/15 bg-white px-4 py-2.5 text-sm font-semibold text-black"
+                  className="rounded-xl border border-[#9595db]/35 bg-white px-4 py-2.5 text-sm font-semibold text-black"
                 >
                   {t.checkoutChoiceGuest}
                 </button>
@@ -274,14 +274,14 @@ export function MiniCartDrawer() {
                     closeDrawer();
                     router.push("/auth?next=/checkout");
                   }}
-                  className="rounded-xl bg-black px-4 py-2.5 text-sm font-semibold text-white hover:bg-black/90"
+                  className="rounded-xl bg-black px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#2a2148]/90"
                 >
                   {t.checkoutChoiceLogin}
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowCheckoutChoice(false)}
-                  className="rounded-xl px-4 py-2 text-sm font-medium text-slate-600"
+                  className="rounded-xl px-4 py-2 text-sm font-medium text-[#5a4f7a]"
                 >
                   {t.checkoutChoiceCancel}
                 </button>

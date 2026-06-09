@@ -47,14 +47,10 @@ test.describe("Search", () => {
   });
 
   test("search results link to valid product pages", async ({ page }) => {
-    await page.goto("/search?q=anillo");
+    // "aros" appears in many seeded product titles, so results are guaranteed
+    await page.goto("/search?q=aros");
     const firstResult = page.locator("a[href^='/product/']").first();
-    const hasResult = await firstResult.isVisible({ timeout: 5000 }).catch(() => false);
-
-    if (!hasResult) {
-      test.skip();
-      return;
-    }
+    await expect(firstResult).toBeVisible({ timeout: 5000 });
 
     await firstResult.click();
     await expect(page).toHaveURL(/\/product\//, { timeout: 5000 });

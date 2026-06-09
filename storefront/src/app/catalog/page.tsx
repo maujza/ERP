@@ -293,20 +293,20 @@ export default function CatalogPage() {
   };
 
   return (
-    <div className="bg-[#f1f1f1] pb-24 md:pb-10">
+    <div className="bg-[#f2e6f7] pb-24 md:pb-10">
       <main className="mx-auto w-full max-w-[1400px] px-4 py-5 md:px-6 md:py-8">
-        <div className="mb-4 flex items-center gap-2 text-sm text-[#666666]">
-          <Link href="/" className="hover:text-[#111111]">
+        <div className="mb-4 flex items-center gap-2 text-sm text-[#5a4f7a]">
+          <Link href="/" className="hover:text-[#2a2148]">
             {t.home}
           </Link>
           <span>/</span>
-          <span className="text-[#111111]">{t.collection}</span>
+          <span className="text-[#2a2148]">{t.collection}</span>
         </div>
 
-        <section className="mb-4 rounded-3xl border border-black/10 bg-white p-4 md:p-6">
+        <section className="mb-4 rounded-3xl border border-[#9595db]/25 bg-white p-4 md:p-6">
           <Badge variant="outline">{t.wholesaleCollection}</Badge>
-          <h1 className="mt-3 text-2xl font-semibold text-[#111111] md:text-3xl">{t.title}</h1>
-          <p className="mt-2 text-sm text-[#555555]">{t.desc}</p>
+          <h1 className="mt-3 text-2xl font-semibold text-[#2a2148] md:text-3xl">{t.title}</h1>
+          <p className="mt-2 text-sm text-[#5a4f7a]">{t.desc}</p>
         </section>
 
         <div className="no-scrollbar mb-4 overflow-x-auto">
@@ -320,8 +320,8 @@ export default function CatalogPage() {
                 }}
                 className={`whitespace-nowrap rounded-full border px-4 py-2 text-sm ${
                   activeSubcategory === subcategory
-                    ? "border-[#111111] bg-[#111111] text-white"
-                    : "border-black/15 bg-white text-[#333333]"
+                    ? "border-[#4660bc] bg-[#4660bc] text-white"
+                    : "border-[#9595db]/35 bg-white text-[#2a2148]"
                 }`}
               >
                 {translateLabel(subcategory, language)}
@@ -350,33 +350,33 @@ export default function CatalogPage() {
           </aside>
 
           <div className="space-y-4" ref={gridRef}>
-            <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-black/10 bg-white p-3 md:justify-between">
+            <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-[#9595db]/25 bg-white p-3 md:justify-between">
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setMobileFiltersOpen(true)}
-                  className="inline-flex items-center gap-2 rounded-full border border-black/15 px-3 py-2 text-sm md:hidden"
+                  className="inline-flex items-center gap-2 rounded-full border border-[#9595db]/35 px-3 py-2 text-sm md:hidden"
                 >
                   <Filter className="h-4 w-4" />
                   {t.filters}
                   {activeFilterCount > 0 && (
-                    <span className="rounded-full bg-[#111111] px-2 py-0.5 text-xs text-white">
+                    <span className="rounded-full bg-[#4660bc] px-2 py-0.5 text-xs text-white">
                       {activeFilterCount}
                     </span>
                   )}
                 </button>
-                <p className="text-sm text-[#666666]">
-                  <span className="font-semibold text-[#111111]">{filteredProducts.length}</span> {t.results}
+                <p className="text-sm text-[#5a4f7a]">
+                  <span className="font-semibold text-[#2a2148]">{filteredProducts.length}</span> {t.results}
                 </p>
               </div>
               <div className="flex items-center gap-2 text-sm">
-                <span className="text-[#666666]">{t.sortBy}</span>
+                <span className="text-[#5a4f7a]">{t.sortBy}</span>
                 <select
                   value={sortBy}
                   onChange={(e) => {
                     setSortBy(e.target.value as SortOption);
                     setPage(1);
                   }}
-                  className="rounded-full border border-black/15 bg-white px-3 py-2"
+                  className="rounded-full border border-[#9595db]/35 bg-white px-3 py-2"
                 >
                   {sortOptions.map((option) => (
                     <option key={option.id} value={option.id}>
@@ -384,14 +384,14 @@ export default function CatalogPage() {
                     </option>
                   ))}
                 </select>
-                <span className="text-[#666666]">{t.perPage}</span>
+                <span className="text-[#5a4f7a]">{t.perPage}</span>
                 <select
                   value={pageSize}
                   onChange={(e) => {
                     setPageSize(Number(e.target.value) as (typeof PAGE_SIZE_OPTIONS)[number]);
                     setPage(1);
                   }}
-                  className="rounded-full border border-black/15 bg-white px-3 py-2"
+                  className="rounded-full border border-[#9595db]/35 bg-white px-3 py-2"
                 >
                   {PAGE_SIZE_OPTIONS.map((option) => (
                     <option key={option} value={option}>
@@ -444,7 +444,7 @@ export default function CatalogPage() {
             </div>
 
             {paginated.length === 0 && (
-              <Card className="border-black/10 bg-white">
+              <Card className="border-[#9595db]/25 bg-white">
                 <CardHeader>
                   <CardTitle>{t.noResults}</CardTitle>
                 </CardHeader>
@@ -456,11 +456,11 @@ export default function CatalogPage() {
               </Card>
             )}
 
-            <div className="flex items-center justify-between rounded-2xl border border-black/10 bg-white p-3">
+            <div className="flex items-center justify-between rounded-2xl border border-[#9595db]/25 bg-white p-3">
               <Button variant="outline" onClick={() => goToPage(currentPage - 1)} disabled={currentPage <= 1}>
                 {t.prev}
               </Button>
-              <p className="text-sm text-[#555555]">
+              <p className="text-sm text-[#5a4f7a]">
                 {t.page} {currentPage} {t.of} {totalPages}
               </p>
               <Button
@@ -476,17 +476,17 @@ export default function CatalogPage() {
 
         <button
           onClick={() => setMobileFiltersOpen(true)}
-          className="fixed bottom-5 left-1/2 z-40 inline-flex -translate-x-1/2 items-center gap-2 rounded-full bg-[#111111] px-5 py-3 text-sm font-semibold text-white shadow-xl md:hidden"
+          className="fixed bottom-5 left-1/2 z-40 inline-flex -translate-x-1/2 items-center gap-2 rounded-full bg-[#4660bc] px-5 py-3 text-sm font-semibold text-white shadow-xl md:hidden"
         >
           <Filter className="h-4 w-4" />
           {t.filters}
           {activeFilterCount > 0 && (
-            <span className="rounded-full bg-white px-2 py-0.5 text-xs text-[#111111]">{activeFilterCount}</span>
+            <span className="rounded-full bg-white px-2 py-0.5 text-xs text-[#2a2148]">{activeFilterCount}</span>
           )}
         </button>
 
         <div
-          className={`fixed inset-0 z-[70] bg-black/45 transition md:hidden ${
+          className={`fixed inset-0 z-[70] bg-[#2a2148]/45 transition md:hidden ${
             mobileFiltersOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
           }`}
           onClick={() => setMobileFiltersOpen(false)}
@@ -498,7 +498,7 @@ export default function CatalogPage() {
         >
           <div className="mb-3 flex items-center justify-between">
             <p className="text-sm font-semibold uppercase tracking-[0.2em]">{t.filters}</p>
-            <button onClick={() => setMobileFiltersOpen(false)} className="rounded-full border border-black/15 p-2">
+            <button onClick={() => setMobileFiltersOpen(false)} className="rounded-full border border-[#9595db]/35 p-2">
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -530,7 +530,7 @@ function Tag({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
     <button
       onClick={onRemove}
-      className="inline-flex items-center gap-1 rounded-full border border-black/15 bg-white px-3 py-1 text-xs"
+      className="inline-flex items-center gap-1 rounded-full border border-[#9595db]/35 bg-white px-3 py-1 text-xs"
     >
       {label}
       <X className="h-3 w-3" />
@@ -576,23 +576,23 @@ function FiltersPanel({
   clearAll: () => void;
 }) {
   return (
-    <Card className="border-black/10 bg-white">
+    <Card className="border-[#9595db]/25 bg-white">
       <CardHeader>
-        <CardTitle className="text-[#111111]">{t.filters}</CardTitle>
+        <CardTitle className="text-[#2a2148]">{t.filters}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-5">
         <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#666666]">{t.searchPrefix}</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#5a4f7a]">{t.searchPrefix}</p>
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-2xl border border-black/15 px-3 py-2 text-sm outline-none"
+            className="w-full rounded-2xl border border-[#9595db]/35 px-3 py-2 text-sm outline-none"
             placeholder={t.searchPlaceholder}
           />
         </div>
 
         <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#666666]">{t.category}</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#5a4f7a]">{t.category}</p>
           <div className="flex flex-wrap gap-2">
             {categories.map((category) => (
               <button
@@ -600,8 +600,8 @@ function FiltersPanel({
                 onClick={() => onToggleCategory(category)}
                 className={`rounded-full border px-3 py-1 text-xs ${
                   selectedCategories.includes(category)
-                    ? "border-[#111111] bg-[#111111] text-white"
-                    : "border-black/15 bg-white"
+                    ? "border-[#4660bc] bg-[#4660bc] text-white"
+                    : "border-[#9595db]/35 bg-white"
                 }`}
               >
                 {translateLabel(category, language)}
@@ -611,7 +611,7 @@ function FiltersPanel({
         </div>
 
         <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#666666]">{t.brand}</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#5a4f7a]">{t.brand}</p>
           <div className="flex flex-wrap gap-2">
             {brands.map((brand) => (
               <button
@@ -619,8 +619,8 @@ function FiltersPanel({
                 onClick={() => onToggleBrand(brand)}
                 className={`rounded-full border px-3 py-1 text-xs ${
                   selectedBrands.includes(brand)
-                    ? "border-[#111111] bg-[#111111] text-white"
-                    : "border-black/15 bg-white"
+                    ? "border-[#4660bc] bg-[#4660bc] text-white"
+                    : "border-[#9595db]/35 bg-white"
                 }`}
               >
                 {translateLabel(brand, language)}
@@ -630,7 +630,7 @@ function FiltersPanel({
         </div>
 
         <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#666666]">{t.price}</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#5a4f7a]">{t.price}</p>
           <div className="grid gap-2">
             {priceFilters.map((filter) => (
               <button
@@ -638,8 +638,8 @@ function FiltersPanel({
                 onClick={() => setPriceFilter(filter.id)}
                 className={`rounded-2xl border px-3 py-2 text-left text-sm ${
                   priceFilter === filter.id
-                    ? "border-[#111111] bg-[#111111] text-white"
-                    : "border-black/15 bg-white"
+                    ? "border-[#4660bc] bg-[#4660bc] text-white"
+                    : "border-[#9595db]/35 bg-white"
                 }`}
               >
                 {translateLabel(filter.label, language)}

@@ -44,7 +44,7 @@ function statusBadgeClasses(type: "order" | "payment" | "fulfillment", value?: s
     if (status.includes("canceled") || status.includes("cancelled") || status.includes("failed")) {
       return "bg-rose-100 text-rose-700";
     }
-    return "bg-slate-200 text-slate-700";
+    return "bg-[#e8daf2] text-[#4a4068]";
   }
   if (type === "fulfillment") {
     if (status.includes("delivered")) return "bg-emerald-100 text-emerald-700";
@@ -52,12 +52,12 @@ function statusBadgeClasses(type: "order" | "payment" | "fulfillment", value?: s
     if (status.includes("fulfilled")) return "bg-blue-100 text-blue-700";
     if (status.includes("not fulfilled") || status.includes("pending")) return "bg-amber-100 text-amber-700";
     if (status.includes("canceled") || status.includes("cancelled")) return "bg-rose-100 text-rose-700";
-    return "bg-slate-200 text-slate-700";
+    return "bg-[#e8daf2] text-[#4a4068]";
   }
   if (status.includes("completed")) return "bg-emerald-100 text-emerald-700";
   if (status.includes("pending")) return "bg-amber-100 text-amber-700";
   if (status.includes("canceled") || status.includes("cancelled")) return "bg-rose-100 text-rose-700";
-  return "bg-slate-200 text-slate-700";
+  return "bg-[#e8daf2] text-[#4a4068]";
 }
 
 type AccountLang = {
@@ -335,7 +335,7 @@ export default function AccountPage() {
   if (state === "loading") {
     return (
       <main className="mx-auto w-full max-w-4xl px-4 py-10">
-        <p className="text-sm text-slate-600">{t.loading}</p>
+        <p className="text-sm text-[#5a4f7a]">{t.loading}</p>
       </main>
     );
   }
@@ -343,17 +343,17 @@ export default function AccountPage() {
   if (state === "unauthenticated") {
     return (
       <main className="mx-auto w-full max-w-2xl px-4 py-10">
-        <section className="rounded-3xl border border-black/10 bg-white p-6 shadow-sm">
+        <section className="rounded-3xl border border-[#9595db]/25 bg-white p-6 shadow-sm">
           <h1 className="text-2xl font-bold text-black">{title}</h1>
-          <p className="mt-2 text-sm text-slate-600">{t.needsLogin}</p>
+          <p className="mt-2 text-sm text-[#5a4f7a]">{t.needsLogin}</p>
           <div className="mt-5 flex gap-3">
             <Link
               href="/auth?next=/account"
-              className="inline-flex items-center justify-center rounded-xl bg-black px-4 py-2 text-sm font-semibold !text-white hover:bg-black/90"
+              className="inline-flex items-center justify-center rounded-xl bg-black px-4 py-2 text-sm font-semibold !text-white hover:bg-[#2a2148]/90"
             >
               {t.loginCta}
             </Link>
-            <Link href="/catalog" className="rounded-xl border border-black/15 px-4 py-2 text-sm font-semibold">
+            <Link href="/catalog" className="rounded-xl border border-[#9595db]/35 px-4 py-2 text-sm font-semibold">
               {t.shopCta}
             </Link>
           </div>
@@ -374,15 +374,15 @@ export default function AccountPage() {
 
   return (
     <main className="mx-auto w-full max-w-4xl px-4 py-10">
-      <section className="rounded-3xl border border-black/10 bg-white p-6 shadow-sm md:p-8">
+      <section className="rounded-3xl border border-[#9595db]/25 bg-white p-6 shadow-sm md:p-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h1 className="text-2xl font-bold text-black">{t.greeting(customerLabel)}</h1>
-            <p className="mt-1 text-sm text-slate-600">{t.subtitle}</p>
+            <p className="mt-1 text-sm text-[#5a4f7a]">{t.subtitle}</p>
           </div>
           <button
             onClick={onLogout}
-            className="rounded-xl border border-black/15 px-3 py-2 text-sm font-semibold text-black"
+            className="rounded-xl border border-[#9595db]/35 px-3 py-2 text-sm font-semibold text-black"
           >
             {t.logout}
           </button>
@@ -393,7 +393,7 @@ export default function AccountPage() {
           <h2 className="text-lg font-semibold text-black">{t.orders}</h2>
 
           {orders.length === 0 ? (
-            <div className="mt-3 rounded-2xl border border-black/10 bg-slate-50 p-4 text-sm text-slate-600">
+            <div className="mt-3 rounded-2xl border border-[#9595db]/25 bg-[#faf6fd] p-4 text-sm text-[#5a4f7a]">
               {t.emptyOrders}
             </div>
           ) : (
@@ -409,7 +409,7 @@ export default function AccountPage() {
                     ? lang.tracking.orderConfirmed
                     : tracking.steps.find((step) => step.current)?.label || lang.tracking.orderConfirmed;
                 return (
-                  <article key={order.id} className="rounded-2xl border border-black/10 bg-slate-50 p-4">
+                  <article key={order.id} className="rounded-2xl border border-[#9595db]/25 bg-[#faf6fd] p-4">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <p className="text-sm font-semibold text-black">
                         {t.orderPrefix}{order.display_id ?? order.id.slice(-6)}
@@ -421,15 +421,15 @@ export default function AccountPage() {
                         }).format(amount)}
                       </p>
                     </div>
-                    <p className="mt-1 text-xs text-slate-600">
+                    <p className="mt-1 text-xs text-[#5a4f7a]">
                       {t.datePrefix} {date ? date.toLocaleString(language === "ko" ? "ko-KR" : "es-AR") : "-"}
                     </p>
                     <div className="mt-3">
                       <OrderStepper steps={tracking.steps} />
-                      <p className="mt-2 text-xs text-slate-500">{t.trackingPrefix} {trackingHint}</p>
+                      <p className="mt-2 text-xs text-[#6f6593]">{t.trackingPrefix} {trackingHint}</p>
                     </div>
                     {discountTotal > 0 && (
-                      <p className="mt-2 text-xs text-slate-500">
+                      <p className="mt-2 text-xs text-[#6f6593]">
                         {t.discountsPrefix} -{discountTotal.toLocaleString(language === "ko" ? "ko-KR" : "es-AR")}
                       </p>
                     )}
@@ -441,25 +441,25 @@ export default function AccountPage() {
 
           {/* Promos + price tier — secondary section */}
           <div className="mt-6 grid gap-3 md:grid-cols-2">
-            <section className="rounded-2xl border border-black/10 bg-slate-50 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{t.promos}</p>
-              <p className="mt-2 text-sm text-slate-700">{t.promosHint}</p>
+            <section className="rounded-2xl border border-[#9595db]/25 bg-[#faf6fd] p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6f6593]">{t.promos}</p>
+              <p className="mt-2 text-sm text-[#4a4068]">{t.promosHint}</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {promoCodes.map((code) => (
                   <button
                     key={code}
                     onClick={() => onCopyPromoCode(code)}
-                    className="rounded-full border border-black/15 bg-white px-3 py-1 text-xs font-semibold text-black transition hover:border-black/35"
+                    className="rounded-full border border-[#9595db]/35 bg-white px-3 py-1 text-xs font-semibold text-black transition hover:border-[#9595db]/55"
                   >
                     {code} {copiedPromoCode === code ? t.copiedLabel : t.copyLabel}
                   </button>
                 ))}
               </div>
             </section>
-            <section className="rounded-2xl border border-black/10 bg-slate-50 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">{t.priceListTitle}</p>
+            <section className="rounded-2xl border border-[#9595db]/25 bg-[#faf6fd] p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#6f6593]">{t.priceListTitle}</p>
               <p className="mt-2 text-sm font-semibold text-black">{t.tierCurrent} {priceListTier}</p>
-              <p className="mt-1 text-sm text-slate-700">{priceListMessage}</p>
+              <p className="mt-1 text-sm text-[#4a4068]">{priceListMessage}</p>
             </section>
           </div>
         </div>
@@ -487,10 +487,10 @@ function OrderStepper({ steps }: { steps: TrackingStep[] }) {
               <div
                 className={`flex h-8 w-8 items-center justify-center rounded-full border-2 transition-colors ${
                   step.done
-                    ? "border-[#61c3d8] bg-[#61c3d8] text-white"
+                    ? "border-[#4660bc] bg-[#4660bc] text-white"
                     : step.current
                       ? "border-black bg-black text-white"
-                      : "border-slate-300 bg-white text-slate-400"
+                      : "border-[#9595db]/50 bg-white text-[#8a80ab]"
                 }`}
                 title={step.label}
               >
@@ -502,7 +502,7 @@ function OrderStepper({ steps }: { steps: TrackingStep[] }) {
               </div>
               <span
                 className={`max-w-[60px] text-center text-[10px] leading-tight ${
-                  step.done || step.current ? "text-slate-700" : "text-slate-400"
+                  step.done || step.current ? "text-[#4a4068]" : "text-[#8a80ab]"
                 } ${step.current ? "font-semibold" : ""}`}
               >
                 {step.label}
@@ -510,7 +510,7 @@ function OrderStepper({ steps }: { steps: TrackingStep[] }) {
             </div>
             {idx < steps.length - 1 && (
               <div
-                className={`mb-4 h-0.5 flex-1 ${step.done ? "bg-[#61c3d8]" : "bg-slate-200"}`}
+                className={`mb-4 h-0.5 flex-1 ${step.done ? "bg-[#4660bc]" : "bg-[#e8daf2]"}`}
               />
             )}
           </div>

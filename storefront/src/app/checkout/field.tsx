@@ -17,13 +17,13 @@ export function Field({
 }) {
   return (
     <div className="space-y-1">
-      <label className="text-sm font-medium text-[#111111]">{label}</label>
+      <label className="text-sm font-medium text-[#2a2148]">{label}</label>
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onBlur={onBlur}
         disabled={disabled}
-        className="w-full rounded-2xl border border-black/15 px-3 py-2 text-sm outline-none disabled:bg-[#f0f0f0]"
+        className="w-full rounded-2xl border border-[#9595db]/35 px-3 py-2 text-sm outline-none disabled:bg-[#f2e6f7]"
       />
       {error && <p className="text-xs text-[#b00020]">{error}</p>}
     </div>

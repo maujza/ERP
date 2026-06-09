@@ -13,7 +13,7 @@ export function QuantitySelector({ qty, max, decreaseLabel, increaseLabel, onCha
     <div className="flex items-center gap-2">
       <button
         onClick={() => onChange(Math.max(1, qty - 1))}
-        className="h-9 w-9 rounded-full border border-black/20 text-lg font-semibold leading-none"
+        className="h-9 w-9 rounded-full border border-[#9595db]/45 text-lg font-semibold leading-none"
         aria-label={decreaseLabel}
       >
         −
@@ -31,11 +31,11 @@ export function QuantitySelector({ qty, max, decreaseLabel, increaseLabel, onCha
           const v = Number.parseInt(e.target.value, 10);
           if (Number.isNaN(v) || v < 1) onChange(1);
         }}
-        className="h-9 w-14 rounded-xl border border-black/20 px-2 text-center text-sm font-semibold outline-none focus:border-black/40"
+        className="h-9 w-14 rounded-xl border border-[#9595db]/45 px-2 text-center text-sm font-semibold outline-none focus:border-[#9595db]/55"
       />
       <button
         onClick={() => onChange(Math.min(max, qty + 1))}
-        className="h-9 w-9 rounded-full border border-black/20 text-lg font-semibold leading-none"
+        className="h-9 w-9 rounded-full border border-[#9595db]/45 text-lg font-semibold leading-none"
         aria-label={increaseLabel}
       >
         +

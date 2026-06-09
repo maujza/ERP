@@ -111,16 +111,16 @@ export default function AuthPage() {
 
   return (
     <main className="mx-auto w-full max-w-xl px-4 py-10">
-      <section className="rounded-3xl border border-black/10 bg-white p-6 shadow-sm md:p-8">
+      <section className="rounded-3xl border border-[#9595db]/25 bg-white p-6 shadow-sm md:p-8">
         <h1 className="text-2xl font-bold text-black">{title}</h1>
-        <p className="mt-2 text-sm text-slate-600">{t.subtitle}</p>
+        <p className="mt-2 text-sm text-[#5a4f7a]">{t.subtitle}</p>
 
-        <div className="mt-5 inline-flex rounded-full border border-black/10 p-1">
+        <div className="mt-5 inline-flex rounded-full border border-[#9595db]/25 p-1">
           <button
             type="button"
             onClick={() => setMode("login")}
             className={`rounded-full px-4 py-2 text-sm font-medium ${
-              mode === "login" ? "bg-black text-white" : "text-slate-700"
+              mode === "login" ? "bg-black text-white" : "text-[#4a4068]"
             }`}
           >
             {t.tabLogin}
@@ -129,7 +129,7 @@ export default function AuthPage() {
             type="button"
             onClick={() => setMode("signup")}
             className={`rounded-full px-4 py-2 text-sm font-medium ${
-              mode === "signup" ? "bg-black text-white" : "text-slate-700"
+              mode === "signup" ? "bg-black text-white" : "text-[#4a4068]"
             }`}
           >
             {t.tabSignup}
@@ -140,20 +140,20 @@ export default function AuthPage() {
           {mode === "signup" && (
             <div className="grid gap-4 md:grid-cols-2">
               <label className="block text-sm">
-                <span className="mb-1 block text-slate-700">{t.firstName}</span>
+                <span className="mb-1 block text-[#4a4068]">{t.firstName}</span>
                 <input
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
-                  className="w-full rounded-xl border border-black/15 px-3 py-2 outline-none focus:border-black/40"
+                  className="w-full rounded-xl border border-[#9595db]/35 px-3 py-2 outline-none focus:border-[#9595db]/55"
                   autoComplete="given-name"
                 />
               </label>
               <label className="block text-sm">
-                <span className="mb-1 block text-slate-700">{t.lastName}</span>
+                <span className="mb-1 block text-[#4a4068]">{t.lastName}</span>
                 <input
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
-                  className="w-full rounded-xl border border-black/15 px-3 py-2 outline-none focus:border-black/40"
+                  className="w-full rounded-xl border border-[#9595db]/35 px-3 py-2 outline-none focus:border-[#9595db]/55"
                   autoComplete="family-name"
                 />
               </label>
@@ -161,26 +161,26 @@ export default function AuthPage() {
           )}
 
           <label className="block text-sm">
-            <span className="mb-1 block text-slate-700">{t.email}</span>
+            <span className="mb-1 block text-[#4a4068]">{t.email}</span>
             <input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-xl border border-black/15 px-3 py-2 outline-none focus:border-black/40"
+              className="w-full rounded-xl border border-[#9595db]/35 px-3 py-2 outline-none focus:border-[#9595db]/55"
               autoComplete="email"
             />
           </label>
 
           <label className="block text-sm">
-            <span className="mb-1 block text-slate-700">{t.password}</span>
+            <span className="mb-1 block text-[#4a4068]">{t.password}</span>
             <input
               type="password"
               required
               minLength={8}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-xl border border-black/15 px-3 py-2 outline-none focus:border-black/40"
+              className="w-full rounded-xl border border-[#9595db]/35 px-3 py-2 outline-none focus:border-[#9595db]/55"
               autoComplete={mode === "login" ? "current-password" : "new-password"}
             />
           </label>
@@ -198,7 +198,7 @@ export default function AuthPage() {
           </button>
         </form>
 
-        <p className="mt-5 text-sm text-slate-600">
+        <p className="mt-5 text-sm text-[#5a4f7a]">
           {t.footerText}{" "}
           <Link href="/catalog" className="font-medium text-black underline">
             {t.footerLink}

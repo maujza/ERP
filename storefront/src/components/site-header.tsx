@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { FormEvent, useMemo, useState } from "react";
 import { Languages, Menu, Search, ShoppingBag, User, X } from "lucide-react";
 
@@ -11,15 +11,12 @@ import { navCategories, translateLabel } from "@/lib/shop-data";
 import { useCart } from "@/components/cart-provider";
 
 export function SiteHeader() {
-  const pathname = usePathname();
   const router = useRouter();
   const { totalItems, openDrawer } = useCart();
   const { language, toggleLanguage } = useLanguage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [search, setSearch] = useState("");
-
-  const isBackoffice = pathname.startsWith("/backoffice");
 
   const categories = useMemo(() => navCategories.slice(0, 5), []);
   const checkoutNavLink = language === "ko"
@@ -47,10 +44,6 @@ export function SiteHeader() {
         categories: "Categorías",
       };
 
-  if (isBackoffice) {
-    return null;
-  }
-
   const submitSearch = (event: FormEvent) => {
     event.preventDefault();
     const q = search.trim();
@@ -61,10 +54,10 @@ export function SiteHeader() {
 
   return (
     <>
-      <header className="fixed top-0 z-50 w-full border-b border-black/10 bg-white/70 backdrop-blur-md">
+      <header className="fixed top-0 z-50 w-full border-b border-[#9595db]/25 bg-white/70 backdrop-blur-md">
         <div className="mx-auto flex w-full max-w-[1400px] items-center gap-2 px-2.5 py-3 min-[361px]:gap-3 min-[361px]:px-4 md:gap-3 lg:gap-6">
           <button
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/15"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#9595db]/35"
             onClick={() => setMobileMenuOpen(true)}
             aria-label={t.openMenu}
           >
@@ -80,28 +73,28 @@ export function SiteHeader() {
 
           <nav className="ml-2 hidden items-center gap-5 text-sm md:flex">
             {t.navLinks.map((link) => (
-              <Link key={link.href} href={link.href} className="text-[#222222] hover:text-black">
+              <Link key={link.href} href={link.href} className="text-[#2a2148] hover:text-black">
                 {link.label}
               </Link>
             ))}
           </nav>
 
           <form onSubmit={submitSearch} className="ml-auto hidden w-full max-w-[180px] items-center md:flex lg:max-w-md">
-            <div className="flex h-10 w-full items-center rounded-full border border-black/15 bg-white px-3">
+            <div className="flex h-10 w-full items-center rounded-full border border-[#9595db]/35 bg-white px-3">
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder={t.searchPlaceholder}
                 className="h-full w-full bg-transparent text-sm outline-none"
               />
-              <button type="submit" className="text-[#444444]" aria-label="Buscar">
+              <button type="submit" className="text-[#5a4f7a]" aria-label="Buscar">
                 <Search className="h-4 w-4" />
               </button>
             </div>
           </form>
 
           <button
-            className="ml-auto inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/15 md:hidden"
+            className="ml-auto inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#9595db]/35 md:hidden"
             onClick={() => setMobileSearchOpen((prev) => !prev)}
             aria-label="Buscar"
           >
@@ -114,13 +107,13 @@ export function SiteHeader() {
             aria-label={t.openCart}
             className={
               totalItems > 0
-                ? "relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/15 md:hidden"
-                : "relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/15"
+                ? "relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#9595db]/35 md:hidden"
+                : "relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#9595db]/35"
             }
           >
             <ShoppingBag className="h-4 w-4" />
             {totalItems > 0 && (
-              <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#111111] px-1 text-[11px] font-semibold text-white">
+              <span className="absolute -right-1 -top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#4660bc] px-1 text-[11px] font-semibold text-white">
                 {totalItems}
               </span>
             )}
@@ -129,7 +122,7 @@ export function SiteHeader() {
             <button
               onClick={openDrawer}
               aria-label={t.openCart}
-              className="hidden items-center gap-2 whitespace-nowrap rounded-full bg-black px-4 py-2 text-sm font-semibold text-white hover:bg-black/80 md:inline-flex"
+              className="hidden items-center gap-2 whitespace-nowrap rounded-full bg-black px-4 py-2 text-sm font-semibold text-white hover:bg-[#2a2148]/80 md:inline-flex"
             >
               {checkoutNavLink.label}
               <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-white/20 px-1 text-[11px] font-semibold">
@@ -140,7 +133,7 @@ export function SiteHeader() {
 
           <Link
             href="/account"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-black/15 max-[360px]:hidden"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[#9595db]/35 max-[360px]:hidden"
             aria-label={language === "ko" ? "내 계정" : "Mi cuenta"}
           >
             <User className="h-4 w-4" />
@@ -149,8 +142,8 @@ export function SiteHeader() {
         </div>
 
         {mobileSearchOpen && (
-          <form onSubmit={submitSearch} className="border-t border-black/10 px-4 pb-3 pt-2 md:hidden">
-            <div className="flex h-10 w-full items-center rounded-full border border-black/15 bg-white px-3">
+          <form onSubmit={submitSearch} className="border-t border-[#9595db]/25 px-4 pb-3 pt-2 md:hidden">
+            <div className="flex h-10 w-full items-center rounded-full border border-[#9595db]/35 bg-white px-3">
               <input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -158,7 +151,7 @@ export function SiteHeader() {
                 className="h-full w-full bg-transparent text-sm outline-none"
                 autoFocus
               />
-              <button type="submit" className="text-[#444444]">
+              <button type="submit" className="text-[#5a4f7a]">
                 <Search className="h-4 w-4" />
               </button>
             </div>
@@ -168,7 +161,7 @@ export function SiteHeader() {
 
       {/* Mobile menu — rendered outside <header> so backdrop-filter doesn't affect fixed positioning */}
       <div
-        className={`fixed inset-0 z-[80] bg-black/50 transition-opacity ${
+        className={`fixed inset-0 z-[80] bg-[#2a2148]/50 transition-opacity ${
           mobileMenuOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
         }`}
         onClick={() => setMobileMenuOpen(false)}
@@ -180,7 +173,7 @@ export function SiteHeader() {
       >
         <div className="mb-6 flex items-center justify-between">
           <p className="text-lg font-bold tracking-[0.18em]">AURORA</p>
-          <button onClick={() => setMobileMenuOpen(false)} className="rounded-full border border-black/15 p-2">
+          <button onClick={() => setMobileMenuOpen(false)} className="rounded-full border border-[#9595db]/35 p-2">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -190,7 +183,7 @@ export function SiteHeader() {
               key={link.href}
               href={link.href}
               onClick={() => setMobileMenuOpen(false)}
-              className="block rounded-2xl border border-black/10 px-4 py-3 text-sm font-medium"
+              className="block rounded-2xl border border-[#9595db]/25 px-4 py-3 text-sm font-medium"
             >
               {link.label}
             </Link>
@@ -205,7 +198,7 @@ export function SiteHeader() {
           )}
         </div>
         <div className="mt-6 space-y-2">
-          <p className="text-xs uppercase tracking-[0.2em] text-[#666666]">{t.categories}</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-[#5a4f7a]">{t.categories}</p>
           <div className="flex flex-wrap gap-2">
             {categories.map((category) => (
               <Link
@@ -220,10 +213,10 @@ export function SiteHeader() {
             ))}
           </div>
         </div>
-        <div className="mt-6 border-t border-black/10 pt-4">
+        <div className="mt-6 border-t border-[#9595db]/25 pt-4">
           <button
             onClick={toggleLanguage}
-            className="flex w-full items-center gap-2 rounded-2xl border border-black/10 px-4 py-3 text-sm font-medium"
+            className="flex w-full items-center gap-2 rounded-2xl border border-[#9595db]/25 px-4 py-3 text-sm font-medium"
           >
             <Languages className="h-4 w-4" />
             {language === "es" ? "한국어" : "Español"}

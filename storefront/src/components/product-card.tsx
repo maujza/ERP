@@ -44,7 +44,7 @@ export function ProductCard({ product, language, soldOutLabel, variant = "catalo
         };
 
   return (
-    <article className="group relative overflow-hidden rounded-2xl border border-black/10 bg-white">
+    <article className="group relative overflow-hidden rounded-2xl border border-[#9595db]/25 bg-white">
       {/* Image area */}
       <div className={`relative ${imageHeight} w-full overflow-hidden`}>
         <Link href={`/product/${product.id}`} className="block h-full w-full">
@@ -58,7 +58,7 @@ export function ProductCard({ product, language, soldOutLabel, variant = "catalo
 
         {/* Discount badge */}
         {isDiscounted && (
-          <span className="pointer-events-none absolute left-2 top-2 rounded-full bg-[#111111] px-2 py-0.5 text-[10px] text-white">
+          <span className="pointer-events-none absolute left-2 top-2 rounded-full bg-[#4660bc] px-2 py-0.5 text-[10px] text-white">
             -{discountPct}%
           </span>
         )}
@@ -97,7 +97,7 @@ export function ProductCard({ product, language, soldOutLabel, variant = "catalo
                   />
                 </svg>
               </Link>
-              <span className="pointer-events-none absolute bottom-full left-1/2 mb-2 -translate-x-1/2 whitespace-nowrap rounded bg-black/75 px-2 py-1 text-[11px] text-white opacity-0 transition-opacity duration-200 group-hover/btn:opacity-100">
+              <span className="pointer-events-none absolute bottom-full left-1/2 mb-2 -translate-x-1/2 whitespace-nowrap rounded bg-[#2a2148]/75 px-2 py-1 text-[11px] text-white opacity-0 transition-opacity duration-200 group-hover/btn:opacity-100">
                 {t.addToCart}
               </span>
             </div>
@@ -122,7 +122,7 @@ export function ProductCard({ product, language, soldOutLabel, variant = "catalo
                       <circle cx="9" cy="9" r="2.25" stroke="currentColor" strokeWidth="1.5" />
                     </svg>
                   </button>
-                  <span className="pointer-events-none absolute bottom-full left-1/2 mb-2 -translate-x-1/2 whitespace-nowrap rounded bg-black/75 px-2 py-1 text-[11px] text-white opacity-0 transition-opacity duration-200 group-hover/btn:opacity-100">
+                  <span className="pointer-events-none absolute bottom-full left-1/2 mb-2 -translate-x-1/2 whitespace-nowrap rounded bg-[#2a2148]/75 px-2 py-1 text-[11px] text-white opacity-0 transition-opacity duration-200 group-hover/btn:opacity-100">
                     {t.quickView}
                   </span>
                 </div>
@@ -134,19 +134,19 @@ export function ProductCard({ product, language, soldOutLabel, variant = "catalo
 
       {/* Product info */}
       <div className="space-y-1 p-3">
-        <p className="line-clamp-2 text-sm font-semibold text-[#111111]">
+        <p className="line-clamp-2 text-sm font-semibold text-[#2a2148]">
           {getProductName(product, language)}
         </p>
         <div className="flex flex-wrap items-center gap-2 text-sm">
           {isDiscounted ? (
             <>
-              <span className="font-semibold text-[#111111]">{formatArs(product.price, language)}</span>
-              <span className="text-xs text-[#777777] line-through">
+              <span className="font-semibold text-[#2a2148]">{formatArs(product.price, language)}</span>
+              <span className="text-xs text-[#6f6593] line-through">
                 {formatArs(product.originalPrice ?? product.price, language)}
               </span>
             </>
           ) : (
-            <span className="font-semibold text-[#111111]">{formatArs(product.price, language)}</span>
+            <span className="font-semibold text-[#2a2148]">{formatArs(product.price, language)}</span>
           )}
         </div>
         {outOfStock && <Badge variant="outline">{soldOutLabel}</Badge>}

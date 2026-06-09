@@ -76,11 +76,11 @@ export default function OrderConfirmationPage() {
   return (
     <main className="mx-auto w-full max-w-[900px] px-4 py-10">
       <Card className="space-y-4 p-6 text-center md:p-8">
-        <p className="text-xs uppercase tracking-[0.2em] text-[#666666]">{t.confirmed}</p>
-        <h1 className="text-3xl font-semibold text-[#111111]">{t.title}</h1>
-        <p className="text-sm text-[#555555]">{t.desc}</p>
+        <p className="text-xs uppercase tracking-[0.2em] text-[#5a4f7a]">{t.confirmed}</p>
+        <h1 className="text-3xl font-semibold text-[#2a2148]">{t.title}</h1>
+        <p className="text-sm text-[#5a4f7a]">{t.desc}</p>
         {orderIdFromQuery && (
-          <p className="text-sm font-semibold text-[#222222]">{t.orderNumber}: {orderIdFromQuery}</p>
+          <p className="text-sm font-semibold text-[#2a2148]">{t.orderNumber}: {orderIdFromQuery}</p>
         )}
         {shouldShowWhatsAppActions && hasDraft && (
           <div className="space-y-2 rounded-2xl border border-[#25d366]/30 bg-[#f0faf4] p-4">
