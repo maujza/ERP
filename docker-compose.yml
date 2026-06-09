@@ -1,7 +1,7 @@
 # docker-compose.yml — Full stack orchestration for local development and production
 #
 # Services and startup order:
-#   db → backend-init → backend → web / pos
+#   db → backend-init → backend → web / pos → nginx
 #
 # To start everything:
 #   ./scripts/compose-up.sh        # smart script with selective rebuilds
@@ -12,10 +12,9 @@
 #   docker compose up --build web -d       # rebuild only the Next.js storefront
 #
 # Ports exposed on the host machine:
-#   5433 → PostgreSQL (connect with: psql postgres://medusa:medusa@localhost:5433/medusa)
-#   9000 → Medusa backend API + admin UI
-#   7358 → Next.js storefront (production build, no hot reload)
-#   8081 → POS web app
+#   80 / 443 → public HTTP/HTTPS traffic through Nginx Proxy Manager
+#   81 → Nginx Proxy Manager admin UI (localhost only; use an SSH tunnel remotely)
+#   5433 / 9000 / 7358 / 8081 → direct service access (localhost only)
 
 services:
 
@@ -30,7 +29,7 @@ services:
       POSTGRES_USER: medusa
       POSTGRES_PASSWORD: medusa
     ports:
-      - "5433:5432"   # host:container — 5433 avoids conflict with a local Postgres on 5432
+      - "127.0.0.1:5433:5432"   # localhost only; Nginx does not need database access
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -86,7 +85,7 @@ services:
       target: runner   # "runner" stage is a slimmer production image without build tools
     command: npm run start
     ports:
-      - "9000:9000"
+      - "127.0.0.1:9000:9000"
     env_file: ./backend/.env
     environment:
       NODE_ENV: production
@@ -109,7 +108,7 @@ services:
     build:
       context: ./storefront
     ports:
-      - "7358:3000"   # storefront accessible at http://localhost:7358
+      - "127.0.0.1:7358:3000"   # direct access remains available from the host
     env_file: ./storefront/.env
     environment:
       # Docker-internal URL used by Next.js's server-side /api/medusa proxy rewrite
@@ -129,12 +128,69 @@ services:
       context: ./pos
       dockerfile: Dockerfile.web
     ports:
-      - "8081:3000"
+      - "127.0.0.1:8081:3000"
     restart: unless-stopped
     depends_on:
       - backend
+
+  # ── nginx ────────────────────────────────────────────────────────────────────
+  # Public reverse proxy and TLS certificate manager for the ERP services.
+  # Configure proxy hosts using Docker service names as upstreams:
+  #   storefront domain  → web:3000
+  #   backoffice domain  → backend:9000
+  #   POS domain         → pos:3000
+  nginx:
+    image: jc21/nginx-proxy-manager:2.11.3
+    ports:
+      - "80:80"
+      - "443:443"
+      - "127.0.0.1:81:81"
+    environment:
+      DB_MYSQL_HOST: nginx-db
+      DB_MYSQL_PORT: 3306
+      DB_MYSQL_USER: npm
+      DB_MYSQL_PASSWORD: ${NGINX_DB_PASSWORD:?set NGINX_DB_PASSWORD in the root .env file}
+      DB_MYSQL_NAME: npm
+      DISABLE_IPV6: "true"
+    volumes:
+      - nginx_data:/data
+      - nginx_letsencrypt:/etc/letsencrypt
+    depends_on:
+      nginx-db:
+        condition: service_healthy
+      backend:
+        condition: service_started
+      web:
+        condition: service_started
+      pos:
+        condition: service_started
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  nginx-db:
+    image: mariadb:10.11
+    environment:
+      MARIADB_DATABASE: npm
+      MARIADB_USER: npm
+      MARIADB_PASSWORD: ${NGINX_DB_PASSWORD:?set NGINX_DB_PASSWORD in the root .env file}
+      MARIADB_ROOT_PASSWORD: ${NGINX_DB_PASSWORD:?set NGINX_DB_PASSWORD in the root .env file}
+    volumes:
+      - nginx_db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
 
 volumes:
   # Named volume — stores Postgres data files outside the container so data
   # persists across `docker compose down` and container rebuilds.
   postgres_data:
+  nginx_data:
+  nginx_letsencrypt:
+  nginx_db_data:

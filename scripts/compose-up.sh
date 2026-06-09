@@ -171,8 +171,8 @@ if [ "$needs_web_build" = true ]; then
   build_web_image
 fi
 
-echo "Starting application services..."
-docker compose up -d backend web pos
+echo "Starting application services and reverse proxy..."
+docker compose up -d backend web pos nginx
 
 echo "Waiting for backend to be ready..."
 for i in {1..120}; do
@@ -194,3 +194,4 @@ printf '%s\n' "$current_pos_hash" > "$POS_HASH_FILE"
 echo "Done."
 echo "  Admin: http://localhost:9000/app"
 echo "  Store: http://localhost:7358"
+echo "  Nginx Proxy Manager: http://localhost:81"
