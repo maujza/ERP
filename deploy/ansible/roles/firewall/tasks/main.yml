@@ -1,0 +1,13 @@
+---
+- name: Allow required ports through UFW
+  ansible.builtin.command: "ufw allow {{ item }}/tcp"
+  loop:
+    - 22
+    - "{{ storefront_port }}"
+    - "{{ backend_port }}"
+  register: ufw_rule
+  changed_when: "'Rule added' in ufw_rule.stdout"
+
+- name: Enable UFW
+  ansible.builtin.command: ufw --force enable
+  changed_when: false
