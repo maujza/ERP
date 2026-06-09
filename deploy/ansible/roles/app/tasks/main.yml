@@ -50,3 +50,15 @@
     src: backend.env.j2
     dest: "{{ app_dir }}/backend/.env"
     mode: "0644"
+
+# docker-compose.yml lists storefront/.env as an env_file for the web service,
+# so EVERY compose command (even `up -d db`) fails when it is missing. The
+# medusa role overwrites this with the real publishable key + region before the
+# web image is built, so an empty placeholder here is enough to unblock the DB
+# bootstrap. force:false keeps a previously-rendered real file intact on re-runs.
+- name: Ensure a placeholder storefront/.env exists so compose can start the db
+  ansible.builtin.copy:
+    dest: "{{ app_dir }}/storefront/.env"
+    content: ""
+    force: false
+    mode: "0644"
