@@ -47,7 +47,7 @@ A custom Medusa file provider that stores product images in **Cloudflare R2** in
 
 **What it does:**
 - Implements `AbstractFileProviderService` (Medusa's file provider interface)
-- Processes images with **Sharp** before upload: images >500 KB or >1400 px wide are resized and converted to WebP (quality 82)
+- Processes images with **Sharp** before upload: images >300 KB or >1600 px wide are resized and converted to WebP (quality 82)
 - Rejects non-image file types with a clear error
 - Registered in `medusa-config.ts` only when `R2_BUCKET` env var is set
 

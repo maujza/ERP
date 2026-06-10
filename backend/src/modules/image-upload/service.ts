@@ -7,7 +7,7 @@
  *
  * Before uploading, images pass through a Sharp processing pipeline:
  *   - GIFs are uploaded as-is (Sharp cannot re-encode animated GIFs)
- *   - Any image over 500 KB or wider than 1400 px is resized and converted
+ *   - Any image over 300 KB or wider than 1600 px is resized and converted
  *     to WebP at quality 82 — reducing bandwidth without visible quality loss
  *   - Non-image files (PDF, video, etc.) are rejected with a clear error
  *
@@ -62,9 +62,21 @@ const SUPPORTED_TYPES = new Set([
   "image/gif",
   "image/avif",
 ])
-const SIZE_THRESHOLD = 500 * 1024 // 500 KB
-const MAX_WIDTH = 1400
-const WEBP_QUALITY = 82
+export const IMAGE_SIZE_THRESHOLD = 300 * 1024 // 300 KB
+export const IMAGE_MAX_WIDTH = 1600
+export const IMAGE_WEBP_QUALITY = 82
+
+export const shouldOptimizeImage = ({
+  mimeType,
+  byteLength,
+  width,
+}: {
+  mimeType: string
+  byteLength: number
+  width: number
+}) =>
+  mimeType !== "image/gif" &&
+  (byteLength > IMAGE_SIZE_THRESHOLD || width > IMAGE_MAX_WIDTH)
 
 type Options = {
   bucket: string
@@ -119,10 +131,12 @@ class ImageUploadService extends AbstractFileProviderService {
 
     const raw = Buffer.from(file.content, "base64")
 
-    const isGif = file.mimeType === "image/gif"
-    const needsProcessing =
-      !isGif &&
-      (raw.byteLength > SIZE_THRESHOLD || (await this.exceedsMaxWidth(raw)))
+    const width = await this.getImageWidth(raw)
+    const needsProcessing = shouldOptimizeImage({
+      mimeType: file.mimeType,
+      byteLength: raw.byteLength,
+      width,
+    })
 
     let body: Uint8Array
     let mimeType = file.mimeType
@@ -130,8 +144,8 @@ class ImageUploadService extends AbstractFileProviderService {
 
     if (needsProcessing) {
       body = await sharp(raw)
-        .resize({ width: MAX_WIDTH, withoutEnlargement: true })
-        .webp({ quality: WEBP_QUALITY })
+        .resize({ width: IMAGE_MAX_WIDTH, withoutEnlargement: true })
+        .webp({ quality: IMAGE_WEBP_QUALITY })
         .toBuffer()
       mimeType = "image/webp"
       ext = "webp"
@@ -215,12 +229,12 @@ class ImageUploadService extends AbstractFileProviderService {
     return { writeStream: passThrough, promise, url, fileKey: key }
   }
 
-  private async exceedsMaxWidth(buffer: Uint8Array): Promise<boolean> {
+  private async getImageWidth(buffer: Uint8Array): Promise<number> {
     try {
       const { width = 0 } = await sharp(buffer).metadata()
-      return width > MAX_WIDTH
+      return width
     } catch {
-      return false
+      return 0
     }
   }
 }
