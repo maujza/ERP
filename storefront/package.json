@@ -14,6 +14,7 @@
     "compose:up": "../scripts/compose-up.sh",
     "medusa:sync-env": "../scripts/sync-medusa-env.sh",
     "test:e2e": "playwright test",
+    "test:e2e:production": "playwright test --config=playwright.production.config.ts",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:report": "playwright show-report"
   },

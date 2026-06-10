@@ -2,8 +2,12 @@
 
 ## Arquitectura de producción
 
-El stack corre en un servidor con Docker Compose. Nginx Proxy Manager forma parte
-del mismo stack y publica los servicios del ERP por HTTP/HTTPS.
+La aplicación y la infraestructura corren como proyectos Docker Compose
+separados. Nginx Proxy Manager vive en
+`infra/networking/nginx-proxy-manager/compose.yml` y publica los servicios del
+ERP por HTTP/HTTPS mediante la red externa compartida `erp_platform`.
+El monitoreo vive en `infra/monitoring/compose.yml` y se levanta como el
+proyecto `erp-monitoring`.
 
 | Servicio | Dominio |
 |---|---|
@@ -20,7 +24,12 @@ Todo push a `main` dispara el workflow `.github/workflows/deploy-to-rpi.yml`:
 
 1. El runner self-hosted en la RPI hace `git pull`
 2. Ejecuta `./scripts/compose-up.sh`
-3. El script reconstruye solo las imágenes que cambiaron (fingerprint en `.deploy-state/`)
+3. Ejecuta smoke tests de producción con Playwright
+4. Guarda trazas, videos y screenshots como artifacts si hay fallos
+
+El script reconstruye solo las imágenes que cambiaron usando fingerprints en
+`.deploy-state/`. La imagen de Playwright también se reutiliza mientras no
+cambien sus tests, configuración o dependencias.
 
 **Para desplegar**: hacer merge de PR a `main` o push directo a `main`.
 
@@ -96,7 +105,9 @@ NEXT_PUBLIC_SHIPPING_EXPRESS_ARS=7200
 ./scripts/compose-up.sh
 ```
 
-En el primer levante: migraciones, bootstrap, creación del admin, sincronización de claves y build de todas las imágenes.
+En el primer levante: creación de la red y volúmenes de infraestructura,
+migraciones, bootstrap, creación del admin, sincronización de claves, build de
+las imágenes y arranque de ambos proyectos Compose.
 
 ### 6. Configurar Nginx Proxy Manager
 
@@ -172,6 +183,8 @@ cd /home/akwiek/code/ERP
 docker compose ps
 docker compose logs -f backend
 docker compose logs -f web
+docker compose --project-name erp-infra --env-file .env \
+  --file infra/networking/nginx-proxy-manager/compose.yml ps
 curl https://backoffice.aurelia.gleeze.com/health
 ```
 

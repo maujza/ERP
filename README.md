@@ -8,6 +8,8 @@ Repositorio monorepo para la operación comercial de Aurelia. El stack combina s
 - `backend/`: backend Medusa v2 con seeds, migraciones y módulo custom `purchaseDepartment`.
 - `pos/`: POS web/mobile basado en Expo.
 - `docker-compose.yml`: stack local con `db`, `backend-init`, `backend`, `web` y `pos`.
+- `infra/`: stacks de infraestructura independientes, incluido Nginx Proxy Manager.
+- `infra/monitoring/`: Prometheus, Grafana, Node Exporter, Telegraf, Blackbox Exporter y Portainer.
 
 ## Documentación
 
@@ -41,6 +43,7 @@ Ese script hace lo siguiente:
 4. resincroniza `storefront/.env.development` con publishable key + región actual
 5. recompila `web` solo si cambió su fingerprint
 6. levanta `backend`, `web` y `pos`
+7. levanta Nginx Proxy Manager desde su proyecto Compose independiente
 
 ## Rebuild selectivo
 
@@ -138,9 +141,12 @@ Eso mantiene alineado el flujo local y el de deploy.
 
 ```bash
 ./scripts/compose-up.sh
+./scripts/production-smoke.sh
 docker compose ps
 docker compose logs -f backend
 docker compose logs -f web
 docker compose logs -f pos
+docker compose --project-name erp-infra --env-file .env \
+  --file infra/networking/nginx-proxy-manager/compose.yml ps
 ./scripts/sync-medusa-env.sh
 ```

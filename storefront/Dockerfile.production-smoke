@@ -1,0 +1,11 @@
+FROM mcr.microsoft.com/playwright:v1.60.0-noble
+
+WORKDIR /tests
+
+COPY e2e/production/package.json e2e/production/package-lock.json ./
+RUN npm ci --ignore-scripts
+
+COPY playwright.production.config.ts ./
+COPY e2e/production ./e2e/production
+
+CMD ["npx", "playwright", "test", "--config=playwright.production.config.ts"]

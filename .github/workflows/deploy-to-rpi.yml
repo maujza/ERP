@@ -17,4 +17,13 @@ jobs:
           git reset --hard
           git pull
           ./scripts/compose-up.sh
-          echo "Repositorio actualizado en la RPI ✅"
+          ./scripts/production-smoke.sh
+          echo "Repositorio actualizado y validado"
+      - name: Upload Playwright artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-smoke-${{ github.run_number }}
+          path: /root/ERP/.artifacts/playwright-production
+          if-no-files-found: ignore
+          retention-days: 7

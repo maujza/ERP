@@ -45,6 +45,7 @@ backend/.env
 backend/node_modules
 .gstack/
 .deploy-state/
+.artifacts/
 
 # service-specific env files (gitignored, each service has its own)
 backend/.env.dev

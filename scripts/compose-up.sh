@@ -8,6 +8,49 @@ STATE_DIR="$ROOT_DIR/.deploy-state"
 BACKEND_HASH_FILE="$STATE_DIR/backend.hash"
 WEB_HASH_FILE="$STATE_DIR/web.hash"
 POS_HASH_FILE="$STATE_DIR/pos.hash"
+PLATFORM_NETWORK="erp_platform"
+INFRA_VOLUMES=(
+  erp_nginx_data
+  erp_nginx_letsencrypt
+  erp_nginx_db_data
+  erp_prometheus_data
+  erp_grafana_data
+  erp_portainer_data
+)
+INFRA_COMPOSE_FILE="$ROOT_DIR/infra/networking/nginx-proxy-manager/compose.yml"
+MONITORING_COMPOSE_FILE="$ROOT_DIR/infra/monitoring/compose.yml"
+
+infra_compose() {
+  docker compose \
+    --project-name erp-infra \
+    --env-file "$ROOT_DIR/.env" \
+    --file "$INFRA_COMPOSE_FILE" \
+    "$@"
+}
+
+monitoring_compose() {
+  DOCKER_GID="$(stat -c '%g' /var/run/docker.sock)" docker compose \
+    --project-name erp-monitoring \
+    --env-file "$ROOT_DIR/.env" \
+    --file "$MONITORING_COMPOSE_FILE" \
+    "$@"
+}
+
+ensure_infrastructure_resources() {
+  local volume
+
+  if ! docker network inspect "$PLATFORM_NETWORK" >/dev/null 2>&1; then
+    echo "Creating shared platform network..."
+    docker network create "$PLATFORM_NETWORK" >/dev/null
+  fi
+
+  for volume in "${INFRA_VOLUMES[@]}"; do
+    if ! docker volume inspect "$volume" >/dev/null 2>&1; then
+      echo "Creating infrastructure volume: $volume"
+      docker volume create "$volume" >/dev/null
+    fi
+  done
+}
 
 image_exists() {
   docker image inspect "$1" >/dev/null 2>&1
@@ -116,6 +159,8 @@ stored_pos_hash="$(read_hash_file "$POS_HASH_FILE")"
 current_backend_hash="$(hash_backend)"
 current_pos_hash="$(hash_pos)"
 
+ensure_infrastructure_resources
+
 if [ -z "$stored_backend_hash" ] || [ "$current_backend_hash" != "$stored_backend_hash" ]; then
   needs_backend_build=true
 fi
@@ -171,12 +216,12 @@ if [ "$needs_web_build" = true ]; then
   build_web_image
 fi
 
-echo "Starting application services and reverse proxy..."
-docker compose up -d backend web pos nginx
+echo "Starting application services..."
+docker compose up -d backend web pos
 
 echo "Waiting for backend to be ready..."
 for i in {1..120}; do
-  if docker compose logs --tail=50 backend 2>/dev/null | grep -q "Server is ready on port: 9000"; then
+  if curl --fail --silent --max-time 2 http://127.0.0.1:9000/health >/dev/null 2>&1; then
     break
   fi
   sleep 2
@@ -185,6 +230,10 @@ for i in {1..120}; do
     exit 1
   fi
 done
+
+echo "Starting infrastructure services..."
+infra_compose up -d
+monitoring_compose up -d
 
 mkdir -p "$STATE_DIR"
 printf '%s\n' "$current_backend_hash" > "$BACKEND_HASH_FILE"
@@ -195,3 +244,6 @@ echo "Done."
 echo "  Admin: http://localhost:9000/app"
 echo "  Store: http://localhost:7358"
 echo "  Nginx Proxy Manager: http://localhost:81"
+echo "  Grafana: http://localhost:3001"
+echo "  Prometheus: http://localhost:9090"
+echo "  Portainer: https://localhost:9443"

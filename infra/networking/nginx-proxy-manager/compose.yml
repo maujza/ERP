@@ -1,0 +1,61 @@
+services:
+  nginx:
+    image: jc21/nginx-proxy-manager:2.11.3
+    ports:
+      - "80:80"
+      - "443:443"
+      - "127.0.0.1:81:81"
+    environment:
+      DB_MYSQL_HOST: nginx-db
+      DB_MYSQL_PORT: 3306
+      DB_MYSQL_USER: npm
+      DB_MYSQL_PASSWORD: ${NGINX_DB_PASSWORD:?set NGINX_DB_PASSWORD in the root .env file}
+      DB_MYSQL_NAME: npm
+      DISABLE_IPV6: "true"
+    volumes:
+      - nginx_data:/data
+      - nginx_letsencrypt:/etc/letsencrypt
+    depends_on:
+      nginx-db:
+        condition: service_healthy
+    networks:
+      - default
+      - platform
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  nginx-db:
+    image: mariadb:10.11
+    environment:
+      MARIADB_DATABASE: npm
+      MARIADB_USER: npm
+      MARIADB_PASSWORD: ${NGINX_DB_PASSWORD:?set NGINX_DB_PASSWORD in the root .env file}
+      MARIADB_ROOT_PASSWORD: ${NGINX_DB_PASSWORD:?set NGINX_DB_PASSWORD in the root .env file}
+    volumes:
+      - nginx_db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+networks:
+  platform:
+    name: erp_platform
+    external: true
+
+volumes:
+  nginx_data:
+    name: erp_nginx_data
+    external: true
+  nginx_letsencrypt:
+    name: erp_nginx_letsencrypt
+    external: true
+  nginx_db_data:
+    name: erp_nginx_db_data
+    external: true
