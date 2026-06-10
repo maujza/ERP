@@ -24,8 +24,9 @@ Todo push a `main` dispara el workflow `.github/workflows/deploy-to-rpi.yml`:
 
 1. El runner self-hosted en la RPI hace `git pull`
 2. Ejecuta `./scripts/compose-up.sh`
-3. Ejecuta smoke tests de producción con Playwright
-4. Guarda trazas, videos y screenshots como artifacts si hay fallos
+3. Valida Nginx, Grafana, Prometheus, Portainer, dashboards, alertas y targets
+4. Ejecuta smoke tests de producción con Playwright
+5. Guarda trazas, videos y screenshots como artifacts si hay fallos
 
 El script reconstruye solo las imágenes que cambiaron usando fingerprints en
 `.deploy-state/`. La imagen de Playwright también se reutiliza mientras no

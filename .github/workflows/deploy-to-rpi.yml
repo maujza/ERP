@@ -17,6 +17,13 @@ jobs:
           git reset --hard
           git pull
           ./scripts/compose-up.sh
+      - name: Validate infrastructure
+        run: |
+          cd /root/ERP
+          ./scripts/infra-healthcheck.sh
+      - name: Run production smoke tests
+        run: |
+          cd /root/ERP
           ./scripts/production-smoke.sh
           echo "Repositorio actualizado y validado"
       - name: Upload Playwright artifacts

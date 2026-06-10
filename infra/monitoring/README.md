@@ -4,6 +4,7 @@ Independent monitoring stack for the ERP:
 
 - Prometheus stores metrics for 15 days.
 - Grafana provides a provisioned ERP overview dashboard.
+- Grafana dashboards, data sources, and alert rules are provisioned from Git.
 - Node Exporter exposes VPS CPU, memory, filesystem, and network metrics.
 - Telegraf exposes Docker container metrics.
 - Blackbox Exporter checks the public ERP endpoints and the internal backend health endpoint.
@@ -34,6 +35,17 @@ The complete stack starts through:
 ```bash
 ./scripts/compose-up.sh
 ```
+
+Validate all infrastructure endpoints, Grafana resources, Prometheus targets,
+and blackbox probes:
+
+```bash
+./scripts/infra-healthcheck.sh
+```
+
+`compose-up.sh` reloads Grafana provisioning after the monitoring stack starts,
+so changes to dashboards, data sources, and alert rules are applied on every
+deployment without deleting Grafana data.
 
 To manage monitoring directly:
 

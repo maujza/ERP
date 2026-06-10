@@ -234,6 +234,7 @@ done
 echo "Starting infrastructure services..."
 infra_compose up -d
 monitoring_compose up -d
+"$ROOT_DIR/scripts/grafana-reload-provisioning.sh"
 
 mkdir -p "$STATE_DIR"
 printf '%s\n' "$current_backend_hash" > "$BACKEND_HASH_FILE"
