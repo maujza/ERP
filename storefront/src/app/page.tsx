@@ -14,12 +14,12 @@ import {
   hasPurchasablePrice,
   isJewelryProduct,
   mapMedusaProduct,
-  navCategories,
   Product,
   translateLabel,
 } from "@/lib/shop-data";
 import { ProductCard } from "@/components/product-card";
 import { ProductCardSkeleton } from "@/components/product-card-skeleton";
+import { useCollections } from "@/hooks/use-collections";
 import { sdk, withStorePricingContext } from "@/lib/medusa";
 
 const lookDotPositions = [
@@ -34,6 +34,7 @@ export default function HomePage() {
   const [slideIndex, setSlideIndex] = useState(0);
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
   const [featuredLoadError, setFeaturedLoadError] = useState(false);
+  const { collections } = useCollections();
 
   useEffect(() => {
     sdk.store.product.list(withStorePricingContext({
@@ -234,34 +235,36 @@ export default function HomePage() {
             ))}
         </section>
 
-        {/* 4. Colecciones (merged categories scroll) */}
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <Badge variant="outline">{t.collections}</Badge>
-            <Link href="/catalog" className="text-sm font-semibold text-[#2a2148]">
-              {t.ctaMore}
-            </Link>
-          </div>
-          <div className="no-scrollbar -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2">
-            {navCategories.slice(0, 6).map((category, idx) => {
-              const accents = ["#4660bc", "#6c5baa", "#9595db", "#92c9ff", "#ffd7fb", "#f2e6f7"];
-              const accent = accents[idx % accents.length];
-              return (
-                <Link
-                  key={category}
-                  href={`/catalog?subcategory=${encodeURIComponent(category)}`}
-                  className="shrink-0 snap-start basis-[78%] overflow-hidden rounded-2xl border border-[#9595db]/25 bg-white sm:basis-[45%] md:basis-[30%]"
-                >
-                  <div className="h-20 w-full" style={{ backgroundColor: accent }} />
-                  <div className="p-4">
-                    <p className="text-xs uppercase tracking-[0.2em] text-[#5a4f7a]">{t.collection}</p>
-                    <p className="mt-1 text-lg font-semibold text-[#2a2148]">{translateLabel(category, language)}</p>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        </section>
+        {/* 4. Colecciones (backend-driven product collections) */}
+        {collections.length > 0 && (
+          <section className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Badge variant="outline">{t.collections}</Badge>
+              <Link href="/catalog" className="text-sm font-semibold text-[#2a2148]">
+                {t.ctaMore}
+              </Link>
+            </div>
+            <div className="no-scrollbar -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2">
+              {collections.slice(0, 6).map((collection, idx) => {
+                const accents = ["#4660bc", "#6c5baa", "#9595db", "#92c9ff", "#ffd7fb", "#f2e6f7"];
+                const accent = accents[idx % accents.length];
+                return (
+                  <Link
+                    key={collection.id}
+                    href={`/catalog?collection=${encodeURIComponent(collection.handle)}`}
+                    className="shrink-0 snap-start basis-[78%] overflow-hidden rounded-2xl border border-[#9595db]/25 bg-white sm:basis-[45%] md:basis-[30%]"
+                  >
+                    <div className="h-20 w-full" style={{ backgroundColor: accent }} />
+                    <div className="p-4">
+                      <p className="text-xs uppercase tracking-[0.2em] text-[#5a4f7a]">{t.collection}</p>
+                      <p className="mt-1 text-lg font-semibold text-[#2a2148]">{translateLabel(collection.title, language)}</p>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         {/* 5. Shop the Look */}
         <section className="rounded-3xl border border-[#9595db]/25 bg-white p-4 md:p-6">

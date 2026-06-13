@@ -370,6 +370,17 @@ export default async function seedDemoData({ container }: ExecArgs) {
   });
   logger.info("Finished seeding publishable API key data.");
 
+  // Demo products and inventory are gated behind SEED_DEMO_DATA. All store
+  // infrastructure above (sales channel, region, tax, stock location,
+  // fulfillment, publishable key) is always created so the stack is usable;
+  // only the demo catalog is optional. Set SEED_DEMO_DATA=true to seed it.
+  if (process.env.SEED_DEMO_DATA !== "true") {
+    logger.info(
+      "SEED_DEMO_DATA is not 'true' — skipping base demo products and inventory. Infrastructure is ready."
+    );
+    return;
+  }
+
   logger.info("Seeding product data...");
 
   const { result: categoryResult } = await createProductCategoriesWorkflow(

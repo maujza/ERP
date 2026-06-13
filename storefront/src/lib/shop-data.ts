@@ -7,7 +7,7 @@
  *
  * Key exports:
  *   Product / ProductVariant — TypeScript types for the UI-layer product object
- *   navCategories / subcategories / brands — static filter lists shown in the sidebar
+ *   brands              — static brand filter list shown in the sidebar
  *   mapMedusaProduct    — converts a raw Medusa API product into a Product
  *   formatArs           — formats a number as Argentine Peso (ARS) currency string
  *   translateLabel      — returns the Spanish or Korean version of a category label
@@ -39,6 +39,12 @@ type MedusaProductCategory = {
   handle?: string | null
 }
 
+type MedusaProductCollection = {
+  id: string
+  title?: string | null
+  handle?: string | null
+}
+
 type MedusaProduct = {
   id: string
   title?: string | null
@@ -47,6 +53,7 @@ type MedusaProduct = {
   images?: { url: string }[]
   variants?: MedusaProductVariant[]
   categories?: MedusaProductCategory[]
+  collection?: MedusaProductCollection | null
   metadata?: Record<string, unknown> | null
 }
 
@@ -70,6 +77,14 @@ export type Product = {
   originalPrice?: number;
   stock: number;
   variants?: ProductVariant[];
+  /** Medusa collection the product belongs to (drives storefront "Colecciones"). */
+  collection?: ProductCollectionRef;
+};
+
+export type ProductCollectionRef = {
+  id: string;
+  title: string;
+  handle: string;
 };
 
 export type UiLanguage = "es" | "ko";
@@ -82,12 +97,10 @@ export const sortOptions = [
   { id: "price_desc" as SortOption, label: "Precio: mayor" },
 ];
 
-const jewelryCategories = ["Aros", "Collares", "Pulseras", "Sets", "Kits", "Anillos", "Perlas"];
-export const navCategories = ["Novedades", "Best Sellers", ...jewelryCategories];
-
-export const subcategories = ["Todos", "Novedades", "Best Sellers", "Esenciales", "Fiesta", "Kits"];
-
 export const brands = ["Aurelia Core", "Aurelia Studio", "Lumiere", "Boreal", "Aurelia Pro"];
+
+// Category names treated as jewelry by isJewelryProduct (filters out branded merch).
+const jewelryCategories = ["Aros", "Collares", "Pulseras", "Sets", "Kits", "Anillos", "Perlas"];
 
 const clothingKeywords = [
   "shirt",
@@ -175,6 +188,15 @@ export function mapMedusaProduct(p: MedusaProduct): Product {
   const nameKo = (p.metadata?.name_ko as string) || undefined
   const descriptionKo = (p.metadata?.description_ko as string) || undefined
 
+  const collection =
+    p.collection && p.collection.id && p.collection.handle
+      ? {
+          id: p.collection.id,
+          title: p.collection.title ?? "",
+          handle: p.collection.handle,
+        }
+      : undefined
+
   return {
     id: p.id,
     name: p.title ?? "",
@@ -188,6 +210,7 @@ export function mapMedusaProduct(p: MedusaProduct): Product {
     price,
     originalPrice,
     stock: totalStock,
+    collection,
     variants: p.variants?.map((v: MedusaProductVariant) => ({
       id: v.id,
       label: v.title ?? "",

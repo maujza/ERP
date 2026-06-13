@@ -7,8 +7,6 @@ import {
   isJewelryProduct,
   getProductName,
   getProductDescription,
-  navCategories,
-  subcategories,
   brands,
   sortOptions,
   type Product,
@@ -317,6 +315,36 @@ describe("mapMedusaProduct", () => {
     });
     expect(mapMedusaProduct(raw).stock).toBe(0);
   });
+
+  it("maps the collection when it has an id and handle", () => {
+    const raw = makeRawProduct({
+      collection: { id: "pcol_01", title: "Best Sellers", handle: "best-sellers" },
+    });
+    expect(mapMedusaProduct(raw).collection).toEqual({
+      id: "pcol_01",
+      title: "Best Sellers",
+      handle: "best-sellers",
+    });
+  });
+
+  it("defaults collection title to an empty string when missing", () => {
+    const raw = makeRawProduct({ collection: { id: "pcol_02", handle: "novedades" } });
+    expect(mapMedusaProduct(raw).collection).toEqual({
+      id: "pcol_02",
+      title: "",
+      handle: "novedades",
+    });
+  });
+
+  it("omits collection when the raw product has none", () => {
+    const raw = makeRawProduct({ collection: null });
+    expect(mapMedusaProduct(raw).collection).toBeUndefined();
+  });
+
+  it("omits collection when it lacks a handle", () => {
+    const raw = makeRawProduct({ collection: { id: "pcol_03", title: "Orphan" } });
+    expect(mapMedusaProduct(raw).collection).toBeUndefined();
+  });
 });
 
 // ─── getProductName ───────────────────────────────────────────────────────────
@@ -378,46 +406,6 @@ describe("getProductDescription", () => {
 
   it("returns a string for any product", () => {
     expect(typeof getProductDescription(mockProduct, "ko")).toBe("string");
-  });
-});
-
-// ─── navCategories ────────────────────────────────────────────────────────────
-
-describe("navCategories", () => {
-  it("is a non-empty array of strings", () => {
-    expect(Array.isArray(navCategories)).toBe(true);
-    expect(navCategories.length).toBeGreaterThan(0);
-  });
-
-  it("contains core categories", () => {
-    expect(navCategories).toContain("Novedades");
-    expect(navCategories).toContain("Best Sellers");
-    expect(navCategories).toContain("Aros");
-    expect(navCategories).toContain("Collares");
-    expect(navCategories).toContain("Pulseras");
-    expect(navCategories).toContain("Sets");
-    expect(navCategories).toContain("Kits");
-  });
-});
-
-// ─── subcategories ────────────────────────────────────────────────────────────
-
-describe("subcategories", () => {
-  it("is a non-empty array", () => {
-    expect(Array.isArray(subcategories)).toBe(true);
-    expect(subcategories.length).toBeGreaterThan(0);
-  });
-
-  it("starts with 'Todos'", () => {
-    expect(subcategories[0]).toBe("Todos");
-  });
-
-  it("contains all expected subcategories", () => {
-    expect(subcategories).toContain("Novedades");
-    expect(subcategories).toContain("Best Sellers");
-    expect(subcategories).toContain("Esenciales");
-    expect(subcategories).toContain("Fiesta");
-    expect(subcategories).toContain("Kits");
   });
 });
 

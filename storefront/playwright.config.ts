@@ -23,6 +23,10 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./e2e",
+  // Provision a test-scoped catalog before the run and remove it after, so the
+  // storefront specs have products to exercise without mutating the seed.
+  globalSetup: "./e2e/global-provision.ts",
+  globalTeardown: "./e2e/global-deprovision.ts",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

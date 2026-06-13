@@ -16,11 +16,11 @@ import {
   hasPurchasablePrice,
   isJewelryProduct,
   mapMedusaProduct,
-  subcategories,
   translateLabel,
   type Product,
   type SortOption,
 } from "@/lib/shop-data";
+import { useCollections } from "@/hooks/use-collections";
 import { sdk, withStorePricingContext } from "@/lib/medusa";
 
 const PRICE_LOW_THRESHOLD = 20_000;
@@ -110,9 +110,11 @@ export default function CatalogPage() {
     { id: "price_desc" as SortOption, label: language === "ko" ? "높은 가격" : "Precio: mayor" },
   ];
 
+  const { collections } = useCollections();
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
-  const [activeSubcategory, setActiveSubcategory] = useState("Todos");
+  // "" means "all collections"; otherwise holds the active collection handle.
+  const [activeCollection, setActiveCollection] = useState("");
   const [search, setSearch] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
@@ -139,7 +141,7 @@ export default function CatalogPage() {
           const { products, count } = await sdk.store.product.list(withStorePricingContext({
             limit: CATALOG_FETCH_BATCH_SIZE,
             offset: currentOffset,
-            fields: "+variants.calculated_price,+variants.inventory_quantity,+metadata,+categories",
+            fields: "+variants.calculated_price,+variants.inventory_quantity,+metadata,+categories,+collection.id,+collection.title,+collection.handle",
           }));
 
           const mapped = products
@@ -188,12 +190,12 @@ export default function CatalogPage() {
 
   useEffect(() => {
     const qs = new URLSearchParams(window.location.search);
-    const subcategory = qs.get("subcategory");
+    const collection = qs.get("collection");
     const category = qs.get("category");
     const rawPage = Number(qs.get("page") || "1");
     const rawPageSize = Number(qs.get("pageSize") || String(PAGE_SIZE_OPTIONS[0]));
-    if (subcategory && subcategories.includes(subcategory as (typeof subcategories)[number])) {
-      setActiveSubcategory(subcategory);
+    if (collection) {
+      setActiveCollection(collection);
     }
     if (category) {
       setSelectedCategories([category]);
@@ -210,8 +212,8 @@ export default function CatalogPage() {
     const normalizedSearch = search.trim().toLowerCase();
 
     const list = allProducts.filter((product) => {
-      const subcategoryMatch =
-        activeSubcategory === "Todos" || product.subcategory === activeSubcategory;
+      const collectionMatch =
+        activeCollection === "" || product.collection?.handle === activeCollection;
       const categoryMatch =
         selectedCategories.length === 0 || selectedCategories.includes(product.category);
       const brandMatch = selectedBrands.length === 0 || selectedBrands.includes(product.brand);
@@ -221,7 +223,7 @@ export default function CatalogPage() {
         getProductName(product, language).toLowerCase().includes(normalizedSearch) ||
         product.description.toLowerCase().includes(normalizedSearch);
 
-      return subcategoryMatch && categoryMatch && brandMatch && priceMatch && searchMatch;
+      return collectionMatch && categoryMatch && brandMatch && priceMatch && searchMatch;
     });
 
     if (sortBy === "price_asc") {
@@ -231,7 +233,7 @@ export default function CatalogPage() {
       return [...list].sort((a, b) => b.price - a.price);
     }
     return list;
-  }, [allProducts, activeSubcategory, language, priceFilter, search, selectedBrands, selectedCategories, sortBy]);
+  }, [allProducts, activeCollection, language, priceFilter, search, selectedBrands, selectedCategories, sortBy]);
 
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / pageSize));
   const currentPage = Math.min(page, totalPages);
@@ -309,26 +311,41 @@ export default function CatalogPage() {
           <p className="mt-2 text-sm text-[#5a4f7a]">{t.desc}</p>
         </section>
 
-        <div className="no-scrollbar mb-4 overflow-x-auto">
-          <div className="flex w-max min-w-full gap-2 pb-1">
-            {subcategories.map((subcategory) => (
+        {collections.length > 0 && (
+          <div className="no-scrollbar mb-4 overflow-x-auto">
+            <div className="flex w-max min-w-full gap-2 pb-1">
               <button
-                key={subcategory}
                 onClick={() => {
-                  setActiveSubcategory(subcategory);
+                  setActiveCollection("");
                   setPage(1);
                 }}
                 className={`whitespace-nowrap rounded-full border px-4 py-2 text-sm ${
-                  activeSubcategory === subcategory
+                  activeCollection === ""
                     ? "border-[#4660bc] bg-[#4660bc] text-white"
                     : "border-[#9595db]/35 bg-white text-[#2a2148]"
                 }`}
               >
-                {translateLabel(subcategory, language)}
+                {translateLabel("Todos", language)}
               </button>
-            ))}
+              {collections.map((collection) => (
+                <button
+                  key={collection.id}
+                  onClick={() => {
+                    setActiveCollection(collection.handle);
+                    setPage(1);
+                  }}
+                  className={`whitespace-nowrap rounded-full border px-4 py-2 text-sm ${
+                    activeCollection === collection.handle
+                      ? "border-[#4660bc] bg-[#4660bc] text-white"
+                      : "border-[#9595db]/35 bg-white text-[#2a2148]"
+                  }`}
+                >
+                  {translateLabel(collection.title, language)}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         <section className="grid gap-4 md:grid-cols-[280px_1fr]">
           <aside className="hidden md:block">

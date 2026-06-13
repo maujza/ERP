@@ -13,8 +13,8 @@ import { type Product } from "@/lib/shop-data";
 // Local mock product catalog (mirrors the original hardcoded shop data)
 // ---------------------------------------------------------------------------
 // Products must satisfy: 5 price≤20000, 4 price 20001-30000, 1 price>30000
-// Subcategories: Best Sellers×3, Novedades×3, Fiesta×1, Kits×1, Esenciales×2
-const products: Product[] = [
+// Collections (by subcategory): Best Sellers×3, Novedades×3, Fiesta×1, Kits×1, Esenciales×2
+const rawProducts: Product[] = [
   {
     id: "siena-pack",
     name: "Pack Argollas Siena",
@@ -131,6 +131,26 @@ const products: Product[] = [
   },
 ];
 
+// Each product belongs to a backend collection. We derive the collection from
+// the legacy `subcategory` label so the fixtures keep the same grouping while
+// exercising the real `product.collection?.handle` filter used in the catalog.
+const SUBCATEGORY_TO_HANDLE: Record<string, string> = {
+  "Best Sellers": "best-sellers",
+  Novedades: "novedades",
+  Fiesta: "fiesta",
+  Kits: "kits",
+  Esenciales: "esenciales",
+};
+
+const products: Product[] = rawProducts.map((p) => ({
+  ...p,
+  collection: {
+    id: `pcol_${SUBCATEGORY_TO_HANDLE[p.subcategory]}`,
+    title: p.subcategory,
+    handle: SUBCATEGORY_TO_HANDLE[p.subcategory],
+  },
+}));
+
 // ---------------------------------------------------------------------------
 // Replicate helpers from catalog/page.tsx (keep in sync)
 // ---------------------------------------------------------------------------
@@ -147,7 +167,7 @@ function byPrice(product: Product, filter: PriceFilter): boolean {
 function filterAndSort(
   allProducts: Product[],
   {
-    activeSubcategory = "Todos",
+    activeCollection = "",
     selectedCategories = [] as string[],
     selectedBrands = [] as string[],
     priceFilter = "all" as PriceFilter,
@@ -158,8 +178,8 @@ function filterAndSort(
   const normalizedSearch = search.trim().toLowerCase();
 
   const list = allProducts.filter((p) => {
-    const subcategoryMatch =
-      activeSubcategory === "Todos" || p.subcategory === activeSubcategory;
+    const collectionMatch =
+      activeCollection === "" || p.collection?.handle === activeCollection;
     const categoryMatch =
       selectedCategories.length === 0 ||
       selectedCategories.includes(p.category);
@@ -171,7 +191,7 @@ function filterAndSort(
       p.name.toLowerCase().includes(normalizedSearch) ||
       p.description.toLowerCase().includes(normalizedSearch);
 
-    return subcategoryMatch && categoryMatch && brandMatch && priceMatch && searchMatch;
+    return collectionMatch && categoryMatch && brandMatch && priceMatch && searchMatch;
   });
 
   if (sortBy === "price_asc") return [...list].sort((a, b) => a.price - b.price);
@@ -246,47 +266,51 @@ describe("filterAndSort – no filters", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Subcategory filter
+// Collection filter
 // ---------------------------------------------------------------------------
-describe("filterAndSort – subcategory", () => {
-  it("'Todos' returns all products", () => {
-    expect(filterAndSort(products, { activeSubcategory: "Todos" })).toHaveLength(10);
+describe("filterAndSort – collection", () => {
+  it("empty handle ('Todos') returns all products", () => {
+    expect(filterAndSort(products, { activeCollection: "" })).toHaveLength(10);
   });
 
-  it("'Best Sellers' returns only Best Sellers products", () => {
-    const result = filterAndSort(products, { activeSubcategory: "Best Sellers" });
+  it("'best-sellers' returns only Best Sellers products", () => {
+    const result = filterAndSort(products, { activeCollection: "best-sellers" });
     expect(result).toHaveLength(3);
     for (const p of result) {
-      expect(p.subcategory).toBe("Best Sellers");
+      expect(p.collection?.handle).toBe("best-sellers");
     }
   });
 
-  it("'Novedades' returns only Novedades products", () => {
-    const result = filterAndSort(products, { activeSubcategory: "Novedades" });
+  it("'novedades' returns only Novedades products", () => {
+    const result = filterAndSort(products, { activeCollection: "novedades" });
     expect(result).toHaveLength(3);
     for (const p of result) {
-      expect(p.subcategory).toBe("Novedades");
+      expect(p.collection?.handle).toBe("novedades");
     }
   });
 
-  it("'Fiesta' returns 1 product (statement-eclair)", () => {
-    const result = filterAndSort(products, { activeSubcategory: "Fiesta" });
+  it("'fiesta' returns 1 product (statement-eclair)", () => {
+    const result = filterAndSort(products, { activeCollection: "fiesta" });
     expect(result).toHaveLength(1);
     expect(result[0].id).toBe("statement-eclair");
   });
 
-  it("'Kits' returns 1 product (kit-vitrina)", () => {
-    const result = filterAndSort(products, { activeSubcategory: "Kits" });
+  it("'kits' returns 1 product (kit-vitrina)", () => {
+    const result = filterAndSort(products, { activeCollection: "kits" });
     expect(result).toHaveLength(1);
     expect(result[0].id).toBe("kit-vitrina");
   });
 
-  it("'Esenciales' returns 2 products", () => {
-    const result = filterAndSort(products, { activeSubcategory: "Esenciales" });
+  it("'esenciales' returns 2 products", () => {
+    const result = filterAndSort(products, { activeCollection: "esenciales" });
     expect(result).toHaveLength(2);
     for (const p of result) {
-      expect(p.subcategory).toBe("Esenciales");
+      expect(p.collection?.handle).toBe("esenciales");
     }
+  });
+
+  it("an unknown handle returns no products", () => {
+    expect(filterAndSort(products, { activeCollection: "does-not-exist" })).toHaveLength(0);
   });
 });
 
@@ -492,13 +516,13 @@ describe("filterAndSort – sorting", () => {
 // Cumulative / combined filters
 // ---------------------------------------------------------------------------
 describe("filterAndSort – combined filters", () => {
-  it("subcategory + category reduces result set", () => {
+  it("collection + category reduces result set", () => {
     const result = filterAndSort(products, {
-      activeSubcategory: "Best Sellers",
+      activeCollection: "best-sellers",
       selectedCategories: ["Aros"],
     });
     for (const p of result) {
-      expect(p.subcategory).toBe("Best Sellers");
+      expect(p.collection?.handle).toBe("best-sellers");
       expect(p.category).toBe("Aros");
     }
   });
