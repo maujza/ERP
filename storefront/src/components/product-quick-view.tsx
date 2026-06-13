@@ -26,7 +26,7 @@ type RawProduct = {
   metadata?: Record<string, unknown> | null;
 };
 
-export function ProductQuickView({ productId, className, dotMode, renderTrigger }: { productId: string; className?: string; dotMode?: boolean; renderTrigger?: (props: { onClick: () => void }) => ReactNode }) {
+export function ProductQuickView({ productId, className, renderTrigger }: { productId: string; className?: string; renderTrigger?: (props: { onClick: () => void }) => ReactNode }) {
   const { language } = useLanguage();
   const { addToCart } = useCart();
   const [isOpen, setIsOpen] = useState(false);
@@ -301,25 +301,6 @@ export function ProductQuickView({ productId, className, dotMode, renderTrigger 
     return (
       <>
         {renderTrigger({ onClick: openQuickView })}
-        {isMounted ? createPortal(modal, document.body) : null}
-      </>
-    );
-  }
-
-  if (dotMode) {
-    return (
-      <>
-        <button
-          type="button"
-          onClick={openQuickView}
-          className={cn(
-            "relative inline-flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-[#4660bc]",
-            className,
-          )}
-          aria-label={t.quickView}
-        >
-          <span className="h-2 w-2 rounded-full bg-white" />
-        </button>
         {isMounted ? createPortal(modal, document.body) : null}
       </>
     );

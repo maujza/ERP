@@ -7,7 +7,6 @@ import { ArrowRight } from "lucide-react";
 import { SafeImage } from "@/components/safe-image";
 import { useLanguage } from "@/components/language-provider";
 import { useCart } from "@/components/cart-provider";
-import { ProductQuickView } from "@/components/product-quick-view";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,12 +20,6 @@ import { ProductCard } from "@/components/product-card";
 import { ProductCardSkeleton } from "@/components/product-card-skeleton";
 import { useCollections } from "@/hooks/use-collections";
 import { sdk, withStorePricingContext } from "@/lib/medusa";
-
-const lookDotPositions = [
-  { mobileClass: "left-[32%] top-[34%]", desktopClass: "md:left-[26%] md:top-[30%]" },
-  { mobileClass: "left-[60%] top-[47%]", desktopClass: "md:left-[58%] md:top-[40%]" },
-  { mobileClass: "left-[43%] top-[66%]", desktopClass: "md:left-[46%] md:top-[64%]" },
-];
 
 export default function HomePage() {
   const { language } = useLanguage();
@@ -89,8 +82,6 @@ export default function HomePage() {
         featured: "추천 상품",
         soldOut: "품절",
         addToCart: "카트 추가",
-        shopLook: "룩으로 쇼핑",
-        tapDots: "점 버튼을 눌러 상품 보기",
       }
     : {
         heroBadge: "Coleccion mayorista",
@@ -127,8 +118,6 @@ export default function HomePage() {
         featured: "Productos destacados",
         soldOut: "AGOTADO",
         addToCart: "Agregar al carrito",
-        shopLook: "Shop the look",
-        tapDots: "Tap sobre cada punto",
       };
 
   useEffect(() => {
@@ -268,34 +257,6 @@ export default function HomePage() {
             </div>
           </section>
         )}
-
-        {/* 5. Shop the Look */}
-        <section className="rounded-3xl border border-[#9595db]/25 bg-white p-4 md:p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <Badge variant="outline">{t.shopLook}</Badge>
-            <p className="text-xs uppercase tracking-[0.2em] text-[#5a4f7a]">{t.tapDots}</p>
-          </div>
-          <div className="relative mx-auto h-[360px] max-w-[780px] overflow-hidden rounded-2xl md:h-[520px]">
-            <SafeImage
-              src="https://images.unsplash.com/photo-1704957205218-d436eac4c607?auto=format&fit=crop&w=1400&q=80"
-              alt={t.shopLook}
-              fill
-              className="object-cover"
-            />
-            {lookDotPositions.map((pos, i) => {
-              const product = featuredProducts[i];
-              if (!product) return null;
-              return (
-                <ProductQuickView
-                  key={product.id}
-                  productId={product.id}
-                  dotMode
-                  className={`absolute z-10 -translate-x-1/2 -translate-y-1/2 ${pos.mobileClass} ${pos.desktopClass}`}
-                />
-              );
-            })}
-          </div>
-        </section>
       </main>
     </div>
   );
