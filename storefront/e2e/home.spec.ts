@@ -44,4 +44,12 @@ test.describe("Home page", () => {
     const cartBtn = page.locator("header").getByRole("button", { name: /carrito|cart/i });
     await expect(cartBtn).toBeVisible({ timeout: 5000 });
   });
+
+  test("quick-action collection chips link to the catalog via ?collection=", async ({ page }) => {
+    // Collections are provisioned for the run; quick-actions are backend-driven
+    // and must use the working ?collection= param, never the legacy ?subcategory=.
+    const collectionChip = page.locator("a[href*='/catalog?collection=']").first();
+    await expect(collectionChip).toBeVisible({ timeout: 10000 });
+    await expect(page.locator("a[href*='subcategory=']")).toHaveCount(0);
+  });
 });

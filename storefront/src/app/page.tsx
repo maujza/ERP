@@ -79,8 +79,6 @@ export default function HomePage() {
         ctaMore: "더 보기",
         ctaSearch: "상품 검색",
         quickActions: [
-          { title: "신상품", href: "/catalog?subcategory=Novedades" },
-          { title: "베스트셀러", href: "/catalog?subcategory=Best%20Sellers" },
           { title: "주문 구성", href: "/catalog" },
           { title: "결제로 이동", href: "/checkout" },
         ],
@@ -119,8 +117,6 @@ export default function HomePage() {
         ctaMore: "Ver mas",
         ctaSearch: "Buscar productos",
         quickActions: [
-          { title: "Novedades", href: "/catalog?subcategory=Novedades" },
-          { title: "Best sellers", href: "/catalog?subcategory=Best%20Sellers" },
           { title: "Armar pedido", href: "/catalog" },
           { title: "Finalizar compra", href: "/checkout" },
         ],
@@ -222,11 +218,18 @@ export default function HomePage() {
 
         {/* 3. Quick Actions */}
         <section className="grid grid-cols-2 gap-3">
-          {t.quickActions
+          {[
+            // First two backend collections as shortcuts, then the fixed actions.
+            ...collections.slice(0, 2).map((collection) => ({
+              title: translateLabel(collection.title, language),
+              href: `/catalog?collection=${encodeURIComponent(collection.handle)}`,
+            })),
+            ...t.quickActions,
+          ]
             .filter((action) => action.href !== "/checkout" || totalItems > 0)
             .map((action) => (
               <Link
-                key={action.title}
+                key={action.href}
                 href={action.href}
                 className="rounded-2xl border border-[#9595db]/25 bg-white p-4 text-sm font-semibold text-[#2a2148]"
               >
