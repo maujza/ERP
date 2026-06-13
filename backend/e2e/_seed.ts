@@ -169,3 +169,103 @@ export async function createTask(
   expect(id, "seed task should return an id").toBeTruthy();
   return { id, title };
 }
+
+/** Resolves a stock location id, preferring "Buenos Aires" (the seeded one). */
+export async function resolveStockLocationId(request: APIRequestContext): Promise<string> {
+  const res = await request.get("/admin/stock-locations?fields=id,name&limit=100");
+  expect(res.ok(), `fetch stock-locations failed (${res.status()})`).toBeTruthy();
+  const { stock_locations } = await res.json();
+  const ba = stock_locations?.find((l: { name?: string }) => l.name === "Buenos Aires");
+  const id = ba?.id ?? stock_locations?.[0]?.id;
+  expect(id, "a stock location is required").toBeTruthy();
+  return id;
+}
+
+/** Resolves the default sales channel id (publishable key + storefront live here). */
+export async function resolveDefaultSalesChannelId(request: APIRequestContext): Promise<string> {
+  const res = await request.get("/admin/sales-channels?fields=id,name&limit=100");
+  expect(res.ok(), `fetch sales-channels failed (${res.status()})`).toBeTruthy();
+  const { sales_channels } = await res.json();
+  const def = sales_channels?.find((c: { name?: string }) => c.name === "Default Sales Channel");
+  const id = def?.id ?? sales_channels?.[0]?.id;
+  expect(id, "a sales channel is required").toBeTruthy();
+  return id;
+}
+
+export type ManagedProduct = {
+  productId: string;
+  variantId: string;
+  sku: string;
+  inventoryItemId: string;
+};
+
+/**
+ * Creates a published product with a single inventory-managed variant in the
+ * default sales channel, and resolves the inventory item linked to that variant.
+ * The caller is responsible for deleting the product (which removes the variant
+ * and its inventory item) in afterEach.
+ */
+export async function createManagedProduct(
+  request: APIRequestContext,
+  overrides: { title?: string; sku?: string; status?: "draft" | "published" } = {}
+): Promise<ManagedProduct> {
+  const salesChannelId = await resolveDefaultSalesChannelId(request);
+  const stamp = Date.now();
+  const sku = overrides.sku ?? `E2E-INV-${stamp}`;
+  const title = overrides.title ?? `E2E Inventory Product ${stamp}`;
+
+  const createRes = await request.post("/admin/products", {
+    data: {
+      title,
+      status: overrides.status ?? "published",
+      options: [{ title: "Modelo", values: ["Única"] }],
+      variants: [
+        {
+          title: "Única",
+          sku,
+          manage_inventory: true,
+          options: { Modelo: "Única" },
+          prices: [{ amount: 10000, currency_code: "ars" }],
+        },
+      ],
+      sales_channels: [{ id: salesChannelId }],
+    },
+  });
+  expect(
+    createRes.ok(),
+    `create managed product failed (${createRes.status()}): ${await createRes.text()}`
+  ).toBeTruthy();
+  const { product } = await createRes.json();
+  const variantId = product?.variants?.[0]?.id;
+  expect(variantId, "managed product should return a variant id").toBeTruthy();
+
+  const inventoryItemId = await resolveInventoryItemId(request, product.id, sku);
+  return { productId: product.id, variantId, sku, inventoryItemId };
+}
+
+/** Resolves the inventory item id for a managed variant, by link then by SKU. */
+async function resolveInventoryItemId(
+  request: APIRequestContext,
+  productId: string,
+  sku: string
+): Promise<string> {
+  const viaProduct = await request.get(
+    `/admin/products/${productId}?fields=variants.id,variants.inventory_items.inventory.id,variants.inventory_items.inventory_item_id`
+  );
+  if (viaProduct.ok()) {
+    const { product } = await viaProduct.json();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const link = product?.variants?.[0]?.inventory_items?.[0] as any;
+    const id = link?.inventory?.id ?? link?.inventory_item_id;
+    if (id) return id;
+  }
+  const viaSku = await request.get(
+    `/admin/inventory-items?q=${encodeURIComponent(sku)}&fields=id,sku&limit=10`
+  );
+  expect(viaSku.ok(), `inventory-items lookup failed (${viaSku.status()})`).toBeTruthy();
+  const { inventory_items } = await viaSku.json();
+  const id =
+    inventory_items?.find((i: { sku?: string }) => i.sku === sku)?.id ?? inventory_items?.[0]?.id;
+  expect(id, `inventory item for sku ${sku} expected`).toBeTruthy();
+  return id;
+}
