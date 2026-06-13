@@ -23,6 +23,9 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./e2e",
+  // Production smoke tests target a live deployment and run via
+  // playwright.production.config.ts (test:e2e:production), not the local suite.
+  testIgnore: "**/production/**",
   // Provision a test-scoped catalog before the run and remove it after, so the
   // storefront specs have products to exercise without mutating the seed.
   globalSetup: "./e2e/global-provision.ts",
