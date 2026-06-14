@@ -101,9 +101,10 @@ export async function createFreshOrder(
   // When a customer is provided the cart carries their auth token, so the
   // completed order is linked to that customer (order.customer_id) and shows up
   // in their /store/orders list. Without it the order is a guest order.
-  const headers = customer
-    ? { "x-publishable-api-key": publishableKey as string, Authorization: `Bearer ${customer.token}` }
-    : { "x-publishable-api-key": publishableKey as string };
+  const headers: Record<string, string> = {
+    "x-publishable-api-key": publishableKey as string,
+    ...(customer ? { Authorization: `Bearer ${customer.token}` } : {}),
+  };
 
   const cartRes = await request.post("/store/carts", {
     headers,

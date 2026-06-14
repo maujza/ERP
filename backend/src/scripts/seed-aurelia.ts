@@ -32,6 +32,7 @@ import {
   markPaymentCollectionAsPaid,
   updateStoresWorkflow,
 } from "@medusajs/medusa/core-flows";
+import { ensureAdminRole } from "../lib/ensure-admin-role";
 
 export default async function seedAureliaData({ container }: ExecArgs) {
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER);
@@ -248,20 +249,8 @@ export default async function seedAureliaData({ container }: ExecArgs) {
   // npx medusa user creates the user with no metadata.role, which causes 403 on
   // all RBAC-protected routes. Find the user by MEDUSA_ADMIN_EMAIL and set role.
   // Runs regardless of SEED_DEMO_DATA so admin access works on an empty catalog.
-  const adminEmail = process.env.MEDUSA_ADMIN_EMAIL || "admin@aurelia.com"
   try {
-    const userModule: any = container.resolve(Modules.USER)
-    const [adminUser] = await userModule.listUsers({ email: adminEmail })
-    if (adminUser) {
-      if (adminUser.metadata?.role !== "admin") {
-        await userModule.updateUsers([{ id: adminUser.id, metadata: { role: "admin" } }])
-        logger.info(`Set metadata.role=admin on ${adminEmail}`)
-      } else {
-        logger.info(`${adminEmail} already has role=admin`)
-      }
-    } else {
-      logger.warn(`Admin user ${adminEmail} not found — skipping role assignment`)
-    }
+    await ensureAdminRole(container, logger)
   } catch (err: any) {
     logger.warn(`Could not set admin role: ${err?.message}`)
   }
