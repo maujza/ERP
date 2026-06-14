@@ -23,7 +23,7 @@ The single source of truth for talking to the Medusa backend.
 The bridge between raw Medusa API responses and the `Product` shape used in the UI.
 
 - Defines `Product` and `ProductVariant` TypeScript types.
-- Exports static lists: `navCategories`, `subcategories`, `brands` (shown in sidebar filters).
+- Exports the static `brands` list (shown in sidebar filters). Categories and collections are derived from backend data at runtime.
 - `mapMedusaProduct(p)` — converts a Medusa API product object into a `Product`.
 - `formatArs(value, language)` — formats a number as ARS currency (handles es/ko locale).
 - `translateLabel(value, language)` — returns the Spanish or Korean version of a category name.

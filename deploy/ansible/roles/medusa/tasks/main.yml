@@ -1,0 +1,124 @@
+---
+# The entire backend bootstrap is imperative (it runs containers that migrate
+# and seed the DB, then reads the result). Check mode cannot simulate that, so
+# the whole sequence is skipped during a --check dry run instead of false-failing.
+- name: Bootstrap Medusa, build the stack and verify
+  when: not ansible_check_mode
+  block:
+    # Bring up the database first so we can bootstrap and read the publishable key
+    # BEFORE the storefront image is built (NEXT_PUBLIC_* vars are baked at build time).
+    - name: Start the database
+      ansible.builtin.command: docker compose up -d db
+      args:
+        chdir: "{{ app_dir }}"
+      changed_when: false
+
+    - name: Wait for the database to accept connections
+      ansible.builtin.command: docker compose exec -T db pg_isready -U medusa -d medusa
+      args:
+        chdir: "{{ app_dir }}"
+      register: pg_ready
+      until: pg_ready.rc == 0
+      retries: 30
+      delay: 2
+      changed_when: false
+
+    - name: Run migrations, bootstrap, seed and admin creation
+      ansible.builtin.command: docker compose run --rm --build backend-init
+      args:
+        chdir: "{{ app_dir }}"
+      changed_when: true
+
+    # The medusa CLI no-ops on an existing user, so a half-created admin (user row
+    # but no emailpass identity) would never get credentials. Detect and repair.
+    - name: Check whether the admin auth identity exists
+      ansible.builtin.command: >-
+        docker compose exec -T db psql -U medusa -d medusa -t -A
+        -c "select count(*) from provider_identity where entity_id='{{ medusa_admin_email }}';"
+      args:
+        chdir: "{{ app_dir }}"
+      register: auth_count
+      changed_when: false
+
+    - name: Repair admin credentials when the identity is missing
+      when: (auth_count.stdout | trim | int) == 0
+      block:
+        - name: Remove the orphaned user row
+          ansible.builtin.command: >-
+            docker compose exec -T db psql -U medusa -d medusa
+            -c "delete from \"user\" where email='{{ medusa_admin_email }}';"
+          args:
+            chdir: "{{ app_dir }}"
+          changed_when: true
+
+        - name: Create the admin user with emailpass credentials
+          ansible.builtin.command: >-
+            docker compose run --rm backend-init npx medusa user
+            -e {{ medusa_admin_email }} -p {{ vault_medusa_admin_password }}
+          args:
+            chdir: "{{ app_dir }}"
+          changed_when: true
+          no_log: true
+
+    - name: Read the storefront publishable key from the database
+      ansible.builtin.command: >-
+        docker compose exec -T db psql -U medusa -d medusa -t -A
+        -c "select token from api_key where type='publishable' and deleted_at is null and revoked_at is null order by created_at desc limit 1;"
+      args:
+        chdir: "{{ app_dir }}"
+      register: pk_query
+      changed_when: false
+
+    - name: Read the ARS region id from the database
+      ansible.builtin.command: >-
+        docker compose exec -T db psql -U medusa -d medusa -t -A
+        -c "select id from region where currency_code='ars' and deleted_at is null order by created_at desc limit 1;"
+      args:
+        chdir: "{{ app_dir }}"
+      register: region_query
+      changed_when: false
+
+    - name: Record the publishable key and region facts
+      ansible.builtin.set_fact:
+        medusa_publishable_key: "{{ pk_query.stdout | trim }}"
+        medusa_region_id: "{{ region_query.stdout | trim }}"
+
+    - name: Ensure the bootstrap produced a publishable key and region
+      ansible.builtin.assert:
+        that:
+          - medusa_publishable_key | length > 0
+          - medusa_region_id | length > 0
+        fail_msg: "Backend bootstrap/seed did not produce a publishable key or ARS region."
+
+    - name: Render storefront/.env with the publishable key and region
+      ansible.builtin.template:
+        src: storefront.env.j2
+        dest: "{{ app_dir }}/storefront/.env"
+        mode: "0644"
+
+    - name: Build images and bring up the full stack
+      ansible.builtin.command: ./scripts/compose-up.sh
+      args:
+        chdir: "{{ app_dir }}"
+      register: composeup
+      changed_when: "'Building' in composeup.stdout"
+
+    - name: Verify the admin login succeeds
+      ansible.builtin.uri:
+        url: "http://localhost:{{ backend_port }}/auth/user/emailpass"
+        method: POST
+        body_format: json
+        body:
+          email: "{{ medusa_admin_email }}"
+          password: "{{ vault_medusa_admin_password }}"
+        status_code: 200
+      register: login_check
+      retries: 5
+      delay: 3
+      until: login_check.status == 200
+      no_log: true
+
+    - name: Verify the storefront responds
+      ansible.builtin.uri:
+        url: "http://localhost:{{ storefront_port }}/"
+        status_code: 200

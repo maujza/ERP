@@ -7,7 +7,8 @@ import { Languages, Menu, Search, ShoppingBag, User, X } from "lucide-react";
 
 import { useLanguage } from "@/components/language-provider";
 import { Badge } from "@/components/ui/badge";
-import { navCategories, translateLabel } from "@/lib/shop-data";
+import { translateLabel } from "@/lib/shop-data";
+import { useCollections } from "@/hooks/use-collections";
 import { useCart } from "@/components/cart-provider";
 
 export function SiteHeader() {
@@ -17,8 +18,9 @@ export function SiteHeader() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const { collections } = useCollections();
 
-  const categories = useMemo(() => navCategories.slice(0, 5), []);
+  const navCollections = useMemo(() => collections.slice(0, 5), [collections]);
   const checkoutNavLink = language === "ko"
     ? { href: "/checkout", label: "결제" }
     : { href: "/checkout", label: "Finalizar compra" };
@@ -197,22 +199,24 @@ export function SiteHeader() {
             </button>
           )}
         </div>
-        <div className="mt-6 space-y-2">
-          <p className="text-xs uppercase tracking-[0.2em] text-[#5a4f7a]">{t.categories}</p>
-          <div className="flex flex-wrap gap-2">
-            {categories.map((category) => (
-              <Link
-                key={category}
-                href={`/catalog?subcategory=${encodeURIComponent(category)}`}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <Badge variant="outline" className="cursor-pointer bg-white">
-                  {translateLabel(category, language)}
-                </Badge>
-              </Link>
-            ))}
+        {navCollections.length > 0 && (
+          <div className="mt-6 space-y-2">
+            <p className="text-xs uppercase tracking-[0.2em] text-[#5a4f7a]">{t.categories}</p>
+            <div className="flex flex-wrap gap-2">
+              {navCollections.map((collection) => (
+                <Link
+                  key={collection.id}
+                  href={`/catalog?collection=${encodeURIComponent(collection.handle)}`}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <Badge variant="outline" className="cursor-pointer bg-white">
+                    {translateLabel(collection.title, language)}
+                  </Badge>
+                </Link>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
         <div className="mt-6 border-t border-[#9595db]/25 pt-4">
           <button
             onClick={toggleLanguage}

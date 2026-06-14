@@ -55,8 +55,22 @@ vi.mock("@/components/cart-provider", () => ({
 }));
 
 vi.mock("@/lib/shop-data", () => ({
-  navCategories: ["Novedades", "Best Sellers", "Aros", "Collares", "Pulseras"],
   translateLabel: (label: string) => label,
+}));
+
+// Backend-driven collections power the header nav links.
+vi.mock("@/hooks/use-collections", () => ({
+  useCollections: () => ({
+    collections: [
+      { id: "pcol_1", title: "Novedades", handle: "novedades" },
+      { id: "pcol_2", title: "Best Sellers", handle: "best-sellers" },
+      { id: "pcol_3", title: "Aros", handle: "aros" },
+      { id: "pcol_4", title: "Collares", handle: "collares" },
+      { id: "pcol_5", title: "Pulseras", handle: "pulseras" },
+    ],
+    loading: false,
+    error: false,
+  }),
 }));
 
 // Stub the LanguageToggle now imported into SiteHeader for the desktop row.
@@ -310,6 +324,11 @@ describe("SiteHeader – mobile menu content", () => {
   it("closes the menu when a category link is clicked", () => {
     fireEvent.click(within(getAside()!).getByText("Novedades"));
     expect(getAside()).toHaveClass("-translate-x-full");
+  });
+
+  it("collection links point to the catalog filtered by collection handle", () => {
+    const link = within(getAside()!).getByText("Best Sellers").closest("a");
+    expect(link).toHaveAttribute("href", "/catalog?collection=best-sellers");
   });
 });
 

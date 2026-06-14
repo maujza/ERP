@@ -1,0 +1,64 @@
+---
+- name: Ensure the root SSH directory exists
+  ansible.builtin.file:
+    path: /root/.ssh
+    state: directory
+    mode: "0700"
+
+- name: Install the GitHub deploy private key
+  ansible.builtin.copy:
+    content: "{{ vault_github_deploy_key }}"
+    dest: "{{ deploy_key_path }}"
+    mode: "0600"
+  no_log: true
+
+- name: Configure SSH to use the deploy key for GitHub
+  ansible.builtin.copy:
+    dest: /root/.ssh/config
+    mode: "0600"
+    content: |
+      Host github.com
+        HostName github.com
+        User git
+        IdentityFile {{ deploy_key_path }}
+        IdentitiesOnly yes
+        StrictHostKeyChecking accept-new
+
+- name: Clone or update the repository (always matches the target branch)
+  ansible.builtin.git:
+    repo: "{{ app_repo }}"
+    dest: "{{ app_dir }}"
+    version: "{{ app_branch }}"
+    force: true
+    accept_newhostkey: true
+    key_file: "{{ deploy_key_path }}"
+
+- name: Map the storefront to the public host port
+  ansible.builtin.replace:
+    path: "{{ app_dir }}/docker-compose.yml"
+    regexp: '- "7358:3000"'
+    replace: '- "{{ storefront_port }}:3000"'
+
+- name: Render the root .env (admin + seed for compose interpolation)
+  ansible.builtin.template:
+    src: root.env.j2
+    dest: "{{ app_dir }}/.env"
+    mode: "0644"
+
+- name: Render backend/.env
+  ansible.builtin.template:
+    src: backend.env.j2
+    dest: "{{ app_dir }}/backend/.env"
+    mode: "0644"
+
+# docker-compose.yml lists storefront/.env as an env_file for the web service,
+# so EVERY compose command (even `up -d db`) fails when it is missing. The
+# medusa role overwrites this with the real publishable key + region before the
+# web image is built, so an empty placeholder here is enough to unblock the DB
+# bootstrap. force:false keeps a previously-rendered real file intact on re-runs.
+- name: Ensure a placeholder storefront/.env exists so compose can start the db
+  ansible.builtin.copy:
+    dest: "{{ app_dir }}/storefront/.env"
+    content: ""
+    force: false
+    mode: "0644"

@@ -5,10 +5,19 @@ import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 
 import { useLanguage } from "@/components/language-provider";
+import { useCollections } from "@/hooks/use-collections";
+import { translateLabel } from "@/lib/shop-data";
 
 export function SiteFooter() {
   const { language } = useLanguage();
+  const { collections } = useCollections();
   const [open, setOpen] = useState<string | null>(null);
+
+  // Backend-driven collection shortcuts for the "Ayuda" / "도움말" column.
+  const collectionLinks = collections.slice(0, 3).map((collection) => ({
+    href: `/catalog?collection=${encodeURIComponent(collection.handle)}`,
+    label: translateLabel(collection.title, language),
+  }));
 
   const sections = language === "ko"
     ? [
@@ -23,8 +32,7 @@ export function SiteFooter() {
         {
           title: "도움말",
           links: [
-            { href: "/catalog?subcategory=Novedades", label: "신상품" },
-            { href: "/catalog?subcategory=Best%20Sellers", label: "베스트셀러" },
+            ...collectionLinks,
             { href: "/", label: "홈으로" },
           ],
         },
@@ -49,8 +57,7 @@ export function SiteFooter() {
         {
           title: "Ayuda",
           links: [
-            { href: "/catalog?subcategory=Novedades", label: "Novedades" },
-            { href: "/catalog?subcategory=Best%20Sellers", label: "Best Sellers" },
+            ...collectionLinks,
             { href: "/", label: "Volver al home" },
           ],
         },

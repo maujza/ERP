@@ -17,6 +17,7 @@
 import { CreateInventoryLevelInput, ExecArgs } from "@medusajs/framework/types";
 import { ContainerRegistrationKeys, Modules, ProductStatus } from "@medusajs/framework/utils";
 import {
+  createCollectionsWorkflow,
   createCustomersWorkflow,
   createInventoryLevelsWorkflow,
   createOrderPaymentCollectionWorkflow,
@@ -243,6 +244,40 @@ export default async function seedAureliaData({ container }: ExecArgs) {
     logger.info("Argentina shipping options already exist.");
   }
 
+  // ── Ensure the initial admin user has the "admin" role (infrastructure) ──────
+  // npx medusa user creates the user with no metadata.role, which causes 403 on
+  // all RBAC-protected routes. Find the user by MEDUSA_ADMIN_EMAIL and set role.
+  // Runs regardless of SEED_DEMO_DATA so admin access works on an empty catalog.
+  const adminEmail = process.env.MEDUSA_ADMIN_EMAIL || "admin@aurelia.com"
+  try {
+    const userModule: any = container.resolve(Modules.USER)
+    const [adminUser] = await userModule.listUsers({ email: adminEmail })
+    if (adminUser) {
+      if (adminUser.metadata?.role !== "admin") {
+        await userModule.updateUsers([{ id: adminUser.id, metadata: { role: "admin" } }])
+        logger.info(`Set metadata.role=admin on ${adminEmail}`)
+      } else {
+        logger.info(`${adminEmail} already has role=admin`)
+      }
+    } else {
+      logger.warn(`Admin user ${adminEmail} not found — skipping role assignment`)
+    }
+  } catch (err: any) {
+    logger.warn(`Could not set admin role: ${err?.message}`)
+  }
+
+  // Demo content (categories, collections, products, inventory, promotions,
+  // customers, orders) is gated behind SEED_DEMO_DATA. Everything above (sales
+  // channel, ARS currency, Argentina region, tax, Buenos Aires stock location,
+  // shipping options, admin role) is always created so the stack is usable and
+  // you can create your own catalog. Set SEED_DEMO_DATA=true to seed demo data.
+  if (process.env.SEED_DEMO_DATA !== "true") {
+    logger.info(
+      "SEED_DEMO_DATA is not 'true' — skipping Aurelia demo content (categories, collections, products, inventory, promotions, customers, orders). Infrastructure is ready."
+    );
+    return;
+  }
+
   // ── 5. Product Categories ─────────────────────────────────────────────────────
   logger.info("Seeding Aurelia product categories...");
   const { data: existingCats } = await query.graph({
@@ -270,6 +305,36 @@ export default async function seedAureliaData({ container }: ExecArgs) {
     logger.info(`Created categories: ${categoriesToCreate.join(", ")}`);
   } else {
     logger.info("Jewelry categories already exist.");
+  }
+
+  // ── 5b. Product Collections ───────────────────────────────────────────────────
+  // Collections are the merchandising surface that drives the storefront's
+  // "Colecciones" section, header nav, and catalog filters. They are created as
+  // always-on infrastructure (like categories) so those surfaces are
+  // backend-driven and non-empty even with an empty product catalog. Staff
+  // assign products to a collection in the Admin UI; the storefront reflects it.
+  logger.info("Seeding Aurelia product collections...");
+  const collectionTitles = ["Novedades", "Best Sellers", "Esenciales", "Fiesta", "Kits"];
+  const { data: existingCollections } = await query.graph({
+    entity: "product_collection",
+    fields: ["id", "title"],
+  });
+  const collectionMap: Record<string, string> = {};
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  existingCollections.forEach((c: any) => { collectionMap[c.title] = c.id; });
+
+  const collectionsToCreate = collectionTitles.filter((title) => !collectionMap[title]);
+  if (collectionsToCreate.length > 0) {
+    const { result: newCollections } = await createCollectionsWorkflow(container).run({
+      input: {
+        collections: collectionsToCreate.map((title) => ({ title })),
+      },
+    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    newCollections.forEach((c: any) => { collectionMap[c.title] = c.id; });
+    logger.info(`Created collections: ${collectionsToCreate.join(", ")}`);
+  } else {
+    logger.info("Aurelia collections already exist.");
   }
 
   // ── 6. Jewelry Products ───────────────────────────────────────────────────────
@@ -457,6 +522,7 @@ export default async function seedAureliaData({ container }: ExecArgs) {
             thumbnail: p.images[0],
             shipping_profile_id: shippingProfile?.id,
             category_ids: categoryMap[p.categoryName] ? [categoryMap[p.categoryName]] : [],
+            collection_id: collectionMap[p.metadata.subcategory] ?? undefined,
             images: p.images.map((url) => ({ url })),
             options: isMultiVariant ? [{ title: "Variante", values: p.variants.map((v) => v.title) }] : [{ title: "Modelo", values: ["Única"] }],
             variants: p.variants.map((v) => ({
@@ -566,6 +632,7 @@ export default async function seedAureliaData({ container }: ExecArgs) {
               thumbnail: p.images[0],
               shipping_profile_id: shippingProfile?.id,
               category_ids: categoryMap[p.categoryName] ? [categoryMap[p.categoryName]] : [],
+              collection_id: collectionMap[p.metadata.subcategory] ?? undefined,
               images: p.images.map((url) => ({ url })),
               options: isMultiVariant
                 ? [{ title: "Talle", values: p.variants.map((v) => v.title) }]
@@ -899,27 +966,6 @@ export default async function seedAureliaData({ container }: ExecArgs) {
     }
   } else {
     logger.info(`Dummy orders already satisfy target (${existingSeededOrders.length}/${ORDER_TARGET}).`);
-  }
-
-  // ── Ensure the initial admin user has the "admin" role ───────────────────────
-  // npx medusa user creates the user with no metadata.role, which causes 403 on
-  // all RBAC-protected routes. Find the user by MEDUSA_ADMIN_EMAIL and set role.
-  const adminEmail = process.env.MEDUSA_ADMIN_EMAIL || "admin@aurelia.com"
-  try {
-    const userModule: any = container.resolve(Modules.USER)
-    const [adminUser] = await userModule.listUsers({ email: adminEmail })
-    if (adminUser) {
-      if (adminUser.metadata?.role !== "admin") {
-        await userModule.updateUsers([{ id: adminUser.id, metadata: { role: "admin" } }])
-        logger.info(`Set metadata.role=admin on ${adminEmail}`)
-      } else {
-        logger.info(`${adminEmail} already has role=admin`)
-      }
-    } else {
-      logger.warn(`Admin user ${adminEmail} not found — skipping role assignment`)
-    }
-  } catch (err: any) {
-    logger.warn(`Could not set admin role: ${err?.message}`)
   }
 
   // ── Done ──────────────────────────────────────────────────────────────────────

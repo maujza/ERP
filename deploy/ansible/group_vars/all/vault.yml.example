@@ -1,0 +1,26 @@
+# Copy to vault.yml, fill in real values, then encrypt in place:
+#   ansible-vault encrypt group_vars/all/vault.yml
+# vault.yml is gitignored. Commit only the ENCRYPTED file if you want it in git
+# (git add -f group_vars/all/vault.yml), and store the vault password in a manager.
+
+vault_jwt_secret: "REPLACE_WITH_32_BYTE_HEX"
+vault_cookie_secret: "REPLACE_WITH_32_BYTE_HEX"
+vault_medusa_admin_password: "REPLACE_WITH_ADMIN_PASSWORD"
+
+# Read-only deploy key (private) registered on aikirias/ERP -> Settings -> Deploy keys
+vault_github_deploy_key: |
+  -----BEGIN OPENSSH PRIVATE KEY-----
+  REPLACE_WITH_PRIVATE_KEY
+  -----END OPENSSH PRIVATE KEY-----
+
+# Resend (optional)
+vault_resend_api_key: ""
+vault_resend_from: "Aurelia <invitaciones@mail.aurelia.gleeze.com>"
+
+# Cloudflare R2 (optional — blank disables image uploads)
+vault_r2_account_id: ""
+vault_r2_access_key_id: ""
+vault_r2_secret_access_key: ""
+vault_r2_bucket: ""
+vault_r2_endpoint: ""
+vault_r2_public_url: ""

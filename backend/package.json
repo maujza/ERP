@@ -17,6 +17,8 @@
     "postinstall": "node ./scripts/patch-dashboard-i18n.mjs",
     "seed": "medusa exec ./src/scripts/seed.ts",
     "seed:aurelia": "medusa exec ./src/scripts/seed-aurelia.ts",
+    "seed:e2e": "medusa exec ./src/scripts/seed-e2e.ts",
+    "cleanup:e2e": "medusa exec ./src/scripts/cleanup-e2e.ts",
     "start": "medusa start",
     "dev": "sh -c 'set -a; [ -f .env ] && . ./.env; [ -f .env.dev ] && . ./.env.dev; set +a; exec medusa develop'",
     "test:integration:http": "TEST_TYPE=integration:http NODE_OPTIONS=--experimental-vm-modules jest --silent=false --runInBand --forceExit",

@@ -13,6 +13,7 @@
     "test:admin": "vitest run --config vitest.admin.config.ts",
     "compose:up": "../scripts/compose-up.sh",
     "medusa:sync-env": "../scripts/sync-medusa-env.sh",
+    "gen:icons": "node scripts/generate-icons.mjs",
     "test:e2e": "playwright test",
     "test:e2e:production": "playwright test --config=playwright.production.config.ts",
     "test:e2e:ui": "playwright test --ui",
@@ -43,6 +44,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "jsdom": "^28.1.0",
+    "sharp": "^0.34.4",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.0.18"

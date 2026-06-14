@@ -109,7 +109,8 @@ The full stack runs at: frontend → `localhost:7358`, backend → `localhost:90
   - `lib/rbac.ts` — role-based access control
   - `lib/notification-recipients.ts` — helper for WhatsApp notification eligibility
 - **Seed scripts**:
-  - `seed-aurelia.ts` — seeds Argentina region, ARS currency, jewelry categories, 10 products, 10%-off promotion (`AURELIA10`)
+  - `seed.ts` / `seed-aurelia.ts` — **infrastructure only by default**: sales channel, ARS currency, Argentina region, tax region, Buenos Aires stock location, shipping options, publishable key, admin role. No content (categories, collections, products, inventory, customers, orders) is seeded. Set `SEED_DEMO_DATA=true` to additionally seed the demo catalog (jewelry categories, collections, ~130 products, customers, orders, `AURELIA10` promo).
+  - `seed-e2e.ts` / `cleanup-e2e.ts` — test-scoped catalog for the E2E suites (tagged `metadata.e2e`): creates categories, collections, products + inventory; the matching cleanup removes exactly those. Wired into both Playwright suites' `globalSetup`/`globalTeardown`.
   - `seed-demo-historic.ts` — demo data for testing
   - `cleanup-seeded-orders.ts` — cleanup utility
   - `reset-demo-data.ts` — reset utility
@@ -181,7 +182,7 @@ Auth uses `emailpass` for both customers and admin users. CORS origins are confi
 - `R2_BUCKET` — R2 bucket name
 - `R2_ENDPOINT` — R2 S3-compatible endpoint (`https://<account-id>.r2.cloudflarestorage.com`)
 - `R2_PUBLIC_URL` — public URL for the bucket (enable "Public Development URL" in R2 settings)
-- `SEED_DEMO_DATA` — set to `true` to seed the demo jewelry catalog on startup (idempotent)
+- `SEED_DEMO_DATA` — `true` also seeds the demo catalog (categories, collections, products, inventory, customers, orders, promo) on startup; **unset/false (default) seeds infrastructure only** so the stack starts with an empty catalog (idempotent)
 
 **Next.js server-side** (not `NEXT_PUBLIC_*`, not baked into bundle):
 - `MEDUSA_INTERNAL_BACKEND_URL` — URL used by `next.config.ts` to rewrite `/api/medusa` requests server-side (defaults to `http://localhost:9000`)

@@ -1,0 +1,10 @@
+---
+- name: Deploy the Aurelia ERP stack
+  hosts: erp
+  become: false
+  gather_facts: true
+  roles:
+    - docker
+    - firewall
+    - app
+    - medusa

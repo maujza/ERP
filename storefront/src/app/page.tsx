@@ -7,26 +7,19 @@ import { ArrowRight } from "lucide-react";
 import { SafeImage } from "@/components/safe-image";
 import { useLanguage } from "@/components/language-provider";
 import { useCart } from "@/components/cart-provider";
-import { ProductQuickView } from "@/components/product-quick-view";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   hasPurchasablePrice,
   isJewelryProduct,
   mapMedusaProduct,
-  navCategories,
   Product,
   translateLabel,
 } from "@/lib/shop-data";
 import { ProductCard } from "@/components/product-card";
 import { ProductCardSkeleton } from "@/components/product-card-skeleton";
+import { useCollections } from "@/hooks/use-collections";
 import { sdk, withStorePricingContext } from "@/lib/medusa";
-
-const lookDotPositions = [
-  { mobileClass: "left-[32%] top-[34%]", desktopClass: "md:left-[26%] md:top-[30%]" },
-  { mobileClass: "left-[60%] top-[47%]", desktopClass: "md:left-[58%] md:top-[40%]" },
-  { mobileClass: "left-[43%] top-[66%]", desktopClass: "md:left-[46%] md:top-[64%]" },
-];
 
 export default function HomePage() {
   const { language } = useLanguage();
@@ -34,6 +27,7 @@ export default function HomePage() {
   const [slideIndex, setSlideIndex] = useState(0);
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
   const [featuredLoadError, setFeaturedLoadError] = useState(false);
+  const { collections } = useCollections();
 
   useEffect(() => {
     sdk.store.product.list(withStorePricingContext({
@@ -78,8 +72,6 @@ export default function HomePage() {
         ctaMore: "더 보기",
         ctaSearch: "상품 검색",
         quickActions: [
-          { title: "신상품", href: "/catalog?subcategory=Novedades" },
-          { title: "베스트셀러", href: "/catalog?subcategory=Best%20Sellers" },
           { title: "주문 구성", href: "/catalog" },
           { title: "결제로 이동", href: "/checkout" },
         ],
@@ -90,8 +82,6 @@ export default function HomePage() {
         featured: "추천 상품",
         soldOut: "품절",
         addToCart: "카트 추가",
-        shopLook: "룩으로 쇼핑",
-        tapDots: "점 버튼을 눌러 상품 보기",
       }
     : {
         heroBadge: "Coleccion mayorista",
@@ -118,8 +108,6 @@ export default function HomePage() {
         ctaMore: "Ver mas",
         ctaSearch: "Buscar productos",
         quickActions: [
-          { title: "Novedades", href: "/catalog?subcategory=Novedades" },
-          { title: "Best sellers", href: "/catalog?subcategory=Best%20Sellers" },
           { title: "Armar pedido", href: "/catalog" },
           { title: "Finalizar compra", href: "/checkout" },
         ],
@@ -130,8 +118,6 @@ export default function HomePage() {
         featured: "Productos destacados",
         soldOut: "AGOTADO",
         addToCart: "Agregar al carrito",
-        shopLook: "Shop the look",
-        tapDots: "Tap sobre cada punto",
       };
 
   useEffect(() => {
@@ -221,11 +207,18 @@ export default function HomePage() {
 
         {/* 3. Quick Actions */}
         <section className="grid grid-cols-2 gap-3">
-          {t.quickActions
+          {[
+            // First two backend collections as shortcuts, then the fixed actions.
+            ...collections.slice(0, 2).map((collection) => ({
+              title: translateLabel(collection.title, language),
+              href: `/catalog?collection=${encodeURIComponent(collection.handle)}`,
+            })),
+            ...t.quickActions,
+          ]
             .filter((action) => action.href !== "/checkout" || totalItems > 0)
             .map((action) => (
               <Link
-                key={action.title}
+                key={action.href}
                 href={action.href}
                 className="rounded-2xl border border-[#9595db]/25 bg-white p-4 text-sm font-semibold text-[#2a2148]"
               >
@@ -234,62 +227,36 @@ export default function HomePage() {
             ))}
         </section>
 
-        {/* 4. Colecciones (merged categories scroll) */}
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <Badge variant="outline">{t.collections}</Badge>
-            <Link href="/catalog" className="text-sm font-semibold text-[#2a2148]">
-              {t.ctaMore}
-            </Link>
-          </div>
-          <div className="no-scrollbar -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2">
-            {navCategories.slice(0, 6).map((category, idx) => {
-              const accents = ["#4660bc", "#6c5baa", "#9595db", "#92c9ff", "#ffd7fb", "#f2e6f7"];
-              const accent = accents[idx % accents.length];
-              return (
-                <Link
-                  key={category}
-                  href={`/catalog?subcategory=${encodeURIComponent(category)}`}
-                  className="shrink-0 snap-start basis-[78%] overflow-hidden rounded-2xl border border-[#9595db]/25 bg-white sm:basis-[45%] md:basis-[30%]"
-                >
-                  <div className="h-20 w-full" style={{ backgroundColor: accent }} />
-                  <div className="p-4">
-                    <p className="text-xs uppercase tracking-[0.2em] text-[#5a4f7a]">{t.collection}</p>
-                    <p className="mt-1 text-lg font-semibold text-[#2a2148]">{translateLabel(category, language)}</p>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* 5. Shop the Look */}
-        <section className="rounded-3xl border border-[#9595db]/25 bg-white p-4 md:p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <Badge variant="outline">{t.shopLook}</Badge>
-            <p className="text-xs uppercase tracking-[0.2em] text-[#5a4f7a]">{t.tapDots}</p>
-          </div>
-          <div className="relative mx-auto h-[360px] max-w-[780px] overflow-hidden rounded-2xl md:h-[520px]">
-            <SafeImage
-              src="https://images.unsplash.com/photo-1704957205218-d436eac4c607?auto=format&fit=crop&w=1400&q=80"
-              alt={t.shopLook}
-              fill
-              className="object-cover"
-            />
-            {lookDotPositions.map((pos, i) => {
-              const product = featuredProducts[i];
-              if (!product) return null;
-              return (
-                <ProductQuickView
-                  key={product.id}
-                  productId={product.id}
-                  dotMode
-                  className={`absolute z-10 -translate-x-1/2 -translate-y-1/2 ${pos.mobileClass} ${pos.desktopClass}`}
-                />
-              );
-            })}
-          </div>
-        </section>
+        {/* 4. Colecciones (backend-driven product collections) */}
+        {collections.length > 0 && (
+          <section className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Badge variant="outline">{t.collections}</Badge>
+              <Link href="/catalog" className="text-sm font-semibold text-[#2a2148]">
+                {t.ctaMore}
+              </Link>
+            </div>
+            <div className="no-scrollbar -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2">
+              {collections.slice(0, 6).map((collection, idx) => {
+                const accents = ["#4660bc", "#6c5baa", "#9595db", "#92c9ff", "#ffd7fb", "#f2e6f7"];
+                const accent = accents[idx % accents.length];
+                return (
+                  <Link
+                    key={collection.id}
+                    href={`/catalog?collection=${encodeURIComponent(collection.handle)}`}
+                    className="shrink-0 snap-start basis-[78%] overflow-hidden rounded-2xl border border-[#9595db]/25 bg-white sm:basis-[45%] md:basis-[30%]"
+                  >
+                    <div className="h-20 w-full" style={{ backgroundColor: accent }} />
+                    <div className="p-4">
+                      <p className="text-xs uppercase tracking-[0.2em] text-[#5a4f7a]">{t.collection}</p>
+                      <p className="mt-1 text-lg font-semibold text-[#2a2148]">{translateLabel(collection.title, language)}</p>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        )}
       </main>
     </div>
   );
