@@ -14,7 +14,11 @@
 
 import { ExecArgs } from "@medusajs/framework/types";
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils";
-import { deleteCollectionsWorkflow, deleteProductsWorkflow } from "@medusajs/medusa/core-flows";
+import {
+  deleteCollectionsWorkflow,
+  deleteProductCategoriesWorkflow,
+  deleteProductsWorkflow,
+} from "@medusajs/medusa/core-flows";
 
 export default async function cleanupE2EData({ container }: ExecArgs) {
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER);
@@ -63,6 +67,20 @@ export default async function cleanupE2EData({ container }: ExecArgs) {
   if (collectionIds.length > 0) {
     await deleteCollectionsWorkflow(container).run({ input: { ids: collectionIds } });
     logger.info(`cleanup-e2e: deleted ${collectionIds.length} E2E collection(s).`);
+  }
+
+  // ── Delete E2E-tagged categories (only ones seed-e2e introduced) ────────────
+  const { data: categories } = await query.graph({
+    entity: "product_category",
+    fields: ["id", "name", "metadata"],
+  });
+  const categoryIds = (categories as Array<{ id: string; metadata?: Record<string, unknown> | null }>)
+    .filter((c) => c?.metadata?.e2e === "true")
+    .map((c) => c.id);
+
+  if (categoryIds.length > 0) {
+    await deleteProductCategoriesWorkflow(container).run({ input: categoryIds });
+    logger.info(`cleanup-e2e: deleted ${categoryIds.length} E2E category(ies).`);
   }
 
   // ── Delete orphaned E2E inventory items ─────────────────────────────────────

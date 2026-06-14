@@ -23,6 +23,7 @@ import { ContainerRegistrationKeys, Modules, ProductStatus } from "@medusajs/fra
 import {
   createCollectionsWorkflow,
   createInventoryLevelsWorkflow,
+  createProductCategoriesWorkflow,
   createProductsWorkflow,
 } from "@medusajs/medusa/core-flows";
 
@@ -79,6 +80,26 @@ export default async function seedE2EData({ container }: ExecArgs) {
   const categoryMap: Record<string, string> = {};
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (cats as any[]).forEach((c) => { categoryMap[c.name] = c.id; });
+
+  // Ensure the categories referenced by the E2E products exist. The main seed no
+  // longer creates categories (they are demo content), so create any missing ones
+  // here, tagged metadata.e2e so cleanup removes only the ones this script made.
+  const neededCategories = [...new Set(E2E_PRODUCTS.map((p) => p.category))];
+  const categoriesToCreate = neededCategories.filter((name) => !categoryMap[name]);
+  if (categoriesToCreate.length > 0) {
+    const { result: newCategories } = await createProductCategoriesWorkflow(container).run({
+      input: {
+        product_categories: categoriesToCreate.map((name) => ({
+          name,
+          is_active: true,
+          metadata: { e2e: "true" } as Record<string, string>,
+        })),
+      },
+    });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (newCategories as any[]).forEach((c) => { categoryMap[c.name] = c.id; });
+    logger.info(`seed-e2e: created ${categoriesToCreate.length} E2E category(ies): ${categoriesToCreate.join(", ")}.`);
+  }
 
   const { data: cols } = await query.graph({ entity: "product_collection", fields: ["id", "title"] });
   const collectionMap: Record<string, string> = {};
