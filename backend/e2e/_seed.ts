@@ -73,7 +73,11 @@ export async function ensureDraftPurchaseOrder(request: APIRequestContext): Prom
  * Mirrors the storefront checkout: create cart → set address → pick a shipping
  * option → open a payment session (manual provider) → complete the cart.
  */
-export async function createFreshOrder(request: APIRequestContext): Promise<string> {
+export async function createFreshOrder(
+  request: APIRequestContext,
+  customer?: { token: string; email: string },
+  variantId?: string
+): Promise<string> {
   // Store config, fetched live via the admin API.
   const keysRes = await request.get("/admin/api-keys?fields=id,token,type&limit=20");
   expect(keysRes.ok(), `fetch api-keys failed (${keysRes.status()})`).toBeTruthy();
@@ -87,18 +91,26 @@ export async function createFreshOrder(request: APIRequestContext): Promise<stri
   expect(region?.id, "a region is required to create a store order").toBeTruthy();
   const countryCode = region.countries?.[0]?.iso_2 ?? "ar";
 
-  const productsRes = await request.get("/admin/products?limit=1&fields=id,variants.id");
-  const variantId = (await productsRes.json()).products?.[0]?.variants?.[0]?.id;
-  expect(variantId, "a product variant is required to create a store order").toBeTruthy();
+  let resolvedVariantId = variantId;
+  if (!resolvedVariantId) {
+    const productsRes = await request.get("/admin/products?limit=1&fields=id,variants.id");
+    resolvedVariantId = (await productsRes.json()).products?.[0]?.variants?.[0]?.id;
+  }
+  expect(resolvedVariantId, "a product variant is required to create a store order").toBeTruthy();
 
-  const headers = { "x-publishable-api-key": publishableKey as string };
+  // When a customer is provided the cart carries their auth token, so the
+  // completed order is linked to that customer (order.customer_id) and shows up
+  // in their /store/orders list. Without it the order is a guest order.
+  const headers = customer
+    ? { "x-publishable-api-key": publishableKey as string, Authorization: `Bearer ${customer.token}` }
+    : { "x-publishable-api-key": publishableKey as string };
 
   const cartRes = await request.post("/store/carts", {
     headers,
     data: {
       region_id: region.id,
-      email: "e2e-fulfillment@test.com",
-      items: [{ variant_id: variantId, quantity: 1 }],
+      email: customer?.email ?? "e2e-fulfillment@test.com",
+      items: [{ variant_id: resolvedVariantId, quantity: 1 }],
     },
   });
   expect(cartRes.ok(), `create cart failed (${cartRes.status()}): ${await cartRes.text()}`).toBeTruthy();
@@ -268,4 +280,180 @@ async function resolveInventoryItemId(
     inventory_items?.find((i: { sku?: string }) => i.sku === sku)?.id ?? inventory_items?.[0]?.id;
   expect(id, `inventory item for sku ${sku} expected`).toBeTruthy();
   return id;
+}
+
+/** Resolves the storefront publishable API key (needed for all /store calls). */
+export async function getPublishableKey(request: APIRequestContext): Promise<string> {
+  const res = await request.get("/admin/api-keys?fields=id,token,type&limit=20");
+  expect(res.ok(), `fetch api-keys failed (${res.status()})`).toBeTruthy();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const token = (await res.json()).api_keys?.find((k: any) => k.type === "publishable")?.token;
+  expect(token, "a publishable API key is required").toBeTruthy();
+  return token as string;
+}
+
+export type RegisteredCustomer = {
+  customerId: string;
+  email: string;
+  password: string;
+  token: string;
+  firstName: string;
+  lastName: string;
+};
+
+/**
+ * Registers a storefront customer the same way the /auth page does: auth
+ * register (emailpass) → create the customer record → log in. Returns the
+ * customer id and a store auth token usable for customer-scoped store calls.
+ */
+export async function registerCustomer(
+  request: APIRequestContext,
+  opts: { email?: string; password?: string; firstName?: string; lastName?: string } = {}
+): Promise<RegisteredCustomer> {
+  const stamp = `${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+  const email = opts.email ?? `e2e-customer-${stamp}@test.com`;
+  const password = opts.password ?? "supersecret";
+  const firstName = opts.firstName ?? "E2E";
+  const lastName = opts.lastName ?? "Cliente";
+  const pk = await getPublishableKey(request);
+
+  const regRes = await request.post("/auth/customer/emailpass/register", {
+    data: { email, password },
+  });
+  expect(regRes.ok(), `customer register failed (${regRes.status()}): ${await regRes.text()}`).toBeTruthy();
+  const registrationToken = (await regRes.json()).token as string;
+  expect(registrationToken, "registration token expected").toBeTruthy();
+
+  const createRes = await request.post("/store/customers", {
+    headers: { "x-publishable-api-key": pk, Authorization: `Bearer ${registrationToken}` },
+    data: { email, first_name: firstName, last_name: lastName },
+  });
+  expect(createRes.ok(), `create customer failed (${createRes.status()}): ${await createRes.text()}`).toBeTruthy();
+  const customerId = (await createRes.json()).customer?.id;
+  expect(customerId, "customer id expected").toBeTruthy();
+
+  const loginRes = await request.post("/auth/customer/emailpass", { data: { email, password } });
+  expect(loginRes.ok(), `customer login failed (${loginRes.status()}): ${await loginRes.text()}`).toBeTruthy();
+  const token = (await loginRes.json()).token as string;
+  expect(token, "customer auth token expected").toBeTruthy();
+
+  return { customerId, email, password, token, firstName, lastName };
+}
+
+/** Captures every authorized payment on an order → payment_status "captured". */
+export async function captureOrderPayment(request: APIRequestContext, orderId: string): Promise<void> {
+  const res = await request.get(
+    `/admin/orders/${orderId}?fields=payment_collections.payments.id,payment_collections.payments.amount`
+  );
+  expect(res.ok(), `fetch order payments failed (${res.status()})`).toBeTruthy();
+  const order = (await res.json()).order;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const payments = (order.payment_collections ?? []).flatMap((pc: any) => pc.payments ?? []);
+  expect(payments.length, "order should have a payment to capture").toBeGreaterThan(0);
+  for (const payment of payments) {
+    const cap = await request.post(`/admin/payments/${payment.id}/capture`, { data: {} });
+    expect(cap.ok(), `capture failed (${cap.status()}): ${await cap.text()}`).toBeTruthy();
+  }
+}
+
+/**
+ * Drives native Medusa fulfillment on an order so order.fulfillment_status
+ * progresses (the field the storefront account page renders). Creates a
+ * fulfillment, then optionally ships and marks delivered.
+ */
+export async function fulfillOrder(
+  request: APIRequestContext,
+  orderId: string,
+  opts: { ship?: boolean; deliver?: boolean } = {}
+): Promise<void> {
+  const locationId = await resolveStockLocationId(request);
+  const itemsRes = await request.get(`/admin/orders/${orderId}?fields=*items`);
+  expect(itemsRes.ok(), `fetch order items failed (${itemsRes.status()})`).toBeTruthy();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const items = ((await itemsRes.json()).order.items ?? []).map((i: any) => ({
+    id: i.id,
+    quantity: i.quantity,
+  }));
+  expect(items.length, "order should have items to fulfill").toBeGreaterThan(0);
+
+  const fulRes = await request.post(`/admin/orders/${orderId}/fulfillments`, {
+    data: { items, location_id: locationId },
+  });
+  expect(fulRes.ok(), `create fulfillment failed (${fulRes.status()}): ${await fulRes.text()}`).toBeTruthy();
+
+  if (!opts.ship && !opts.deliver) return;
+
+  const fidRes = await request.get(`/admin/orders/${orderId}?fields=fulfillments.id`);
+  const fulfillments = (await fidRes.json()).order.fulfillments ?? [];
+  const fid = fulfillments[fulfillments.length - 1]?.id;
+  expect(fid, "fulfillment id expected").toBeTruthy();
+
+  const shipRes = await request.post(`/admin/orders/${orderId}/fulfillments/${fid}/shipments`, {
+    data: { items },
+  });
+  expect(shipRes.ok(), `ship failed (${shipRes.status()}): ${await shipRes.text()}`).toBeTruthy();
+
+  if (opts.deliver) {
+    const delRes = await request.post(
+      `/admin/orders/${orderId}/fulfillments/${fid}/mark-as-delivered`,
+      { data: {} }
+    );
+    expect(delRes.ok(), `mark delivered failed (${delRes.status()}): ${await delRes.text()}`).toBeTruthy();
+  }
+}
+
+export type OrderableProduct = { productId: string; variantId: string };
+
+/**
+ * Creates a dedicated, self-contained product an order can be placed against:
+ * published, in the default sales channel, with a default shipping profile (so
+ * cart line items resolve requires_shipping) and 50 units of stock. Order/customer
+ * specs use this so they never depend on — or deplete — the shared seeded catalog.
+ * Delete the product in afterEach (after cancelling any open order).
+ */
+export async function createOrderableProduct(request: APIRequestContext): Promise<OrderableProduct> {
+  const salesChannelId = await resolveDefaultSalesChannelId(request);
+  const locationId = await resolveStockLocationId(request);
+
+  const spRes = await request.get("/admin/shipping-profiles?fields=id,type&limit=10");
+  expect(spRes.ok(), `fetch shipping-profiles failed (${spRes.status()})`).toBeTruthy();
+  const profiles = (await spRes.json()).shipping_profiles ?? [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const shippingProfileId = profiles.find((p: any) => p.type === "default")?.id ?? profiles[0]?.id;
+  expect(shippingProfileId, "a default shipping profile is required").toBeTruthy();
+
+  const sku = `E2E-ORD-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+  const createRes = await request.post("/admin/products", {
+    data: {
+      title: `E2E Orderable ${sku}`,
+      status: "published",
+      shipping_profile_id: shippingProfileId,
+      options: [{ title: "Modelo", values: ["Única"] }],
+      variants: [
+        {
+          title: "Única",
+          sku,
+          manage_inventory: true,
+          options: { Modelo: "Única" },
+          prices: [{ amount: 10000, currency_code: "ars" }],
+        },
+      ],
+      sales_channels: [{ id: salesChannelId }],
+    },
+  });
+  expect(
+    createRes.ok(),
+    `create orderable product failed (${createRes.status()}): ${await createRes.text()}`
+  ).toBeTruthy();
+  const product = (await createRes.json()).product;
+  const variantId = product?.variants?.[0]?.id;
+  expect(variantId, "orderable product variant id expected").toBeTruthy();
+
+  const inventoryItemId = await resolveInventoryItemId(request, product.id, sku);
+  const levelRes = await request.post(`/admin/inventory-items/${inventoryItemId}/location-levels`, {
+    data: { location_id: locationId, stocked_quantity: 50 },
+  });
+  expect(levelRes.ok(), `set inventory level failed (${levelRes.status()}): ${await levelRes.text()}`).toBeTruthy();
+
+  return { productId: product.id, variantId };
 }

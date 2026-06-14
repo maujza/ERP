@@ -32,8 +32,21 @@ export default async function cleanupE2EData({ container }: ExecArgs) {
     .map((p) => p.id);
 
   if (productIds.length > 0) {
-    await deleteProductsWorkflow(container).run({ input: { ids: productIds } });
-    logger.info(`cleanup-e2e: deleted ${productIds.length} E2E product(s).`);
+    // Delete one at a time: a product referenced by a (test) order whose
+    // inventory reservation is still open cannot have its inventory item
+    // deleted, which would otherwise fail the whole batch and the teardown.
+    let deleted = 0;
+    for (const id of productIds) {
+      try {
+        await deleteProductsWorkflow(container).run({ input: { ids: [id] } });
+        deleted += 1;
+      } catch (e) {
+        logger.warn(
+          `cleanup-e2e: could not delete product ${id} (likely referenced by a test order): ${(e as Error).message}`
+        );
+      }
+    }
+    logger.info(`cleanup-e2e: deleted ${deleted}/${productIds.length} E2E product(s).`);
   } else {
     logger.info("cleanup-e2e: no E2E products to delete.");
   }
