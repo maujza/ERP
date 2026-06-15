@@ -4,7 +4,7 @@ WORKDIR /app
 
 COPY package*.json ./
 COPY scripts/ ./scripts/
-RUN npm ci --legacy-peer-deps
+RUN --mount=type=cache,target=/root/.npm npm ci --legacy-peer-deps
 
 FROM deps AS builder
 
@@ -47,10 +47,9 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-COPY --from=deps /root/.npm /root/.npm
 COPY package*.json ./
 COPY scripts/ ./scripts/
-RUN npm ci --omit=dev --legacy-peer-deps --prefer-offline --no-audit --progress=false
+RUN --mount=type=cache,target=/root/.npm npm ci --omit=dev --legacy-peer-deps --prefer-offline --no-audit --progress=false
 
 FROM node:20-bookworm-slim AS runner
 

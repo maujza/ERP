@@ -3,7 +3,7 @@ FROM node:20-bookworm-slim AS deps
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci --legacy-peer-deps
+RUN --mount=type=cache,target=/root/.npm npm ci --legacy-peer-deps
 
 FROM node:20-bookworm-slim AS builder
 

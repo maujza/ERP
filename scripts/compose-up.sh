@@ -94,6 +94,10 @@ hash_backend() {
     \( -path 'backend/node_modules' \
        -o -path 'backend/.medusa' \
        -o -path 'backend/dist' \
+       -o -path 'backend/coverage' \
+       -o -path 'backend/tests' \
+       -o -path 'backend/e2e' \
+       -o -path 'backend/integration-tests' \
        -o -name '*.md' \
        -o -name '*.template' \
     \) -prune \

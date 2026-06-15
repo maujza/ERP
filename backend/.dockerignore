@@ -6,3 +6,7 @@ npm-debug.log*
 dist
 coverage
 **/__tests__
+tests
+e2e
+integration-tests
+playwright*.config.ts
