@@ -1,6 +1,7 @@
 .next
 node_modules
 npm-debug.log*
+coverage
 .git
 Dockerfile
 docker-compose.yml
