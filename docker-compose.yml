@@ -56,7 +56,7 @@ services:
         npx medusa exec ./src/scripts/bootstrap.ts &&
         (npx medusa user -e \"$${MEDUSA_ADMIN_EMAIL:-admin@aurelia.com}\" -p \"$${MEDUSA_ADMIN_PASSWORD}\" >/dev/null 2>&1 || true) &&
         npx medusa exec ./src/scripts/assign-admin-role.ts &&
-        if [ \"${SEED_DEMO_DATA:-false}\" = \"true\" ]; then
+        if [ \"$${SEED_DEMO_DATA:-false}\" = \"true\" ]; then
           echo 'Seeding demo data...' &&
           npx medusa exec ./src/scripts/seed-aurelia.ts
         fi
