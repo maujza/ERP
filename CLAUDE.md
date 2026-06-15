@@ -52,6 +52,8 @@ docker compose up --build -d          # rebuild everything
 
 The full stack runs at: frontend → `localhost:7358`, backend → `localhost:9000`, POS → `localhost:8081`.
 
+> **After a full `docker system prune --volumes`**: `docker-compose.yml` declares the `erp_platform` network as `external: true`, so a raw `docker compose up` fails with "network erp_platform declared as external, but could not be found" once prune removes it. `./scripts/compose-up.sh` recreates this network (and other infra resources) automatically before bringing up the stack — always use it as the entrypoint after a full prune.
+
 > **Note**: The `web` service runs a production Next.js build (no hot reload). After frontend changes, rebuild the container. After changing any `NEXT_PUBLIC_*` env var, rebuild `web`.
 
 ## Architecture

@@ -4,7 +4,12 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-ENV_FILE="$ROOT_DIR/storefront/.env.development"
+# Synced into both: .env.development (local dev) and .env (baked into the
+# Docker `web` image at build time, so a rebuild picks up fresh values too).
+ENV_FILES=(
+  "$ROOT_DIR/storefront/.env.development"
+  "$ROOT_DIR/storefront/.env"
+)
 
 if ! command -v docker >/dev/null 2>&1; then
   echo "docker is required" >&2
@@ -21,35 +26,26 @@ query_db() {
   docker compose exec -T db psql -U medusa -d medusa -t -A -c "$sql" | tr -d '\r' | sed '/^$/d' | head -n1
 }
 
-read_env_var() {
-  local key="$1"
-
-  if [ ! -f "$ENV_FILE" ]; then
-    return 0
-  fi
-
-  awk -F= -v k="$key" '$1 == k { print substr($0, index($0, "=") + 1); exit }' "$ENV_FILE"
-}
-
 upsert_env_var() {
-  local key="$1"
-  local value="$2"
+  local env_file="$1"
+  local key="$2"
+  local value="$3"
 
   local tmp
   tmp="$(mktemp)"
 
-  if [ -f "$ENV_FILE" ]; then
+  if [ -f "$env_file" ]; then
     awk -v k="$key" -v v="$value" '
       BEGIN { replaced = 0 }
       $0 ~ "^" k "=" { print k "=" v; replaced = 1; next }
       { print }
       END { if (!replaced) print k "=" v }
-    ' "$ENV_FILE" > "$tmp"
+    ' "$env_file" > "$tmp"
   else
     printf '%s=%s\n' "$key" "$value" > "$tmp"
   fi
 
-  mv "$tmp" "$ENV_FILE"
+  mv "$tmp" "$env_file"
 }
 
 PUBLISHABLE_KEY="$(query_db "select token from api_key where type='publishable' and deleted_at is null and revoked_at is null order by created_at desc limit 1;")"
@@ -65,10 +61,12 @@ if [ -z "$REGION_ID" ]; then
   exit 1
 fi
 
-upsert_env_var "NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY" "$PUBLISHABLE_KEY"
-upsert_env_var "NEXT_PUBLIC_MEDUSA_REGION_ID" "$REGION_ID"
-upsert_env_var "NEXT_PUBLIC_MEDUSA_COUNTRY_CODE" "ar"
+for env_file in "${ENV_FILES[@]}"; do
+  upsert_env_var "$env_file" "NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY" "$PUBLISHABLE_KEY"
+  upsert_env_var "$env_file" "NEXT_PUBLIC_MEDUSA_REGION_ID" "$REGION_ID"
+  upsert_env_var "$env_file" "NEXT_PUBLIC_MEDUSA_COUNTRY_CODE" "ar"
+  echo "Synced ${env_file#"$ROOT_DIR/"}"
+done
 
-echo "Synced storefront/.env.development"
 echo "  NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=${PUBLISHABLE_KEY}"
 echo "  NEXT_PUBLIC_MEDUSA_REGION_ID=${REGION_ID}"

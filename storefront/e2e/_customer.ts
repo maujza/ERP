@@ -1,17 +1,44 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { APIRequestContext, expect } from "@playwright/test";
 
 /**
+ * Reads a single KEY=VALUE entry from storefront/.env.development. Playwright
+ * doesn't load .env files, so this is the only way to pick up the publishable
+ * key/region that scripts/sync-medusa-env.sh keeps in sync with the database.
+ */
+function readDevEnvVar(key: string): string | undefined {
+  const envPath = path.resolve(__dirname, "../.env.development");
+  let contents: string;
+  try {
+    contents = readFileSync(envPath, "utf-8");
+  } catch {
+    return undefined;
+  }
+  for (const line of contents.split("\n")) {
+    const [k, ...rest] = line.split("=");
+    if (k === key) return rest.join("=").trim();
+  }
+  return undefined;
+}
+
+/**
  * API helpers for the storefront account E2E. These talk directly to the Medusa
- * backend (the Playwright runner doesn't load the backend .env, so we fall back
- * to known local defaults, mirroring product-image-upload.spec.ts). They let the
- * browser test focus on the UI while data is set up via the API.
+ * backend. They let the browser test focus on the UI while data is set up via
+ * the API.
  */
 export const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:9000";
 export const PUBLISHABLE_KEY =
-  process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY ??
-  "pk_c219157b4e4786e9ce07755b3b9981083b6baca4316ac8cbaf4c16fe1548f629";
+  process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY ?? readDevEnvVar("NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY");
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "admin@aurelia.com";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "supersecret";
+
+if (!PUBLISHABLE_KEY) {
+  throw new Error(
+    "NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY is not set and storefront/.env.development has no value for it. " +
+      "Run `npm run medusa:sync-env` (from storefront/) to populate it from the database."
+  );
+}
 
 export type StoreCustomer = {
   customerId: string;

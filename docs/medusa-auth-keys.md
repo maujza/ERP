@@ -14,7 +14,9 @@ A `pk_...` token that the **storefront** sends on every request to identify whic
 - **Frontend** — `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` in `storefront/.env.development` (local dev) or `storefront/.env` (Docker build).
 
 ### The stale-key problem
-Every time the Postgres volume is wiped and the stack is rebuilt, a **new** publishable key is generated. The old value in `storefront/.env.development` becomes invalid, causing the storefront to receive `400` on every product fetch and show "0 resultados".
+Every time the Postgres volume is wiped and the stack is rebuilt, Medusa generates a **new random** publishable key by default. The old value in `storefront/.env.development` / `storefront/.env` becomes invalid, causing the storefront to receive `400` on every product fetch and show "0 resultados".
+
+To avoid this, set `MEDUSA_PUBLISHABLE_KEY` in `backend/.env` (see `backend/.env.example`) to the value you want the storefront to use. On a fresh seed, `backend/src/scripts/seed.ts` patches the generated key's `token`/`redacted` columns to match it, so the value in `storefront/.env*` stays valid across a full wipe. `scripts/sync-medusa-env.sh` (run automatically by `scripts/compose-up.sh`) then keeps both `storefront/.env.development` and `storefront/.env` in sync with whatever key is actually in the database.
 
 ### How to refresh after a DB rebuild
 
@@ -123,7 +125,28 @@ The backend does **not** need a rebuild — it reads secrets from environment va
 
 ---
 
-## 5. Quick diagnostics
+## 5. Admin SPA stale-chunk errors after a backend rebuild
+
+### Symptom
+A `:9000/app` admin tab left open across a `docker compose up --build backend -d` starts throwing errors like:
+
+```
+Failed to load module script: Expected a JavaScript-or-Wasm module script but the
+server responded with a MIME type of "text/html". Strict MIME type checking is
+enforced for module scripts per HTML spec.
+```
+
+or other "module script"/"chunk" failures when navigating.
+
+### Root cause
+The admin SPA serves `/app/index.html` with `Cache-Control: no-cache`, but `/app/assets/*.js` with `Cache-Control: max-age=31536000, immutable`. A rebuild generates new asset filenames (new content hashes). Any request under `/app/*` that doesn't match a real file — including the *old*, now-deleted asset hashes still referenced by a stale `index.html` cached in the browser — falls through to the SPA catch-all and returns `200 text/html` instead of a `404`. The browser then refuses to execute that HTML as a JS module, producing the MIME error above.
+
+### Fix
+Hard-refresh the admin tab (bypass cache) after any `backend` rebuild — e.g. Cmd+Shift+R, or close and reopen the `:9000/app` tab. This forces the browser to fetch the new `index.html` and its matching asset hashes. This is a browser caching artifact, not a data or backend bug — leftover seed data (orders/customers) does not cause this error.
+
+---
+
+## 6. Quick diagnostics
 
 ```bash
 # Is the key valid?
