@@ -25,10 +25,16 @@ test.describe("Fulfillment — Order lifecycle", () => {
   // inline lifecycle action button (the board has no separate detail page —
   // pick/pack/dispatch happen inline per row).
   test.describe("with a freshly picked order", () => {
+    let orderId: string;
+
     test.beforeEach(async ({ request }) => {
-      const orderId = await createFreshOrder(request);
+      orderId = await createFreshOrder(request);
       const pick = await request.post(`/admin/fulfillment/orders/${orderId}/pick`);
       expect(pick.status(), `start picking failed: ${await pick.text()}`).toBe(200);
+    });
+
+    test.afterEach(async ({ request }) => {
+      await request.post(`/admin/orders/${orderId}/cancel`, { data: {} }).catch(() => null);
     });
 
     test("picked order appears in the fulfillment list", async ({ page }) => {
@@ -54,6 +60,11 @@ test.describe("Fulfillment — Order lifecycle", () => {
   // order; if a step fails the rest are skipped (a real failure, not empty data).
   test.describe.serial("lifecycle steps on a fresh order", () => {
     let orderId: string;
+
+    test.afterAll(async ({ request }) => {
+      // Dispatched orders are terminal and can't be cancelled — ignore that failure.
+      await request.post(`/admin/orders/${orderId}/cancel`, { data: {} }).catch(() => null);
+    });
 
     test("startPickingWorkflow returns 200", async ({ request }) => {
       orderId = await createFreshOrder(request);

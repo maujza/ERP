@@ -333,10 +333,10 @@ export default async function seedDemoData({ container }: ExecArgs) {
   logger.info("Finished seeding stock location data.");
 
   logger.info("Seeding publishable API key data...");
-  let publishableApiKey: ApiKey | null = null;
+  let publishableApiKey: (ApiKey & { token?: string }) | null = null;
   const { data } = await query.graph({
     entity: "api_key",
-    fields: ["id"],
+    fields: ["id", "token"],
     filters: {
       type: "publishable",
     },
@@ -360,6 +360,23 @@ export default async function seedDemoData({ container }: ExecArgs) {
     });
 
     publishableApiKey = publishableApiKeyResult as ApiKey;
+  }
+
+  // Pin the publishable key to MEDUSA_PUBLISHABLE_KEY (backend/.env) so
+  // NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY survives a full DB wipe. The api-key
+  // module always generates a random token on creation and has no public
+  // update path for it, so it's patched directly via SQL — publishable tokens
+  // are stored in plaintext (see ApiKeyModuleService.generatePublishableKey).
+  const desiredPublishableKey = process.env.MEDUSA_PUBLISHABLE_KEY;
+  if (desiredPublishableKey && publishableApiKey.token !== desiredPublishableKey) {
+    const pgConnection = container.resolve<any>("pg_connection");
+    const redacted = [desiredPublishableKey.slice(0, 6), desiredPublishableKey.slice(-3)].join("***");
+    await pgConnection.raw(`UPDATE api_key SET token = ?, redacted = ? WHERE id = ?`, [
+      desiredPublishableKey,
+      redacted,
+      publishableApiKey.id,
+    ]);
+    logger.info(`Pinned publishable API key to MEDUSA_PUBLISHABLE_KEY (${redacted}).`);
   }
 
   await linkSalesChannelsToApiKeyWorkflow(container).run({
