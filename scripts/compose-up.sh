@@ -23,7 +23,7 @@ MONITORING_COMPOSE_FILE="$ROOT_DIR/infra/monitoring/compose.yml"
 infra_compose() {
   docker compose \
     --project-name erp-infra \
-    --env-file "$ROOT_DIR/.env" \
+    --env-file "$ROOT_DIR/infra/.env" \
     --file "$INFRA_COMPOSE_FILE" \
     "$@"
 }
@@ -31,7 +31,7 @@ infra_compose() {
 monitoring_compose() {
   DOCKER_GID="$(stat -c '%g' /var/run/docker.sock)" docker compose \
     --project-name erp-monitoring \
-    --env-file "$ROOT_DIR/.env" \
+    --env-file "$ROOT_DIR/infra/.env" \
     --file "$MONITORING_COMPOSE_FILE" \
     "$@"
 }

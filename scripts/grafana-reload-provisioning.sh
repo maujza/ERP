@@ -3,20 +3,20 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-if [ ! -f "$ROOT_DIR/.env" ]; then
-  echo "Missing root .env file" >&2
+if [ ! -f "$ROOT_DIR/infra/.env" ]; then
+  echo "Missing infra/.env file" >&2
   exit 1
 fi
 
 MONITORING_ADMIN_USER="$(
-  sed -n 's/^MONITORING_ADMIN_USER=//p' "$ROOT_DIR/.env" | tail -1
+  sed -n 's/^MONITORING_ADMIN_USER=//p' "$ROOT_DIR/infra/.env" | tail -1
 )"
 MONITORING_ADMIN_PASSWORD="$(
-  sed -n 's/^MONITORING_ADMIN_PASSWORD=//p' "$ROOT_DIR/.env" | tail -1
+  sed -n 's/^MONITORING_ADMIN_PASSWORD=//p' "$ROOT_DIR/infra/.env" | tail -1
 )"
 
-: "${MONITORING_ADMIN_USER:?set MONITORING_ADMIN_USER in the root .env file}"
-: "${MONITORING_ADMIN_PASSWORD:?set MONITORING_ADMIN_PASSWORD in the root .env file}"
+: "${MONITORING_ADMIN_USER:?set MONITORING_ADMIN_USER in infra/.env}"
+: "${MONITORING_ADMIN_PASSWORD:?set MONITORING_ADMIN_PASSWORD in infra/.env}"
 
 grafana_url="http://127.0.0.1:3001"
 grafana_auth="${MONITORING_ADMIN_USER}:${MONITORING_ADMIN_PASSWORD}"

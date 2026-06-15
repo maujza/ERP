@@ -16,9 +16,9 @@ The administration ports are bound to localhost only:
 
 | Service | URL | Credentials |
 |---|---|---|
-| Grafana | `http://127.0.0.1:3001` | root `.env` monitoring credentials |
+| Grafana | `http://127.0.0.1:3001` | `infra/.env` monitoring credentials |
 | Prometheus | `http://127.0.0.1:9090` | none |
-| Portainer | `https://127.0.0.1:9443` | root `.env` monitoring credentials |
+| Portainer | `https://127.0.0.1:9443` | `infra/.env` monitoring credentials |
 
 Use an SSH tunnel from a local machine:
 
@@ -52,7 +52,7 @@ To manage monitoring directly:
 ```bash
 docker compose \
   --project-name erp-monitoring \
-  --env-file .env \
+  --env-file infra/.env \
   --file infra/monitoring/compose.yml \
   up -d
 ```
