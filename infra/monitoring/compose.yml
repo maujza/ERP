@@ -27,8 +27,8 @@ services:
     ports:
       - "127.0.0.1:3001:3000"
     environment:
-      GF_SECURITY_ADMIN_USER: ${MONITORING_ADMIN_USER:?set MONITORING_ADMIN_USER in the root .env file}
-      GF_SECURITY_ADMIN_PASSWORD: ${MONITORING_ADMIN_PASSWORD:?set MONITORING_ADMIN_PASSWORD in the root .env file}
+      GF_SECURITY_ADMIN_USER: ${MONITORING_ADMIN_USER:?set MONITORING_ADMIN_USER in infra/.env}
+      GF_SECURITY_ADMIN_PASSWORD: ${MONITORING_ADMIN_PASSWORD:?set MONITORING_ADMIN_PASSWORD in infra/.env}
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_AUTH_ANONYMOUS_ENABLED: "false"
       GF_SERVER_ROOT_URL: "%(protocol)s://%(domain)s:%(http_port)s/"
@@ -109,7 +109,7 @@ services:
     image: portainer/portainer-ce:2.33.6-alpine
     command:
       - --admin-password
-      - ${PORTAINER_ADMIN_PASSWORD_HASH:?set PORTAINER_ADMIN_PASSWORD_HASH in the root .env file}
+      - ${PORTAINER_ADMIN_PASSWORD_HASH:?set PORTAINER_ADMIN_PASSWORD_HASH in infra/.env}
     ports:
       - "127.0.0.1:8000:8000"
       - "127.0.0.1:9443:9443"
@@ -129,8 +129,8 @@ services:
   portainer-init:
     image: curlimages/curl:8.12.1
     environment:
-      MONITORING_ADMIN_USER: ${MONITORING_ADMIN_USER:?set MONITORING_ADMIN_USER in the root .env file}
-      MONITORING_ADMIN_PASSWORD: ${MONITORING_ADMIN_PASSWORD:?set MONITORING_ADMIN_PASSWORD in the root .env file}
+      MONITORING_ADMIN_USER: ${MONITORING_ADMIN_USER:?set MONITORING_ADMIN_USER in infra/.env}
+      MONITORING_ADMIN_PASSWORD: ${MONITORING_ADMIN_PASSWORD:?set MONITORING_ADMIN_PASSWORD in infra/.env}
     entrypoint: /bin/sh
     command:
       - -ec

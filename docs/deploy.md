@@ -73,10 +73,10 @@ cp backend/.env.example backend/.env
 | `RESEND_FROM` | `Aurelia <invitaciones@mail.aurelia.gleeze.com>` |
 | `SEED_DEMO_DATA` | `false` |
 
-### 3. Configurar el `.env` raíz
+### 3. Configurar `infra/.env`
 
 ```bash
-cp .env.example .env
+cp infra/.env.example infra/.env
 ```
 
 Definir `NGINX_DB_PASSWORD` con una contraseña larga y aleatoria. Este archivo
@@ -184,7 +184,7 @@ cd /home/akwiek/code/ERP
 docker compose ps
 docker compose logs -f backend
 docker compose logs -f web
-docker compose --project-name erp-infra --env-file .env \
+docker compose --project-name erp-infra --env-file infra/.env \
   --file infra/networking/nginx-proxy-manager/compose.yml ps
 curl https://backoffice.aurelia.gleeze.com/health
 ```

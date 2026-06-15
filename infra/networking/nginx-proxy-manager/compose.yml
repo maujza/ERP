@@ -9,7 +9,7 @@ services:
       DB_MYSQL_HOST: nginx-db
       DB_MYSQL_PORT: 3306
       DB_MYSQL_USER: npm
-      DB_MYSQL_PASSWORD: ${NGINX_DB_PASSWORD:?set NGINX_DB_PASSWORD in the root .env file}
+      DB_MYSQL_PASSWORD: ${NGINX_DB_PASSWORD:?set NGINX_DB_PASSWORD in infra/.env}
       DB_MYSQL_NAME: npm
       DISABLE_IPV6: "true"
     volumes:
@@ -33,8 +33,8 @@ services:
     environment:
       MARIADB_DATABASE: npm
       MARIADB_USER: npm
-      MARIADB_PASSWORD: ${NGINX_DB_PASSWORD:?set NGINX_DB_PASSWORD in the root .env file}
-      MARIADB_ROOT_PASSWORD: ${NGINX_DB_PASSWORD:?set NGINX_DB_PASSWORD in the root .env file}
+      MARIADB_PASSWORD: ${NGINX_DB_PASSWORD:?set NGINX_DB_PASSWORD in infra/.env}
+      MARIADB_ROOT_PASSWORD: ${NGINX_DB_PASSWORD:?set NGINX_DB_PASSWORD in infra/.env}
     volumes:
       - nginx_db_data:/var/lib/mysql
     healthcheck:
