@@ -83,6 +83,43 @@ export default async function cleanupE2EData({ container }: ExecArgs) {
     logger.info(`cleanup-e2e: deleted ${categoryIds.length} E2E category(ies).`);
   }
 
+  // ── Cancel orders and delete customers from E2E test accounts ───────────────
+  const { data: customers } = await query.graph({
+    entity: "customer",
+    fields: ["id", "email"],
+  });
+  const e2eCustomers = (customers as Array<{ id: string; email?: string | null }>)
+    .filter((c) => /^e2e-(acct|ui)-/.test(c.email ?? ""));
+
+  if (e2eCustomers.length > 0) {
+    const { cancelOrderWorkflow } = await import("@medusajs/medusa/core-flows");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const customerModuleService: any = container.resolve(Modules.CUSTOMER);
+
+    for (const customer of e2eCustomers) {
+      const { data: orders } = await query.graph({
+        entity: "order",
+        fields: ["id", "status"],
+        filters: { customer_id: customer.id },
+      });
+      for (const order of orders as Array<{ id: string; status: string }>) {
+        if (!["canceled", "completed"].includes(order.status)) {
+          try {
+            await cancelOrderWorkflow(container).run({ input: { order_id: order.id } });
+          } catch (e) {
+            logger.warn(`cleanup-e2e: could not cancel order ${order.id}: ${(e as Error).message}`);
+          }
+        }
+      }
+      try {
+        await customerModuleService.deleteCustomers(customer.id);
+        logger.info(`cleanup-e2e: deleted E2E customer ${customer.email}`);
+      } catch (e) {
+        logger.warn(`cleanup-e2e: could not delete customer ${customer.email}: ${(e as Error).message}`);
+      }
+    }
+  }
+
   // ── Delete orphaned E2E inventory items ─────────────────────────────────────
   const { data: invItems } = await query.graph({ entity: "inventory_item", fields: ["id", "sku"] });
   const e2eItemIds = (invItems as Array<{ id: string; sku?: string | null }>)

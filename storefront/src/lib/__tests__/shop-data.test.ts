@@ -4,10 +4,8 @@ import {
   translateLabel,
   mapMedusaProduct,
   hasPurchasablePrice,
-  isJewelryProduct,
   getProductName,
   getProductDescription,
-  brands,
   sortOptions,
   type Product,
   type UiLanguage,
@@ -21,7 +19,6 @@ const mockProduct: Product = {
   description: "Test product description.",
   category: "Aros",
   subcategory: "Esenciales",
-  brand: "Aurelia Core",
   image: "https://example.com/image.jpg",
   price: 18900,
   stock: 5,
@@ -36,7 +33,6 @@ function makeProduct(overrides: Partial<Product> = {}): Product {
     description: "A nice product",
     category: "Aros",
     subcategory: "",
-    brand: "Aurelia Core",
     image: "/test.jpg",
     price: 10000,
     stock: 5,
@@ -180,40 +176,6 @@ describe("hasPurchasablePrice", () => {
   });
 });
 
-// ─── isJewelryProduct ────────────────────────────────────────────────────────
-
-describe("isJewelryProduct", () => {
-  it("returns true for a product in a known jewelry category", () => {
-    for (const cat of ["Aros", "Collares", "Pulseras", "Sets", "Kits", "Anillos", "Perlas"]) {
-      expect(isJewelryProduct(makeProduct({ category: cat }))).toBe(true);
-    }
-  });
-
-  it("returns false for a product whose name/description contains a clothing keyword", () => {
-    const p = makeProduct({ category: "", name: "Cool hoodie", description: "" });
-    expect(isJewelryProduct(p)).toBe(false);
-  });
-
-  it("returns false for a shirt product", () => {
-    expect(isJewelryProduct(makeProduct({ category: "", name: "Aurelia shirt", description: "" }))).toBe(false);
-  });
-
-  it("returns true for a product whose name contains 'aro' (ring inference)", () => {
-    const p = makeProduct({ category: "", name: "Aro dorado", description: "" });
-    expect(isJewelryProduct(p)).toBe(true);
-  });
-
-  it("returns true for a product whose description contains 'collar'", () => {
-    const p = makeProduct({ category: "", name: "Item", description: "Collar plateado" });
-    expect(isJewelryProduct(p)).toBe(true);
-  });
-
-  it("returns false for a product in no known category and no inferrable keywords", () => {
-    const p = makeProduct({ category: "", name: "Generic item", description: "A random thing" });
-    expect(isJewelryProduct(p)).toBe(false);
-  });
-});
-
 // ─── mapMedusaProduct ────────────────────────────────────────────────────────
 
 describe("mapMedusaProduct", () => {
@@ -286,6 +248,13 @@ describe("mapMedusaProduct", () => {
   it("falls back to categories[0].name when metadata has no category", () => {
     const raw = makeRawProduct({ metadata: {}, categories: [{ name: "Collares" }] });
     expect(mapMedusaProduct(raw).category).toBe("Collares");
+  });
+
+  it("returns empty category when API returns category object without name (missing subfield expansion)", () => {
+    // Medusa v2 store API returns [{is_internal:false}] when +categories is requested
+    // without explicit subfields. +categories.id,+categories.name,+categories.handle is required.
+    const raw = makeRawProduct({ metadata: {}, categories: [{ is_internal: false } as never] });
+    expect(mapMedusaProduct(raw).category).toBe("");
   });
 
   it("maps a full https thumbnail URL as-is", () => {
@@ -406,23 +375,6 @@ describe("getProductDescription", () => {
 
   it("returns a string for any product", () => {
     expect(typeof getProductDescription(mockProduct, "ko")).toBe("string");
-  });
-});
-
-// ─── brands ───────────────────────────────────────────────────────────────────
-
-describe("brands", () => {
-  it("is a non-empty array", () => {
-    expect(Array.isArray(brands)).toBe(true);
-    expect(brands.length).toBeGreaterThan(0);
-  });
-
-  it("contains all expected brands", () => {
-    expect(brands).toContain("Aurelia Core");
-    expect(brands).toContain("Aurelia Studio");
-    expect(brands).toContain("Lumiere");
-    expect(brands).toContain("Boreal");
-    expect(brands).toContain("Aurelia Pro");
   });
 });
 

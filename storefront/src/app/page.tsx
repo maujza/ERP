@@ -11,7 +11,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   hasPurchasablePrice,
-  isJewelryProduct,
   mapMedusaProduct,
   Product,
   translateLabel,
@@ -32,13 +31,12 @@ export default function HomePage() {
   useEffect(() => {
     sdk.store.product.list(withStorePricingContext({
       limit: 6,
-      fields: "+variants.calculated_price,+variants.inventory_quantity,+metadata,+categories",
+      fields: "+variants.calculated_price,+variants.inventory_quantity,+metadata,+categories.id,+categories.name,+categories.handle",
     })).then(({ products }) => {
       setFeaturedProducts(
         products
           .map(mapMedusaProduct)
-          .filter(hasPurchasablePrice)
-          .filter(isJewelryProduct),
+          .filter(hasPurchasablePrice),
       );
     }).catch((err: unknown) => {
       console.error("[HomePage] Failed to load featured products", err);
@@ -54,7 +52,7 @@ export default function HomePage() {
             title: "바로 판매 가능한 큐레이션 컬렉션.",
             description: "빠른 회전, 도매 팩, 24/48시간 출고로 재고 공백을 줄입니다.",
             image:
-              "https://images.unsplash.com/photo-1522312346375-d1a52e2b99b3?auto=format&fit=crop&w=1400&q=80",
+              "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&w=1400&q=80",
           },
           {
             title: "실제 마진 중심의 주간 신상품.",
@@ -78,7 +76,6 @@ export default function HomePage() {
         collections: "컬렉션",
         collection: "컬렉션",
         categories: "카테고리",
-        brands: "브랜드",
         featured: "추천 상품",
         soldOut: "품절",
         addToCart: "카트 추가",
@@ -90,7 +87,7 @@ export default function HomePage() {
             title: "Colecciones curadas listas para vender.",
             description: "Rotacion rapida, pack mayorista y despacho en 24/48h para que tu tienda no se quede sin novedades.",
             image:
-              "https://images.unsplash.com/photo-1522312346375-d1a52e2b99b3?auto=format&fit=crop&w=1400&q=80",
+              "https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?auto=format&fit=crop&w=1400&q=80",
           },
           {
             title: "Lanzamientos semanales con margen real.",
@@ -114,7 +111,6 @@ export default function HomePage() {
         collections: "Colecciones",
         collection: "Coleccion",
         categories: "Categorias",
-        brands: "Marcas",
         featured: "Productos destacados",
         soldOut: "AGOTADO",
         addToCart: "Agregar al carrito",

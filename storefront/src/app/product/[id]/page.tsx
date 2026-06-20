@@ -17,7 +17,6 @@ import {
   getProductDescription,
   getProductName,
   hasPurchasablePrice,
-  isJewelryProduct,
   mapMedusaProduct,
   translateLabel,
   type Product,
@@ -77,10 +76,10 @@ export default function ProductDetailPage() {
   useEffect(() => {
     setLoading(true);
     sdk.store.product.retrieve(params.id, withStorePricingContext({
-      fields: "+variants.calculated_price,+variants.inventory_quantity,+metadata,+categories",
+      fields: "+variants.calculated_price,+variants.inventory_quantity,+metadata,+categories.id,+categories.name,+categories.handle",
     }) as Parameters<typeof sdk.store.product.retrieve>[1]).then(({ product: p }) => {
       const mappedProduct = mapMedusaProduct(p);
-      setProduct(isJewelryProduct(mappedProduct) ? mappedProduct : null);
+      setProduct(mappedProduct);
     }).catch(() => {
       setProduct(null);
     }).finally(() => {
