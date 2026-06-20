@@ -6,6 +6,11 @@ async function navigateToFirstProduct(page: import("@playwright/test").Page) {
   await expect(firstCard).toBeVisible({ timeout: 10000 });
   await firstCard.click();
   await expect(page).toHaveURL(/\/product\//, { timeout: 5000 });
+  // Select first variant if the product requires one before add-to-cart is enabled
+  const firstVariantBtn = page.locator("div.flex.flex-wrap.gap-2 button").first();
+  if (await firstVariantBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+    await firstVariantBtn.click();
+  }
 }
 
 test.describe("Product page", () => {
