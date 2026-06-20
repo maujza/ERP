@@ -28,17 +28,19 @@ function readDevEnvVar(key: string): string | undefined {
  * the API.
  */
 export const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:9000";
-export const PUBLISHABLE_KEY =
+const _publishableKey =
   process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY ?? readDevEnvVar("NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY");
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "admin@aurelia.com";
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "supersecret";
 
-if (!PUBLISHABLE_KEY) {
+if (!_publishableKey) {
   throw new Error(
     "NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY is not set and storefront/.env.development has no value for it. " +
       "Run `npm run medusa:sync-env` (from storefront/) to populate it from the database."
   );
 }
+
+export const PUBLISHABLE_KEY: string = _publishableKey;
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "admin@aurelia.com";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "supersecret";
 
 export type StoreCustomer = {
   customerId: string;
