@@ -14,7 +14,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   getProductName,
   hasPurchasablePrice,
-  isJewelryProduct,
   mapMedusaProduct,
   translateLabel,
   type Product,
@@ -71,7 +70,6 @@ export default function CatalogPage() {
         applyFilters: "필터 적용",
         searchPlaceholder: "후프, 키트, 진주...",
         category: "카테고리",
-        brand: "브랜드",
         prev: "이전",
         next: "다음",
         loadMore: "더 불러오기",
@@ -98,7 +96,6 @@ export default function CatalogPage() {
         applyFilters: "Aplicar filtros",
         searchPlaceholder: "Argollas, kits, perlas...",
         category: "Categoria",
-        brand: "Marca",
         prev: "Prev",
         next: "Next",
         loading: "Cargando...",
@@ -117,7 +114,6 @@ export default function CatalogPage() {
   const [activeCollection, setActiveCollection] = useState("");
   const [search, setSearch] = useState("");
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   const [priceFilter, setPriceFilter] = useState<PriceFilter>("all");
   const [sortBy, setSortBy] = useState<SortOption>("recommended");
   const [page, setPage] = useState(1);
@@ -141,13 +137,12 @@ export default function CatalogPage() {
           const { products, count } = await sdk.store.product.list(withStorePricingContext({
             limit: CATALOG_FETCH_BATCH_SIZE,
             offset: currentOffset,
-            fields: "+variants.calculated_price,+variants.inventory_quantity,+metadata,+categories,+collection.id,+collection.title,+collection.handle",
+            fields: "+variants.calculated_price,+variants.inventory_quantity,+metadata,+categories.id,+categories.name,+categories.handle,+collection.id,+collection.title,+collection.handle",
           }));
 
           const mapped = products
             .map(mapMedusaProduct)
-            .filter(hasPurchasablePrice)
-            .filter(isJewelryProduct);
+            .filter(hasPurchasablePrice);
 
           loaded.push(...mapped);
           totalCount = count ?? loaded.length;
@@ -183,10 +178,6 @@ export default function CatalogPage() {
     () => Array.from(new Set(allProducts.map((product) => product.category))).filter(Boolean),
     [allProducts],
   );
-  const brands = useMemo(
-    () => Array.from(new Set(allProducts.map((product) => product.brand))).filter(Boolean),
-    [allProducts],
-  );
 
   useEffect(() => {
     const qs = new URLSearchParams(window.location.search);
@@ -216,14 +207,13 @@ export default function CatalogPage() {
         activeCollection === "" || product.collection?.handle === activeCollection;
       const categoryMatch =
         selectedCategories.length === 0 || selectedCategories.includes(product.category);
-      const brandMatch = selectedBrands.length === 0 || selectedBrands.includes(product.brand);
       const priceMatch = byPrice(product, priceFilter);
       const searchMatch =
         normalizedSearch.length === 0 ||
         getProductName(product, language).toLowerCase().includes(normalizedSearch) ||
         product.description.toLowerCase().includes(normalizedSearch);
 
-      return collectionMatch && categoryMatch && brandMatch && priceMatch && searchMatch;
+      return collectionMatch && categoryMatch && priceMatch && searchMatch;
     });
 
     if (sortBy === "price_asc") {
@@ -233,7 +223,7 @@ export default function CatalogPage() {
       return [...list].sort((a, b) => b.price - a.price);
     }
     return list;
-  }, [allProducts, activeCollection, language, priceFilter, search, selectedBrands, selectedCategories, sortBy]);
+  }, [allProducts, activeCollection, language, priceFilter, search, selectedCategories, sortBy]);
 
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / pageSize));
   const currentPage = Math.min(page, totalPages);
@@ -271,7 +261,6 @@ export default function CatalogPage() {
 
   const activeFilterCount =
     selectedCategories.length +
-    selectedBrands.length +
     (priceFilter === "all" ? 0 : 1) +
     (search.trim() ? 1 : 0);
 
@@ -289,7 +278,6 @@ export default function CatalogPage() {
   const clearAll = () => {
     setSearch("");
     setSelectedCategories([]);
-    setSelectedBrands([]);
     setPriceFilter("all");
     setPage(1);
   };
@@ -353,15 +341,12 @@ export default function CatalogPage() {
               language={language}
               t={t}
               categories={categories}
-              brands={brands}
               search={search}
               setSearch={setSearch}
               selectedCategories={selectedCategories}
-              selectedBrands={selectedBrands}
               priceFilter={priceFilter}
               setPriceFilter={setPriceFilter}
               onToggleCategory={(category) => toggleInList(category, setSelectedCategories)}
-              onToggleBrand={(brand) => toggleInList(brand, setSelectedBrands)}
               clearAll={clearAll}
             />
           </aside>
@@ -429,13 +414,6 @@ export default function CatalogPage() {
                     key={category}
                     label={translateLabel(category, language)}
                     onRemove={() => setSelectedCategories((prev) => prev.filter((item) => item !== category))}
-                  />
-                ))}
-                {selectedBrands.map((brand) => (
-                  <Tag
-                    key={brand}
-                    label={translateLabel(brand, language)}
-                    onRemove={() => setSelectedBrands((prev) => prev.filter((item) => item !== brand))}
                   />
                 ))}
                 {priceFilter !== "all" && (
@@ -523,15 +501,12 @@ export default function CatalogPage() {
             language={language}
             t={t}
             categories={categories}
-            brands={brands}
             search={search}
             setSearch={setSearch}
             selectedCategories={selectedCategories}
-            selectedBrands={selectedBrands}
             priceFilter={priceFilter}
             setPriceFilter={setPriceFilter}
             onToggleCategory={(category) => toggleInList(category, setSelectedCategories)}
-            onToggleBrand={(brand) => toggleInList(brand, setSelectedBrands)}
             clearAll={clearAll}
           />
           <Button className="mt-4 w-full" onClick={() => setMobileFiltersOpen(false)}>
@@ -559,15 +534,12 @@ function FiltersPanel({
   language,
   t,
   categories,
-  brands,
   search,
   setSearch,
   selectedCategories,
-  selectedBrands,
   priceFilter,
   setPriceFilter,
   onToggleCategory,
-  onToggleBrand,
   clearAll,
 }: {
   language: "es" | "ko";
@@ -576,20 +548,16 @@ function FiltersPanel({
     searchPrefix: string;
     searchPlaceholder: string;
     category: string;
-    brand: string;
     price: string;
     clearFilters: string;
   };
   categories: string[];
-  brands: string[];
   search: string;
   setSearch: (value: string) => void;
   selectedCategories: string[];
-  selectedBrands: string[];
   priceFilter: PriceFilter;
   setPriceFilter: (value: PriceFilter) => void;
   onToggleCategory: (value: string) => void;
-  onToggleBrand: (value: string) => void;
   clearAll: () => void;
 }) {
   return (
@@ -622,25 +590,6 @@ function FiltersPanel({
                 }`}
               >
                 {translateLabel(category, language)}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#5a4f7a]">{t.brand}</p>
-          <div className="flex flex-wrap gap-2">
-            {brands.map((brand) => (
-              <button
-                key={brand}
-                onClick={() => onToggleBrand(brand)}
-                className={`rounded-full border px-3 py-1 text-xs ${
-                  selectedBrands.includes(brand)
-                    ? "border-[#4660bc] bg-[#4660bc] text-white"
-                    : "border-[#9595db]/35 bg-white"
-                }`}
-              >
-                {translateLabel(brand, language)}
               </button>
             ))}
           </div>

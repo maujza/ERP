@@ -17,19 +17,17 @@ import { useCheckout } from "./use-checkout";
 export default function CheckoutPage() {
   const router = useRouter();
   const checkout = useCheckout();
-  const { t, language, cartLines, isWhatsAppPaymentMethod, isSubmitting } = checkout;
+  const { t, language, cartLines, isSubmitting } = checkout;
 
   const steps = language === "ko"
-    ? ["연락처", "배송지", "배송 방법", "결제"]
-    : ["Contacto", "Envío", "Método de envío", "Pago"];
+    ? ["연락처", "배송지", "결제"]
+    : ["Contacto", "Envío", "Pago"];
 
-  const currentStep = checkout.selectedShippingMethod
-    ? 3
-    : checkout.allShippingRequiredComplete
-      ? 2
-      : checkout.contactComplete
-        ? 1
-        : 0;
+  const currentStep = checkout.allShippingRequiredComplete
+    ? 2
+    : checkout.contactComplete
+      ? 1
+      : 0;
 
   if (cartLines.length === 0) {
     return (
@@ -63,12 +61,7 @@ export default function CheckoutPage() {
           </div>
         </div>
         <section className="space-y-4">
-          <PaymentMethodPicker
-            paymentMethod={checkout.paymentMethod}
-            setPaymentMethod={checkout.setPaymentMethod}
-            t={t}
-            language={language}
-          />
+          <PaymentMethodPicker t={t} language={language} />
 
           <ContactForm
             email={checkout.email}
@@ -79,7 +72,7 @@ export default function CheckoutPage() {
             phoneError={checkout.phoneError}
             setPhoneError={checkout.setPhoneError}
             showLoginHint={checkout.showLoginHint}
-            isWhatsAppPaymentMethod={isWhatsAppPaymentMethod}
+            isWhatsAppPaymentMethod={true}
             t={t}
             onLoginClick={() => router.push("/auth?next=/checkout")}
             onPhoneBlur={() => checkout.setPhoneError("")}
@@ -91,20 +84,13 @@ export default function CheckoutPage() {
             setShipping={checkout.setShipping}
             shippingErrors={checkout.shippingErrors}
             onShippingBlur={checkout.onShippingBlur}
-            loadingShippingMethods={checkout.loadingShippingMethods}
-            shippingMethods={checkout.shippingMethods}
-            selectedShippingMethod={checkout.selectedShippingMethod}
-            setSelectedShippingMethod={checkout.setSelectedShippingMethod}
-            allShippingRequiredComplete={checkout.allShippingRequiredComplete}
             t={t}
-            language={language}
           />
         </section>
 
         <OrderSummary
           cartLines={cartLines}
           subtotal={checkout.subtotal}
-          shippingAmount={checkout.shippingAmount}
           discountAmount={checkout.discountAmount}
           total={checkout.total}
           discountCode={checkout.discountCode}
@@ -122,10 +108,10 @@ export default function CheckoutPage() {
       <div className="fixed inset-x-0 bottom-0 z-45 border-t border-[#9595db]/25 bg-white p-3 md:hidden">
         <Button
           disabled={isSubmitting}
-          className={`w-full ${isWhatsAppPaymentMethod ? "bg-[#25d366] hover:bg-[#1fb558]" : ""}`}
+          className="w-full bg-[#25d366] hover:bg-[#1fb558]"
           onClick={() => void checkout.submitOrder()}
         >
-          {isWhatsAppPaymentMethod ? t.wppSend : t.payNow}
+          {t.wppSend}
         </Button>
       </div>
 
@@ -134,10 +120,10 @@ export default function CheckoutPage() {
         <Button
           size="lg"
           disabled={isSubmitting}
-          className={isWhatsAppPaymentMethod ? "bg-[#25d366] hover:bg-[#1fb558]" : ""}
+          className="bg-[#25d366] hover:bg-[#1fb558]"
           onClick={() => void checkout.submitOrder()}
         >
-          {isWhatsAppPaymentMethod ? t.wppSend : t.payNow}
+          {t.wppSend}
         </Button>
       </div>
 

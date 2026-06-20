@@ -11,7 +11,6 @@ import type { CheckoutTranslations } from "./translations";
 type Props = {
   cartLines: CartLineWithTotal[];
   subtotal: number;
-  shippingAmount: number;
   discountAmount: number;
   total: number;
   discountCode: string;
@@ -25,7 +24,7 @@ type Props = {
 };
 
 export function OrderSummary({
-  cartLines, subtotal, shippingAmount, discountAmount, total,
+  cartLines, subtotal, discountAmount, total,
   discountCode, setDiscountCode, discountError, applyDiscount,
   t, language, summaryOpenMobile, setSummaryOpenMobile,
 }: Props) {
@@ -83,14 +82,12 @@ export function OrderSummary({
             <span>{t.subtotal}</span>
             <span>{formatArs(subtotal, language)}</span>
           </div>
-          <div className="flex items-center justify-between">
-            <span>{t.shipping}</span>
-            <span>{formatArs(shippingAmount, language)}</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span>{t.discount}</span>
-            <span>-{formatArs(discountAmount, language)}</span>
-          </div>
+          {discountAmount > 0 && (
+            <div className="flex items-center justify-between">
+              <span>{t.discount}</span>
+              <span>-{formatArs(discountAmount, language)}</span>
+            </div>
+          )}
           <div className="flex items-center justify-between border-t border-[#9595db]/25 pt-2 font-semibold text-[#2a2148]">
             <span>{t.total}</span>
             <span>{formatArs(total, language)}</span>

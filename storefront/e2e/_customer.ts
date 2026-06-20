@@ -249,6 +249,14 @@ export async function seedDeliveredOrder(
   return { orderId, productId };
 }
 
+/** Best-effort cancel of an order by id (afterEach cleanup). Cancellation frees inventory reservations so the product can then be deleted. */
+export async function cancelOrderById(request: APIRequestContext, orderId: string): Promise<void> {
+  const aToken = await adminToken(request);
+  await request
+    .post(`${BACKEND_URL}/admin/orders/${orderId}/cancel`, { headers: { Authorization: `Bearer ${aToken}` } })
+    .catch(() => null);
+}
+
 /** Best-effort delete of a customer by email (afterEach cleanup). */
 export async function deleteCustomerByEmail(request: APIRequestContext, email: string): Promise<void> {
   const aToken = await adminToken(request);
