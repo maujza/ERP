@@ -12,30 +12,41 @@ on:
 jobs:
   deploy:
     runs-on: [self-hosted, erp]
+    env:
+      # promote-to-prod.sh / rollback-prod.sh / infra-healthcheck.sh /
+      # production-smoke.sh must run against the persistent clone whose
+      # directory identity ("erp" by default project naming) is what's
+      # actually running prod — not the runner's default checkout workspace.
+      DEPLOY_DIR: /root/ERP
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: Resolve image tag
-        run: echo "TAG=$(git rev-parse --short HEAD)" >> "$GITHUB_ENV"
+      - name: Sync the prod checkout to this commit
+        run: |
+          cd "$DEPLOY_DIR"
+          git fetch origin "$GITHUB_SHA"
+          git checkout --force "$GITHUB_SHA"
+          echo "TAG=$(git rev-parse --short HEAD)" >> "$GITHUB_ENV"
 
       - name: Build and push backend/backend-init/pos (no env baked in, build-once-promote)
+        working-directory: /root/ERP
         run: |
           for name in backend backend-init pos; do
             ./scripts/ci-build-and-push.sh "$name" "$TAG"
           done
 
       - name: Start staging database
+        working-directory: /root/ERP
         env:
           IMAGE_TAG: ${{ env.TAG }}
         run: docker compose --project-name erp-staging -f docker-compose.staging.yml up -d db
 
       - name: Run staging migrations and bootstrap
+        working-directory: /root/ERP
         env:
           IMAGE_TAG: ${{ env.TAG }}
         run: docker compose --project-name erp-staging -f docker-compose.staging.yml run --rm backend-init
 
       - name: Start staging backend
+        working-directory: /root/ERP
         env:
           IMAGE_TAG: ${{ env.TAG }}
         run: docker compose --project-name erp-staging -f docker-compose.staging.yml up -d backend
@@ -52,17 +63,19 @@ jobs:
           exit 1
 
       - name: Build and push web (staging-flavored env)
+        working-directory: /root/ERP
         run: |
           ./scripts/sync-medusa-env.sh --project erp-staging
           ./scripts/ci-build-and-push.sh web "$TAG"
 
       - name: Start staging web and pos
+        working-directory: /root/ERP
         env:
           IMAGE_TAG: ${{ env.TAG }}
         run: docker compose --project-name erp-staging -f docker-compose.staging.yml up -d web pos
 
       - name: Backend integration tests against staging
-        working-directory: backend
+        working-directory: /root/ERP/backend
         env:
           DATABASE_URL: postgres://medusa:medusa@localhost:5532/medusa?sslmode=disable
         run: |
@@ -71,7 +84,7 @@ jobs:
           npm run test:integration:http
 
       - name: Backend admin e2e against staging
-        working-directory: backend
+        working-directory: /root/ERP/backend
         env:
           DATABASE_URL: postgres://medusa:medusa@localhost:5532/medusa?sslmode=disable
           ADMIN_BASE_URL: http://127.0.0.1:9100
@@ -79,7 +92,7 @@ jobs:
         run: npx playwright install --with-deps chromium && npm run test:e2e
 
       - name: Storefront e2e against staging
-        working-directory: storefront
+        working-directory: /root/ERP/storefront
         env:
           DATABASE_URL: postgres://medusa:medusa@localhost:5532/medusa?sslmode=disable
           BASE_URL: http://127.0.0.1:7458
@@ -91,18 +104,22 @@ jobs:
 
       - name: Tear down staging
         if: always()
+        working-directory: /root/ERP
         env:
           IMAGE_TAG: ${{ env.TAG }}
         run: docker compose --project-name erp-staging -f docker-compose.staging.yml down -v
 
       - name: Promote validated images to prod
         id: promote
+        working-directory: /root/ERP
         run: ./scripts/promote-to-prod.sh "$TAG"
 
       - name: Validate infrastructure
+        working-directory: /root/ERP
         run: ./scripts/infra-healthcheck.sh
 
       - name: Run production smoke tests
+        working-directory: /root/ERP
         run: ./scripts/production-smoke.sh
 
       - name: Upload Playwright artifacts
@@ -110,10 +127,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: production-smoke-${{ github.run_number }}
-          path: .artifacts/playwright-production
+          path: /root/ERP/.artifacts/playwright-production
           if-no-files-found: ignore
           retention-days: 7
 
       - name: Roll back prod (post-deploy verification failed)
         if: failure() && steps.promote.outcome == 'success'
+        working-directory: /root/ERP
         run: ./scripts/rollback-prod.sh
