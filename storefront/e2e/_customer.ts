@@ -28,17 +28,21 @@ function readDevEnvVar(key: string): string | undefined {
  * the API.
  */
 export const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:9000";
-export const PUBLISHABLE_KEY =
-  process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY ?? readDevEnvVar("NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY");
+// Typed as `string` (not `string | undefined`) via the throwing fallback below,
+// so downstream functions in this file don't each need their own narrowing —
+// TypeScript can't carry a module-level `if (!x) throw` guard across the
+// function declarations later in the file.
+export const PUBLISHABLE_KEY: string =
+  process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY ??
+  readDevEnvVar("NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY") ??
+  (() => {
+    throw new Error(
+      "NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY is not set and storefront/.env.development has no value for it. " +
+        "Run `npm run medusa:sync-env` (from storefront/) to populate it from the database."
+    );
+  })();
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "admin@aurelia.com";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "supersecret";
-
-if (!PUBLISHABLE_KEY) {
-  throw new Error(
-    "NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY is not set and storefront/.env.development has no value for it. " +
-      "Run `npm run medusa:sync-env` (from storefront/) to populate it from the database."
-  );
-}
 
 export type StoreCustomer = {
   customerId: string;
