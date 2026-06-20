@@ -16,9 +16,11 @@ INFRA_VOLUMES=(
   erp_prometheus_data
   erp_grafana_data
   erp_portainer_data
+  erp_registry_data
 )
 INFRA_COMPOSE_FILE="$ROOT_DIR/infra/networking/nginx-proxy-manager/compose.yml"
 MONITORING_COMPOSE_FILE="$ROOT_DIR/infra/monitoring/compose.yml"
+REGISTRY_COMPOSE_FILE="$ROOT_DIR/infra/registry/compose.yml"
 
 infra_compose() {
   docker compose \
@@ -33,6 +35,13 @@ monitoring_compose() {
     --project-name erp-monitoring \
     --env-file "$ROOT_DIR/infra/.env" \
     --file "$MONITORING_COMPOSE_FILE" \
+    "$@"
+}
+
+registry_compose() {
+  docker compose \
+    --project-name erp-registry \
+    --file "$REGISTRY_COMPOSE_FILE" \
     "$@"
 }
 
@@ -238,6 +247,7 @@ done
 echo "Starting infrastructure services..."
 infra_compose up -d
 monitoring_compose up -d
+registry_compose up -d
 "$ROOT_DIR/scripts/grafana-reload-provisioning.sh"
 
 mkdir -p "$STATE_DIR"
@@ -252,3 +262,4 @@ echo "  Nginx Proxy Manager: http://localhost:81"
 echo "  Grafana: http://localhost:3001"
 echo "  Prometheus: http://localhost:9090"
 echo "  Portainer: https://localhost:9443"
+echo "  Registry: http://localhost:5000/v2/_catalog"

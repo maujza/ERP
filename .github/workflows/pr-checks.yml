@@ -1,0 +1,33 @@
+name: PR checks (lint + unit tests)
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  checks:
+    runs-on: [self-hosted, erp]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install backend dependencies
+        run: npm ci --legacy-peer-deps
+        working-directory: backend
+
+      - name: Backend unit tests
+        run: npm run test:unit
+        working-directory: backend
+
+      - name: Install storefront dependencies
+        run: npm ci
+        working-directory: storefront
+
+      - name: Storefront lint
+        run: npm run lint
+        working-directory: storefront
+
+      - name: Storefront unit tests
+        run: npm run test:run
+        working-directory: storefront

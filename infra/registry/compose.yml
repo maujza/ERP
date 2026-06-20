@@ -1,0 +1,26 @@
+services:
+  registry:
+    image: registry:2
+    ports:
+      - "127.0.0.1:5000:5000"
+    volumes:
+      - registry_data:/var/lib/registry
+    networks:
+      - default
+      - platform
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+networks:
+  platform:
+    name: erp_platform
+    external: true
+
+volumes:
+  registry_data:
+    name: erp_registry_data
+    external: true

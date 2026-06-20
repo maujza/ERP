@@ -1,0 +1,119 @@
+name: Build, test in staging, promote to prod
+
+# workflow_dispatch lets this run be exercised manually (repeatedly, without
+# waiting for a real push) while the pipeline is being validated. Drop it
+# once confidence is high if a manual trigger isn't wanted long-term.
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, erp]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Resolve image tag
+        run: echo "TAG=$(git rev-parse --short HEAD)" >> "$GITHUB_ENV"
+
+      - name: Build and push backend/backend-init/pos (no env baked in, build-once-promote)
+        run: |
+          for name in backend backend-init pos; do
+            ./scripts/ci-build-and-push.sh "$name" "$TAG"
+          done
+
+      - name: Start staging database
+        env:
+          IMAGE_TAG: ${{ env.TAG }}
+        run: docker compose --project-name erp-staging -f docker-compose.staging.yml up -d db
+
+      - name: Run staging migrations and bootstrap
+        env:
+          IMAGE_TAG: ${{ env.TAG }}
+        run: docker compose --project-name erp-staging -f docker-compose.staging.yml run --rm backend-init
+
+      - name: Start staging backend
+        env:
+          IMAGE_TAG: ${{ env.TAG }}
+        run: docker compose --project-name erp-staging -f docker-compose.staging.yml up -d backend
+
+      - name: Wait for staging backend to be ready
+        run: |
+          for i in {1..60}; do
+            if curl --fail --silent --max-time 2 http://127.0.0.1:9100/health >/dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Staging backend did not become ready in time" >&2
+          exit 1
+
+      - name: Build and push web (staging-flavored env)
+        run: |
+          ./scripts/sync-medusa-env.sh --project erp-staging
+          ./scripts/ci-build-and-push.sh web "$TAG"
+
+      - name: Start staging web and pos
+        env:
+          IMAGE_TAG: ${{ env.TAG }}
+        run: docker compose --project-name erp-staging -f docker-compose.staging.yml up -d web pos
+
+      - name: Backend integration tests against staging
+        working-directory: backend
+        env:
+          DATABASE_URL: postgres://medusa:medusa@localhost:5532/medusa?sslmode=disable
+        run: |
+          npm ci --legacy-peer-deps
+          npm run test:integration:modules
+          npm run test:integration:http
+
+      - name: Backend admin e2e against staging
+        working-directory: backend
+        env:
+          DATABASE_URL: postgres://medusa:medusa@localhost:5532/medusa?sslmode=disable
+          ADMIN_BASE_URL: http://127.0.0.1:9100
+          CI: "true"
+        run: npx playwright install --with-deps chromium && npm run test:e2e
+
+      - name: Storefront e2e against staging
+        working-directory: storefront
+        env:
+          DATABASE_URL: postgres://medusa:medusa@localhost:5532/medusa?sslmode=disable
+          BASE_URL: http://127.0.0.1:7458
+          CI: "true"
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          npm run test:e2e
+
+      - name: Tear down staging
+        if: always()
+        env:
+          IMAGE_TAG: ${{ env.TAG }}
+        run: docker compose --project-name erp-staging -f docker-compose.staging.yml down -v
+
+      - name: Promote validated images to prod
+        id: promote
+        run: ./scripts/promote-to-prod.sh "$TAG"
+
+      - name: Validate infrastructure
+        run: ./scripts/infra-healthcheck.sh
+
+      - name: Run production smoke tests
+        run: ./scripts/production-smoke.sh
+
+      - name: Upload Playwright artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-smoke-${{ github.run_number }}
+          path: .artifacts/playwright-production
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Roll back prod (post-deploy verification failed)
+        if: failure() && steps.promote.outcome == 'success'
+        run: ./scripts/rollback-prod.sh

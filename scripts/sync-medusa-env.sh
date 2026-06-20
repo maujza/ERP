@@ -4,26 +4,39 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-# Synced into both: .env.development (local dev) and .env (baked into the
-# Docker `web` image at build time, so a rebuild picks up fresh values too).
+# --project NAME targets an alternate compose project (e.g. the ephemeral
+# "erp-staging" stack used by CI) instead of the default prod project, and
+# writes only storefront/.env (not .env.development, which is dev-only).
+COMPOSE_PROJECT_ARGS=()
 ENV_FILES=(
   "$ROOT_DIR/storefront/.env.development"
   "$ROOT_DIR/storefront/.env"
 )
+
+if [ "${1:-}" = "--project" ]; then
+  # erp-staging is the only alternate project this script ever targets, so
+  # the matching compose file is implied rather than taking a separate flag.
+  COMPOSE_PROJECT_ARGS=(--project-name "$2" --file "$ROOT_DIR/docker-compose.staging.yml")
+  ENV_FILES=("$ROOT_DIR/storefront/.env")
+fi
+
+compose() {
+  docker compose "${COMPOSE_PROJECT_ARGS[@]}" "$@"
+}
 
 if ! command -v docker >/dev/null 2>&1; then
   echo "docker is required" >&2
   exit 1
 fi
 
-if ! docker compose ps db >/dev/null 2>&1; then
+if ! compose ps db >/dev/null 2>&1; then
   echo "db service is not available. Start compose first." >&2
   exit 1
 fi
 
 query_db() {
   local sql="$1"
-  docker compose exec -T db psql -U medusa -d medusa -t -A -c "$sql" | tr -d '\r' | sed '/^$/d' | head -n1
+  compose exec -T db psql -U medusa -d medusa -t -A -c "$sql" | tr -d '\r' | sed '/^$/d' | head -n1
 }
 
 upsert_env_var() {
