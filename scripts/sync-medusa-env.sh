@@ -89,6 +89,16 @@ for env_file in "${ENV_FILES[@]}"; do
     # loading. Clearing it falls back to the relative /api/medusa proxy
     # (same-origin, no CORS involved) per src/lib/medusa.ts's own fallback.
     upsert_env_var "$env_file" "NEXT_PUBLIC_MEDUSA_BACKEND_URL" ""
+    # next.config.ts's rewrites() resolves MEDUSA_INTERNAL_BACKEND_URL into
+    # routes-manifest.json at build time (Next.js compiles a static rewrite
+    # destination string, it isn't re-read at container startup) — relying on
+    # docker-compose.staging.yml's runtime `environment:` override alone left
+    # it frozen at the next.config.ts fallback ("http://localhost:9000"),
+    # which doesn't exist inside the `web` container, breaking the
+    # /api/medusa proxy with ECONNREFUSED. Prod never hit this because it
+    # bypasses the proxy entirely via the absolute NEXT_PUBLIC_MEDUSA_BACKEND_URL
+    # above. Setting it here makes it available at build time too.
+    upsert_env_var "$env_file" "MEDUSA_INTERNAL_BACKEND_URL" "http://backend:9000"
   fi
   echo "Synced ${env_file#"$ROOT_DIR/"}"
 done
