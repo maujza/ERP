@@ -1,0 +1,42 @@
+name: PR checks (lint + unit tests)
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  checks:
+    runs-on: [self-hosted, vps]
+    # Same base image as backend/Dockerfile and storefront/Dockerfile — the
+    # runner host itself has no Node installed (everything here runs
+    # dockerized), so the whole job runs inside this container instead.
+    # /root/.npm-ci-cache is the same host-side npm cache deploy.yml's docker
+    # run steps use — a local bind mount, no network round-trip per run.
+    container:
+      image: node:20-bookworm-slim
+      volumes:
+        - /root/.npm-ci-cache:/root/.npm
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install backend dependencies
+        run: npm ci --legacy-peer-deps
+        working-directory: backend
+
+      - name: Backend unit tests
+        run: npm run test:unit
+        working-directory: backend
+
+      - name: Install storefront dependencies
+        run: npm ci
+        working-directory: storefront
+
+      - name: Storefront lint
+        run: npm run lint
+        working-directory: storefront
+
+      - name: Storefront unit tests
+        run: npm run test:run
+        working-directory: storefront

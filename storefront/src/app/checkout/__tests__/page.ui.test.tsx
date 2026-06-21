@@ -97,7 +97,6 @@ describe("CheckoutPage", () => {
     [
       "Paso 1 - Contacto",
       "Paso 2 - Dirección de envío",
-      "Paso 3 - Método de envío",
       "Paso 4 - Pago",
     ].forEach((step) => {
       const heading = screen.getByText(step);
@@ -241,13 +240,13 @@ describe("CheckoutPage – progress bar DOM", () => {
     mockCustomerRetrieve.mockRejectedValue(new Error("Unauthorized"));
   });
 
-  it("renders 4 step nodes in the progress bar", () => {
+  it("renders 3 step nodes in the progress bar", () => {
     render(<CheckoutPage />);
-    // Each step node is a div with h-7 w-7 classes; look for the step numbers 1–4
+    // Each step node is a div with h-7 w-7 classes; look for the step numbers 1–3
+    // (shipping method is no longer its own step — server-side auto-pick)
     expect(screen.getByText("1")).toBeInTheDocument();
     expect(screen.getByText("2")).toBeInTheDocument();
     expect(screen.getByText("3")).toBeInTheDocument();
-    expect(screen.getByText("4")).toBeInTheDocument();
   });
 
   it("first step node (index 0) has border-2 border-[#4660bc] class when currentStep=0", () => {

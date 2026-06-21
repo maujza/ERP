@@ -1,0 +1,108 @@
+# docker-compose.staging.yml — ephemeral pre-prod stack for CI
+#
+# Standalone (not a docker-compose.yml override): every service references an
+# already-built image pulled from the local registry, so there is no `build:`
+# block to accidentally trigger and no shared network/volume with prod. Run
+# with:
+#   docker compose --project-name erp-staging -f docker-compose.staging.yml up -d
+#   docker compose --project-name erp-staging -f docker-compose.staging.yml down -v
+#
+# IMAGE_TAG must be set by the caller (the CI workflow) — there is no default,
+# so a forgotten export fails loudly instead of silently reusing a stale tag.
+# REGISTRY defaults to the local registry started by infra/registry/compose.yml.
+#
+# Ports are remapped (db 5532, backend 9100, web 7458, pos 8181) and bound to
+# 127.0.0.1 so they never collide with the prod ports in docker-compose.yml.
+# Resource limits keep a runaway staging build/test run from starving prod on
+# the same host.
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: medusa
+      POSTGRES_USER: medusa
+      POSTGRES_PASSWORD: medusa
+    ports:
+      - "127.0.0.1:5532:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medusa -d medusa"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+
+  backend-init:
+    image: ${REGISTRY:-localhost:5000}/erp-backend-init:${IMAGE_TAG:?set IMAGE_TAG to the image tag to test}
+    command: >
+      sh -c "
+        npx medusa db:migrate &&
+        npx medusa exec ./src/scripts/bootstrap.ts &&
+        (npx medusa user -e \"$${MEDUSA_ADMIN_EMAIL:-admin@aurelia.com}\" -p \"$${MEDUSA_ADMIN_PASSWORD}\" >/dev/null 2>&1 || true) &&
+        npx medusa exec ./src/scripts/assign-admin-role.ts
+      "
+    env_file: ./backend/.env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://medusa:medusa@db:5432/medusa?sslmode=disable
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 768M
+
+  backend:
+    image: ${REGISTRY:-localhost:5000}/erp-backend:${IMAGE_TAG:?set IMAGE_TAG to the image tag to test}
+    ports:
+      - "127.0.0.1:9100:9000"
+    env_file: ./backend/.env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://medusa:medusa@db:5432/medusa?sslmode=disable
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 768M
+
+  web:
+    image: ${REGISTRY:-localhost:5000}/erp-web:${IMAGE_TAG:?set IMAGE_TAG to the image tag to test}
+    ports:
+      - "127.0.0.1:7458:3000"
+    environment:
+      MEDUSA_INTERNAL_BACKEND_URL: http://backend:9000
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: "1"
+    depends_on:
+      - backend
+    restart: "no"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+
+  pos:
+    image: ${REGISTRY:-localhost:5000}/erp-pos:${IMAGE_TAG:?set IMAGE_TAG to the image tag to test}
+    ports:
+      - "127.0.0.1:8181:3000"
+    depends_on:
+      - backend
+    restart: "no"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M

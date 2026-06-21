@@ -1,0 +1,151 @@
+name: Build, test in staging, promote to prod
+
+# workflow_dispatch lets this run be exercised manually (repeatedly, without
+# waiting for a real push) while the pipeline is being validated. Drop it
+# once confidence is high if a manual trigger isn't wanted long-term.
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, vps]
+    env:
+      # promote-to-prod.sh / rollback-prod.sh / infra-healthcheck.sh /
+      # production-smoke.sh must run against the persistent clone whose
+      # directory identity ("erp" by default project naming) is what's
+      # actually running prod — not the runner's default checkout workspace.
+      DEPLOY_DIR: /root/ERP
+    steps:
+      - name: Sync the prod checkout to this commit
+        run: |
+          cd "$DEPLOY_DIR"
+          git fetch origin "$GITHUB_SHA"
+          git checkout --force "$GITHUB_SHA"
+          echo "TAG=$(git rev-parse --short HEAD)" >> "$GITHUB_ENV"
+
+      - name: Build and push backend/backend-init/pos (no env baked in, build-once-promote)
+        working-directory: /root/ERP
+        run: |
+          for name in backend backend-init pos; do
+            ./scripts/ci-build-and-push.sh "$name" "$TAG"
+          done
+
+      - name: Start staging database
+        working-directory: /root/ERP
+        env:
+          IMAGE_TAG: ${{ env.TAG }}
+        run: docker compose --project-name erp-staging -f docker-compose.staging.yml up -d db
+
+      - name: Run staging migrations and bootstrap
+        working-directory: /root/ERP
+        env:
+          IMAGE_TAG: ${{ env.TAG }}
+        run: docker compose --project-name erp-staging -f docker-compose.staging.yml run --rm backend-init
+
+      - name: Start staging backend
+        working-directory: /root/ERP
+        env:
+          IMAGE_TAG: ${{ env.TAG }}
+        run: docker compose --project-name erp-staging -f docker-compose.staging.yml up -d backend
+
+      - name: Wait for staging backend to be ready
+        run: |
+          for i in {1..60}; do
+            if curl --fail --silent --max-time 2 http://127.0.0.1:9100/health >/dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Staging backend did not become ready in time" >&2
+          exit 1
+
+      - name: Build and push web (staging-flavored env)
+        working-directory: /root/ERP
+        run: |
+          ./scripts/sync-medusa-env.sh --project erp-staging
+          ./scripts/ci-build-and-push.sh web "$TAG"
+
+      - name: Start staging web and pos
+        working-directory: /root/ERP
+        env:
+          IMAGE_TAG: ${{ env.TAG }}
+        run: docker compose --project-name erp-staging -f docker-compose.staging.yml up -d web pos
+
+      # The runner host has no Node installed (everything here runs
+      # dockerized) — these steps run inside a node:20 container instead,
+      # with /root/ERP bind-mounted so npm ci's node_modules and the
+      # Playwright browser cache persist on the host between steps/runs, and
+      # --network host so "localhost" reaches staging's host-bound ports.
+      - name: Backend integration tests against staging
+        run: |
+          docker rm -f ci-backend-integration-tests 2>/dev/null || true
+          docker run --rm --network host --name ci-backend-integration-tests \
+            -v /root/ERP:/work -w /work/backend \
+            -v /root/.cache/ms-playwright:/root/.cache/ms-playwright \
+            -v /root/.npm-ci-cache:/root/.npm \
+            -e DATABASE_URL=postgres://medusa:medusa@localhost:5532/medusa?sslmode=disable \
+            node:20-bookworm-slim \
+            bash -c "npm ci --legacy-peer-deps && npm run test:integration:modules && npm run test:integration:http"
+
+      - name: Backend admin e2e against staging
+        run: |
+          docker rm -f ci-backend-e2e 2>/dev/null || true
+          docker run --rm --network host --name ci-backend-e2e \
+            -v /root/ERP:/work -w /work/backend \
+            -v /root/.cache/ms-playwright:/root/.cache/ms-playwright \
+            -v /root/.npm-ci-cache:/root/.npm \
+            -e DATABASE_URL=postgres://medusa:medusa@localhost:5532/medusa?sslmode=disable \
+            -e ADMIN_BASE_URL=http://127.0.0.1:9100 \
+            -e CI=true \
+            node:20-bookworm-slim \
+            bash -c "npx playwright install --with-deps chromium && npm run test:e2e"
+
+      - name: Storefront e2e against staging
+        run: |
+          docker rm -f ci-storefront-e2e 2>/dev/null || true
+          docker run --rm --network host --name ci-storefront-e2e \
+            -v /root/ERP:/work -w /work/storefront \
+            -v /root/.cache/ms-playwright:/root/.cache/ms-playwright \
+            -v /root/.npm-ci-cache:/root/.npm \
+            -e DATABASE_URL=postgres://medusa:medusa@localhost:5532/medusa?sslmode=disable \
+            -e BASE_URL=http://127.0.0.1:7458 \
+            -e CI=true \
+            node:20-bookworm-slim \
+            bash -c "npm ci && npx playwright install --with-deps chromium && npm run test:e2e"
+
+      - name: Tear down staging
+        if: always()
+        working-directory: /root/ERP
+        env:
+          IMAGE_TAG: ${{ env.TAG }}
+        run: docker compose --project-name erp-staging -f docker-compose.staging.yml down -v
+
+      - name: Promote validated images to prod
+        id: promote
+        working-directory: /root/ERP
+        run: ./scripts/promote-to-prod.sh "$TAG"
+
+      - name: Validate infrastructure
+        working-directory: /root/ERP
+        run: ./scripts/infra-healthcheck.sh
+
+      - name: Run production smoke tests
+        working-directory: /root/ERP
+        run: ./scripts/production-smoke.sh
+
+      - name: Upload Playwright artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-smoke-${{ github.run_number }}
+          path: /root/ERP/.artifacts/playwright-production
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Roll back prod (post-deploy verification failed)
+        if: failure() && steps.promote.outcome == 'success'
+        working-directory: /root/ERP
+        run: ./scripts/rollback-prod.sh
