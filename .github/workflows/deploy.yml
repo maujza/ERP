@@ -96,8 +96,16 @@ jobs:
             node:20-bookworm-slim \
             bash -c "npm ci --legacy-peer-deps && npm run test:integration:modules && npm run test:integration:http"
 
+      # backend-init creates the staging admin user from MEDUSA_ADMIN_EMAIL/
+      # MEDUSA_ADMIN_PASSWORD in backend/.env (not the "supersecret" fallback
+      # the e2e suites default to), so both suites below source that file and
+      # forward it under the ADMIN_EMAIL/ADMIN_PASSWORD names they expect.
       - name: Backend admin e2e against staging
+        working-directory: /root/ERP
         run: |
+          set -a
+          source backend/.env
+          set +a
           docker rm -f ci-backend-e2e 2>/dev/null || true
           docker run --rm --network host --name ci-backend-e2e \
             -v /root/ERP:/work -w /work/backend \
@@ -105,12 +113,18 @@ jobs:
             -v /root/.npm-ci-cache:/root/.npm \
             -e DATABASE_URL=postgres://medusa:medusa@localhost:5532/medusa?sslmode=disable \
             -e ADMIN_BASE_URL=http://127.0.0.1:9100 \
+            -e ADMIN_EMAIL="$MEDUSA_ADMIN_EMAIL" \
+            -e ADMIN_PASSWORD="$MEDUSA_ADMIN_PASSWORD" \
             -e CI=true \
             node:20-bookworm-slim \
             bash -c "npx playwright install --with-deps chromium && npm run test:e2e"
 
       - name: Storefront e2e against staging
+        working-directory: /root/ERP
         run: |
+          set -a
+          source backend/.env
+          set +a
           docker rm -f ci-storefront-e2e 2>/dev/null || true
           docker run --rm --network host --name ci-storefront-e2e \
             -v /root/ERP:/work -w /work/storefront \
@@ -118,6 +132,8 @@ jobs:
             -v /root/.npm-ci-cache:/root/.npm \
             -e DATABASE_URL=postgres://medusa:medusa@localhost:5532/medusa?sslmode=disable \
             -e BASE_URL=http://127.0.0.1:7458 \
+            -e ADMIN_EMAIL="$MEDUSA_ADMIN_EMAIL" \
+            -e ADMIN_PASSWORD="$MEDUSA_ADMIN_PASSWORD" \
             -e CI=true \
             node:20-bookworm-slim \
             bash -c "npm ci && npx playwright install --with-deps chromium && npm run test:e2e"
