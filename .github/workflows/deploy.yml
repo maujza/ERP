@@ -84,6 +84,7 @@ jobs:
           docker run --rm --network host \
             -v /root/ERP:/work -w /work/backend \
             -v /root/.cache/ms-playwright:/root/.cache/ms-playwright \
+            -v /root/.npm-ci-cache:/root/.npm \
             -e DATABASE_URL=postgres://medusa:medusa@localhost:5532/medusa?sslmode=disable \
             node:20-bookworm-slim \
             bash -c "npm ci --legacy-peer-deps && npm run test:integration:modules && npm run test:integration:http"
@@ -93,6 +94,7 @@ jobs:
           docker run --rm --network host \
             -v /root/ERP:/work -w /work/backend \
             -v /root/.cache/ms-playwright:/root/.cache/ms-playwright \
+            -v /root/.npm-ci-cache:/root/.npm \
             -e DATABASE_URL=postgres://medusa:medusa@localhost:5532/medusa?sslmode=disable \
             -e ADMIN_BASE_URL=http://127.0.0.1:9100 \
             -e CI=true \
@@ -104,6 +106,7 @@ jobs:
           docker run --rm --network host \
             -v /root/ERP:/work -w /work/storefront \
             -v /root/.cache/ms-playwright:/root/.cache/ms-playwright \
+            -v /root/.npm-ci-cache:/root/.npm \
             -e DATABASE_URL=postgres://medusa:medusa@localhost:5532/medusa?sslmode=disable \
             -e BASE_URL=http://127.0.0.1:7458 \
             -e CI=true \
