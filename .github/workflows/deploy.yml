@@ -98,46 +98,42 @@ jobs:
 
       # backend-init creates the staging admin user from MEDUSA_ADMIN_EMAIL/
       # MEDUSA_ADMIN_PASSWORD in backend/.env (not the "supersecret" fallback
-      # the e2e suites default to), so both suites below grep those two values
-      # out and forward them under the ADMIN_EMAIL/ADMIN_PASSWORD names the
-      # suites expect. Not sourcing the file directly: dotenv-style .env files
-      # aren't guaranteed valid shell — e.g. RESEND_FROM's unquoted "<...>"
-      # breaks `source` as redirection syntax.
+      # the e2e suites default to). --env-file loads that file through
+      # Docker's own dotenv-style parser (same mechanism docker-compose uses
+      # for backend-init/backend, so the value is guaranteed identical to the
+      # one used to create the user) — not bash `source`, which fails on
+      # RESEND_FROM's unquoted "<...>" value. The two vars are remapped to
+      # ADMIN_EMAIL/ADMIN_PASSWORD inside the container, the names the e2e
+      # suites actually read.
       - name: Backend admin e2e against staging
         working-directory: /root/ERP
         run: |
-          MEDUSA_ADMIN_EMAIL=$(grep '^MEDUSA_ADMIN_EMAIL=' backend/.env | cut -d= -f2-)
-          MEDUSA_ADMIN_PASSWORD=$(grep '^MEDUSA_ADMIN_PASSWORD=' backend/.env | cut -d= -f2-)
           docker rm -f ci-backend-e2e 2>/dev/null || true
           docker run --rm --network host --name ci-backend-e2e \
             -v /root/ERP:/work -w /work/backend \
             -v /root/.cache/ms-playwright:/root/.cache/ms-playwright \
             -v /root/.npm-ci-cache:/root/.npm \
+            --env-file backend/.env \
             -e DATABASE_URL=postgres://medusa:medusa@localhost:5532/medusa?sslmode=disable \
             -e ADMIN_BASE_URL=http://127.0.0.1:9100 \
-            -e ADMIN_EMAIL="$MEDUSA_ADMIN_EMAIL" \
-            -e ADMIN_PASSWORD="$MEDUSA_ADMIN_PASSWORD" \
             -e CI=true \
             node:20-bookworm-slim \
-            bash -c "npx playwright install --with-deps chromium && npm run test:e2e"
+            bash -c 'export ADMIN_EMAIL="$MEDUSA_ADMIN_EMAIL" ADMIN_PASSWORD="$MEDUSA_ADMIN_PASSWORD"; npx playwright install --with-deps chromium && npm run test:e2e'
 
       - name: Storefront e2e against staging
         working-directory: /root/ERP
         run: |
-          MEDUSA_ADMIN_EMAIL=$(grep '^MEDUSA_ADMIN_EMAIL=' backend/.env | cut -d= -f2-)
-          MEDUSA_ADMIN_PASSWORD=$(grep '^MEDUSA_ADMIN_PASSWORD=' backend/.env | cut -d= -f2-)
           docker rm -f ci-storefront-e2e 2>/dev/null || true
           docker run --rm --network host --name ci-storefront-e2e \
             -v /root/ERP:/work -w /work/storefront \
             -v /root/.cache/ms-playwright:/root/.cache/ms-playwright \
             -v /root/.npm-ci-cache:/root/.npm \
+            --env-file backend/.env \
             -e DATABASE_URL=postgres://medusa:medusa@localhost:5532/medusa?sslmode=disable \
             -e BASE_URL=http://127.0.0.1:7458 \
-            -e ADMIN_EMAIL="$MEDUSA_ADMIN_EMAIL" \
-            -e ADMIN_PASSWORD="$MEDUSA_ADMIN_PASSWORD" \
             -e CI=true \
             node:20-bookworm-slim \
-            bash -c "npm ci && npx playwright install --with-deps chromium && npm run test:e2e"
+            bash -c 'export ADMIN_EMAIL="$MEDUSA_ADMIN_EMAIL" ADMIN_PASSWORD="$MEDUSA_ADMIN_PASSWORD"; npm ci && npx playwright install --with-deps chromium && npm run test:e2e'
 
       - name: Tear down staging
         if: always()
