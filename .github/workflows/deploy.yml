@@ -26,6 +26,18 @@ jobs:
           git checkout --force "$GITHUB_SHA"
           echo "TAG=$(git rev-parse --short HEAD)" >> "$GITHUB_ENV"
 
+      # If a previous run was cancelled (or the runner crashed) before
+      # reaching "Tear down staging", the erp-staging project's containers
+      # and anonymous db volume survive — the next run's `up -d db` then
+      # reuses that stale database, with an admin user/password from
+      # whatever ran before, instead of a clean ephemeral stack. Tearing
+      # down defensively here guarantees every run starts from zero.
+      - name: Clean up any leftover staging stack from a previous run
+        working-directory: /root/ERP
+        env:
+          IMAGE_TAG: ${{ env.TAG }}
+        run: docker compose --project-name erp-staging -f docker-compose.staging.yml down -v --remove-orphans
+
       - name: Build and push backend/backend-init/pos (no env baked in, build-once-promote)
         working-directory: /root/ERP
         run: |
