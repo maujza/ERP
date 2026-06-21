@@ -350,6 +350,7 @@ describe("CartProvider – addToCart", () => {
     expect(mockCartApi.createLineItem).toHaveBeenCalledWith(
       expect.any(String),
       expect.objectContaining({ variant_id: "variant_01", quantity: 1 }),
+      expect.any(Object),
     );
     expect(result.current.items).toHaveLength(1);
   });
@@ -368,7 +369,7 @@ describe("CartProvider – addToCart", () => {
     });
 
     expect(mockCartApi.create).not.toHaveBeenCalled();
-    expect(mockCartApi.createLineItem).toHaveBeenCalledWith("cart_existing", expect.any(Object));
+    expect(mockCartApi.createLineItem).toHaveBeenCalledWith("cart_existing", expect.any(Object), expect.any(Object));
   });
 
   it("opens the drawer when openDrawer option is true", async () => {
@@ -420,7 +421,7 @@ describe("CartProvider – updateQuantity", () => {
       await result.current.updateQuantity("item_01", 3);
     });
 
-    expect(mockCartApi.updateLineItem).toHaveBeenCalledWith("cart_01", "item_01", { quantity: 3 });
+    expect(mockCartApi.updateLineItem).toHaveBeenCalledWith("cart_01", "item_01", { quantity: 3 }, expect.any(Object));
     expect(result.current.items[0].quantity).toBe(3);
   });
 
@@ -436,7 +437,7 @@ describe("CartProvider – updateQuantity", () => {
       await result.current.updateQuantity("item_01", 0);
     });
 
-    expect(mockCartApi.deleteLineItem).toHaveBeenCalledWith("cart_01", "item_01");
+    expect(mockCartApi.deleteLineItem).toHaveBeenCalledWith("cart_01", "item_01", expect.any(Object));
     expect(result.current.items).toHaveLength(0);
   });
 
@@ -464,7 +465,7 @@ describe("CartProvider – removeFromCart", () => {
       await result.current.removeFromCart("item_01");
     });
 
-    expect(mockCartApi.deleteLineItem).toHaveBeenCalledWith("cart_01", "item_01");
+    expect(mockCartApi.deleteLineItem).toHaveBeenCalledWith("cart_01", "item_01", expect.any(Object));
     expect(result.current.items).toHaveLength(0);
   });
 

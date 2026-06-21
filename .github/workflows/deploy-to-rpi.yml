@@ -1,9 +1,7 @@
 name: Deploy to RPI on push to main
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch: # auto-deploy disabled; trigger manually when needed
 
 jobs:
   deploy:

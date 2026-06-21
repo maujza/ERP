@@ -7,6 +7,12 @@ async function addFirstProductToCart(page: import("@playwright/test").Page) {
   await firstCard.click();
   await expect(page).toHaveURL(/\/product\//, { timeout: 5000 });
 
+  // Select first variant if the product requires one before add-to-cart is enabled
+  const firstVariantBtn = page.locator("div.flex.flex-wrap.gap-2 button").first();
+  if (await firstVariantBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
+    await firstVariantBtn.click();
+  }
+
   const addBtn = page.locator("button").filter({ hasText: "Agregar al carrito" });
   await expect(addBtn).toBeVisible({ timeout: 5000 });
   await expect(addBtn).toBeEnabled({ timeout: 5000 });

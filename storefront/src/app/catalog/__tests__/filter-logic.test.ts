@@ -21,7 +21,6 @@ const rawProducts: Product[] = [
     description: "Micro circonias, baño oro 18K y tres diámetros combinables.",
     category: "Aros",
     subcategory: "Best Sellers",
-    brand: "Aurelia Core",
     image: "/mock/siena.jpg",
     price: 18900,
     stock: 12,
@@ -36,7 +35,6 @@ const rawProducts: Product[] = [
     description: "Capas de delicadeza para el cuello.",
     category: "Collares",
     subcategory: "Novedades",
-    brand: "Aurelia Studio",
     image: "/mock/aura.jpg",
     price: 24500,
     stock: 8,
@@ -47,7 +45,6 @@ const rawProducts: Product[] = [
     description: "Mix de pulseras en colores vibrantes.",
     category: "Pulseras",
     subcategory: "Best Sellers",
-    brand: "Aurelia Core",
     image: "/mock/capri.jpg",
     price: 19900,
     stock: 10,
@@ -58,7 +55,6 @@ const rawProducts: Product[] = [
     description: "Diseño audaz para ocasiones especiales.",
     category: "Aros",
     subcategory: "Fiesta",
-    brand: "Lumiere",
     image: "/mock/eclair.jpg",
     price: 28500,
     stock: 4,
@@ -69,7 +65,6 @@ const rawProducts: Product[] = [
     description: "Cadena minimalista de plata 925.",
     category: "Collares",
     subcategory: "Novedades",
-    brand: "Aurelia Studio",
     image: "/mock/materia.jpg",
     price: 22000,
     stock: 15,
@@ -80,7 +75,6 @@ const rawProducts: Product[] = [
     description: "Kit completo para exhibición profesional.",
     category: "Sets",
     subcategory: "Kits",
-    brand: "Aurelia Pro",
     image: "/mock/kit.jpg",
     price: 98500,
     stock: 3,
@@ -91,7 +85,6 @@ const rawProducts: Product[] = [
     description: "Colección de perlas naturales boreal.",
     category: "Sets",
     subcategory: "Esenciales",
-    brand: "Boreal",
     image: "/mock/perlas.jpg",
     price: 27500,
     stock: 0,
@@ -102,7 +95,6 @@ const rawProducts: Product[] = [
     description: "Argollas de acero quirúrgico, acabado pulido.",
     category: "Aros",
     subcategory: "Esenciales",
-    brand: "Aurelia Core",
     image: "/mock/acero.jpg",
     price: 13200,
     stock: 20,
@@ -113,7 +105,6 @@ const rawProducts: Product[] = [
     description: "Choker delicado con perla central.",
     category: "Collares",
     subcategory: "Novedades",
-    brand: "Lumiere",
     image: "/mock/luna.jpg",
     price: 19500,
     stock: 7,
@@ -124,7 +115,6 @@ const rawProducts: Product[] = [
     description: "Diseño ondulado en plata 925.",
     category: "Anillos",
     subcategory: "Best Sellers",
-    brand: "Boreal",
     image: "/mock/wave.jpg",
     price: 16500,
     stock: 5,
@@ -169,7 +159,6 @@ function filterAndSort(
   {
     activeCollection = "",
     selectedCategories = [] as string[],
-    selectedBrands = [] as string[],
     priceFilter = "all" as PriceFilter,
     search = "",
     sortBy = "recommended" as SortOption,
@@ -183,15 +172,13 @@ function filterAndSort(
     const categoryMatch =
       selectedCategories.length === 0 ||
       selectedCategories.includes(p.category);
-    const brandMatch =
-      selectedBrands.length === 0 || selectedBrands.includes(p.brand);
     const priceMatch = byPrice(p, priceFilter);
     const searchMatch =
       normalizedSearch.length === 0 ||
       p.name.toLowerCase().includes(normalizedSearch) ||
       p.description.toLowerCase().includes(normalizedSearch);
 
-    return collectionMatch && categoryMatch && brandMatch && priceMatch && searchMatch;
+    return collectionMatch && categoryMatch && priceMatch && searchMatch;
   });
 
   if (sortBy === "price_asc") return [...list].sort((a, b) => a.price - b.price);
@@ -348,46 +335,6 @@ describe("filterAndSort – category", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Brand filter
-// ---------------------------------------------------------------------------
-describe("filterAndSort – brand", () => {
-  it("filtering by 'Aurelia Core' returns only that brand", () => {
-    const result = filterAndSort(products, { selectedBrands: ["Aurelia Core"] });
-    expect(result.length).toBeGreaterThan(0);
-    for (const p of result) {
-      expect(p.brand).toBe("Aurelia Core");
-    }
-  });
-
-  it("filtering by 'Boreal' returns only Boreal products", () => {
-    const result = filterAndSort(products, { selectedBrands: ["Boreal"] });
-    expect(result.length).toBeGreaterThan(0);
-    for (const p of result) {
-      expect(p.brand).toBe("Boreal");
-    }
-  });
-
-  it("filtering by 'Aurelia Pro' returns only kit-vitrina", () => {
-    const result = filterAndSort(products, { selectedBrands: ["Aurelia Pro"] });
-    expect(result).toHaveLength(1);
-    expect(result[0].id).toBe("kit-vitrina");
-  });
-
-  it("filtering by multiple brands returns products from all those brands", () => {
-    const result = filterAndSort(products, {
-      selectedBrands: ["Lumiere", "Boreal"],
-    });
-    for (const p of result) {
-      expect(["Lumiere", "Boreal"]).toContain(p.brand);
-    }
-  });
-
-  it("empty brands array returns all products", () => {
-    expect(filterAndSort(products, { selectedBrands: [] })).toHaveLength(10);
-  });
-});
-
-// ---------------------------------------------------------------------------
 // Price filter
 // ---------------------------------------------------------------------------
 describe("filterAndSort – price range", () => {
@@ -527,17 +474,6 @@ describe("filterAndSort – combined filters", () => {
     }
   });
 
-  it("brand + price filter combines correctly", () => {
-    const result = filterAndSort(products, {
-      selectedBrands: ["Aurelia Core"],
-      priceFilter: "low",
-    });
-    for (const p of result) {
-      expect(p.brand).toBe("Aurelia Core");
-      expect(p.price).toBeLessThanOrEqual(20000);
-    }
-  });
-
   it("search + price_asc returns sorted, filtered results", () => {
     const result = filterAndSort(products, {
       search: "siena",
@@ -627,13 +563,11 @@ describe("Pagination helpers", () => {
 describe("activeFilterCount", () => {
   function activeFilterCount({
     selectedCategories = [] as string[],
-    selectedBrands = [] as string[],
     priceFilter = "all" as PriceFilter,
     search = "",
   } = {}) {
     return (
       selectedCategories.length +
-      selectedBrands.length +
       (priceFilter === "all" ? 0 : 1) +
       (search.trim() ? 1 : 0)
     );
@@ -645,10 +579,6 @@ describe("activeFilterCount", () => {
 
   it("counts each category as 1", () => {
     expect(activeFilterCount({ selectedCategories: ["Aros", "Collares"] })).toBe(2);
-  });
-
-  it("counts each brand as 1", () => {
-    expect(activeFilterCount({ selectedBrands: ["Lumiere"] })).toBe(1);
   });
 
   it("counts non-'all' price filter as 1", () => {
@@ -673,10 +603,9 @@ describe("activeFilterCount", () => {
     expect(
       activeFilterCount({
         selectedCategories: ["Aros"],
-        selectedBrands: ["Lumiere"],
         priceFilter: "low",
         search: "choker",
       })
-    ).toBe(4);
+    ).toBe(3);
   });
 });

@@ -7,13 +7,11 @@
  *
  * Key exports:
  *   Product / ProductVariant — TypeScript types for the UI-layer product object
- *   brands              — static brand filter list shown in the sidebar
  *   mapMedusaProduct    — converts a raw Medusa API product into a Product
  *   formatArs           — formats a number as Argentine Peso (ARS) currency string
  *   translateLabel      — returns the Spanish or Korean version of a category label
  *   getProductName /
  *   getProductDescription — language-aware accessors (reads nameKo/descriptionKo from metadata)
- *   isJewelryProduct    — filters out non-jewelry items (e.g., branded merch)
  *   calculateDiscountPercent — computes % off given original vs. sale price
  *
  * Korean product names/descriptions come from Medusa product metadata fields:
@@ -71,7 +69,6 @@ export type Product = {
   descriptionKo?: string;
   category: string;
   subcategory: string;
-  brand: string;
   image: string;
   price: number;
   originalPrice?: number;
@@ -95,24 +92,6 @@ export const sortOptions = [
   { id: "recommended" as SortOption, label: "Recomendados" },
   { id: "price_asc" as SortOption, label: "Precio: menor" },
   { id: "price_desc" as SortOption, label: "Precio: mayor" },
-];
-
-export const brands = ["Aurelia Core", "Aurelia Studio", "Lumiere", "Boreal", "Aurelia Pro"];
-
-// Category names treated as jewelry by isJewelryProduct (filters out branded merch).
-const jewelryCategories = ["Aros", "Collares", "Pulseras", "Sets", "Kits", "Anillos", "Perlas"];
-
-const clothingKeywords = [
-  "shirt",
-  "sweat",
-  "hoodie",
-  "short",
-  "pant",
-  "sock",
-  "cap",
-  "merch",
-  "jean",
-  "jacket",
 ];
 
 const labelKo: Record<string, string> = {
@@ -182,9 +161,8 @@ export function mapMedusaProduct(p: MedusaProduct): Product {
     0
   ) ?? 0
 
-  const category = (p.metadata?.category as string) ?? p.categories?.[0]?.name ?? inferCategoryFromText(p.title ?? "", p.description ?? "")
+  const category = (p.metadata?.category as string) ?? p.categories?.[0]?.name ?? ""
   const subcategory = (p.metadata?.subcategory as string) ?? ""
-  const brand = (p.metadata?.brand as string) ?? ""
   const nameKo = (p.metadata?.name_ko as string) || undefined
   const descriptionKo = (p.metadata?.description_ko as string) || undefined
 
@@ -205,7 +183,6 @@ export function mapMedusaProduct(p: MedusaProduct): Product {
     descriptionKo,
     category,
     subcategory,
-    brand,
     image,
     price,
     originalPrice,
@@ -238,31 +215,6 @@ function resolveProductImage(rawImage: string) {
 
 export function hasPurchasablePrice(product: Product) {
   return product.price > 0
-}
-
-function inferCategoryFromText(name: string, description: string) {
-  const normalized = `${name} ${description}`.toLowerCase()
-  if (normalized.includes("aro")) return "Aros"
-  if (normalized.includes("collar")) return "Collares"
-  if (normalized.includes("pulsera")) return "Pulseras"
-  if (normalized.includes("kit")) return "Kits"
-  if (normalized.includes("set")) return "Sets"
-  if (normalized.includes("anillo")) return "Anillos"
-  if (normalized.includes("perla")) return "Perlas"
-  return ""
-}
-
-export function isJewelryProduct(product: Product) {
-  if (jewelryCategories.includes(product.category)) {
-    return true
-  }
-
-  const normalized = `${product.name} ${product.description} ${product.category}`.toLowerCase()
-  if (clothingKeywords.some((keyword) => normalized.includes(keyword))) {
-    return false
-  }
-
-  return Boolean(inferCategoryFromText(product.name, product.description))
 }
 
 /**

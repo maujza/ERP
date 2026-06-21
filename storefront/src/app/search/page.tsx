@@ -9,7 +9,7 @@ import { ProductCard } from "@/components/product-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { hasPurchasablePrice, isJewelryProduct, mapMedusaProduct, type Product } from "@/lib/shop-data";
+import { hasPurchasablePrice, mapMedusaProduct, type Product } from "@/lib/shop-data";
 import { sdk, withStorePricingContext } from "@/lib/medusa";
 
 function SearchContent() {
@@ -56,9 +56,9 @@ function SearchContent() {
     sdk.store.product.list(withStorePricingContext({
       q: rawQuery,
       limit: 50,
-      fields: "+variants.calculated_price,+variants.inventory_quantity,+metadata,+categories",
+      fields: "+variants.calculated_price,+variants.inventory_quantity,+metadata,+categories.id,+categories.name,+categories.handle",
     })).then(({ products }) => {
-      setResults(products.map(mapMedusaProduct).filter(hasPurchasablePrice).filter(isJewelryProduct));
+      setResults(products.map(mapMedusaProduct).filter(hasPurchasablePrice));
       setSearchError(false);
     }).catch((err: unknown) => {
       console.error("[SearchPage] Failed to fetch search results", err);

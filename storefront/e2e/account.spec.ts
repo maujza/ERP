@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 import {
+  cancelOrderById,
   deleteCustomerByEmail,
   deleteProductById,
   registerCustomerApi,
@@ -17,9 +18,14 @@ import {
  */
 test.describe("Account — registration and order history (UI)", () => {
   let cleanupEmail: string | null = null;
+  let cleanupOrderId: string | null = null;
   let cleanupProductId: string | null = null;
 
   test.afterEach(async ({ request }) => {
+    if (cleanupOrderId) {
+      await cancelOrderById(request, cleanupOrderId);
+      cleanupOrderId = null;
+    }
     if (cleanupProductId) {
       await deleteProductById(request, cleanupProductId);
       cleanupProductId = null;
@@ -50,7 +56,8 @@ test.describe("Account — registration and order history (UI)", () => {
   test("a delivered order appears on the account home with the correct status", async ({ page, request }) => {
     const customer: StoreCustomer = await registerCustomerApi(request, { firstName: "Aurora", lastName: "Pedido" });
     cleanupEmail = customer.email;
-    const { productId } = await seedDeliveredOrder(request, customer);
+    const { orderId, productId } = await seedDeliveredOrder(request, customer);
+    cleanupOrderId = orderId;
     cleanupProductId = productId;
 
     // Log in through the UI as that customer.

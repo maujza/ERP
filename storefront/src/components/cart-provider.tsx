@@ -48,7 +48,10 @@ function lineItemsFromCart(cart: { items?: unknown[] | null } | null): CartLineI
     variantId: (item.variant_id as string) ?? "",
     title: (item.title as string) ?? "",
     variantTitle: ((item.variant as Record<string, unknown>)?.title as string) ?? "",
-    thumbnail: (item.thumbnail as string | null) ?? null,
+    thumbnail: (item.thumbnail as string | null)
+      ?? ((item.variant as Record<string, unknown>)?.product as Record<string, unknown>)?.thumbnail as string | null
+      ?? (((item.variant as Record<string, unknown>)?.product as Record<string, unknown>)?.images as { url: string }[] | null)?.[0]?.url
+      ?? null,
     quantity: (item.quantity as number) ?? 0,
     unitPrice: (item.unit_price as number) ?? 0,
   }));
@@ -78,7 +81,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const storedId = localStorage.getItem(CART_ID_KEY);
     if (!storedId) return;
-    sdk.store.cart.retrieve(storedId).then(({ cart }) => {
+    sdk.store.cart.retrieve(storedId, { fields: "+items.variant.product.thumbnail,+items.variant.product.images.url" }).then(({ cart }) => {
       if ((cart as { completed_at?: string | null })?.completed_at) {
         clearCart();
         return;
@@ -132,7 +135,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const { cart } = await sdk.store.cart.createLineItem(id, {
         variant_id: variantId,
         quantity,
-      });
+      }, { fields: "+items.variant.product.thumbnail,+items.variant.product.images.url" });
       const updatedItems = lineItemsFromCart(cart);
       setItems(updatedItems);
       if (options?.openDrawer) {
@@ -153,10 +156,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     if (!cartId) return;
     try {
       if (quantity <= 0) {
-        const { parent: cart } = await sdk.store.cart.deleteLineItem(cartId, lineItemId);
+        const { parent: cart } = await sdk.store.cart.deleteLineItem(cartId, lineItemId, { fields: "+items.variant.product.thumbnail,+items.variant.product.images.url" });
         setItems(lineItemsFromCart(cart ?? null));
       } else {
-        const { cart } = await sdk.store.cart.updateLineItem(cartId, lineItemId, { quantity });
+        const { cart } = await sdk.store.cart.updateLineItem(cartId, lineItemId, { quantity }, { fields: "+items.variant.product.thumbnail,+items.variant.product.images.url" });
         setItems(lineItemsFromCart(cart));
       }
     } catch (error) {
@@ -170,7 +173,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const removeFromCart = useCallback(async (lineItemId: string) => {
     if (!cartId) return;
     try {
-      const { parent: cart } = await sdk.store.cart.deleteLineItem(cartId, lineItemId);
+      const { parent: cart } = await sdk.store.cart.deleteLineItem(cartId, lineItemId, { fields: "+items.variant.product.thumbnail,+items.variant.product.images.url" });
       setItems(lineItemsFromCart(cart ?? null));
     } catch (error) {
       console.error("Failed to remove cart line item", error);
