@@ -13,6 +13,11 @@ Run from your laptop; only SSH is required on the target.
 4. **medusa** — bootstraps the DB (migrate/seed/admin), repairs admin credentials if
    needed, reads the publishable key, renders `storefront/.env`, brings the stack up via
    `scripts/compose-up.sh`, and verifies admin login + storefront respond.
+5. **runner** — grants the GitHub Actions self-hosted runner user (`runner_user`, installed
+   and registered manually — it's not part of this playbook) the ACLs it needs to drive
+   deploys from `app_dir` and to read the shared deploy key over SSH, marks `app_dir` as a
+   git `safe.directory` for that user, ensures the host-side npm/Playwright CI caches exist,
+   and points the Docker daemon at the local registry as an insecure registry.
 
 Two non-obvious gotchas are codified here: the root `.env` (compose interpolates
 `MEDUSA_ADMIN_PASSWORD`/`SEED_DEMO_DATA` from it, not `backend/.env`), and fetching the

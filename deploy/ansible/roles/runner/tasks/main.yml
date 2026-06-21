@@ -1,0 +1,75 @@
+---
+# This role assumes the GitHub Actions self-hosted runner service is already
+# installed and registered under {{ runner_user }} (a manual one-time step —
+# see deploy/ansible/README.md). It only grants that existing user the access
+# it needs to drive deploys, and configures the host-level pieces CI relies on
+# (the local registry's insecure-registries entry, npm/Playwright caches).
+
+# ansible.posix.acl would be the declarative way to do this, but every other
+# role in this playbook sticks to ansible.builtin only, so these use
+# `setfacl` directly via the command module instead of adding a collection
+# dependency. Re-running setfacl with the same entry is a no-op.
+- name: Allow the runner user to traverse /root (not list it, not read other files there)
+  ansible.builtin.command: setfacl -m u:{{ runner_user }}:x /root
+  changed_when: false
+
+- name: Grant the runner user full access to the app checkout
+  ansible.builtin.command: setfacl -R -m u:{{ runner_user }}:rwx {{ app_dir }}
+  changed_when: false
+
+- name: Default-grant the same access for files created later (git pull, build artifacts)
+  ansible.builtin.command: setfacl -R -d -m u:{{ runner_user }}:rwx {{ app_dir }}
+  changed_when: false
+
+- name: Allow the runner user to traverse /root/.ssh
+  ansible.builtin.command: setfacl -m u:{{ runner_user }}:x /root/.ssh
+  changed_when: false
+
+- name: Allow the runner user to read the deploy key (reused, not duplicated, so key rotation stays in sync)
+  ansible.builtin.command: setfacl -m u:{{ runner_user }}:r {{ deploy_key_path }}
+  changed_when: false
+
+- name: Ensure the runner user's .ssh directory exists
+  ansible.builtin.file:
+    path: "/home/{{ runner_user }}/.ssh"
+    state: directory
+    owner: "{{ runner_user }}"
+    group: "{{ runner_user }}"
+    mode: "0700"
+
+- name: Configure the runner user's SSH to use the shared deploy key for GitHub
+  ansible.builtin.template:
+    src: ssh_config.j2
+    dest: "/home/{{ runner_user }}/.ssh/config"
+    owner: "{{ runner_user }}"
+    group: "{{ runner_user }}"
+    mode: "0600"
+
+- name: Mark the app checkout as a safe.directory for the runner user (it's root-owned, runner isn't root)
+  ansible.builtin.command: >-
+    git config --global --replace-all safe.directory {{ app_dir }}
+  become: true
+  become_user: "{{ runner_user }}"
+  changed_when: false
+
+- name: Ensure the CI npm/Playwright host caches exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ npm_cache_dir }}"
+    - "{{ playwright_cache_dir }}"
+
+- name: Allow the Docker daemon to push/pull the local registry over plain HTTP
+  ansible.builtin.template:
+    src: daemon.json.j2
+    dest: /etc/docker/daemon.json
+    mode: "0644"
+  register: docker_daemon_config
+
+- name: Restart Docker to pick up the insecure-registries change
+  ansible.builtin.service:
+    name: docker
+    state: restarted
+  when: docker_daemon_config.changed

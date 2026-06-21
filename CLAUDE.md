@@ -149,6 +149,8 @@ Auth uses `emailpass` for both customers and admin users. CORS origins are confi
 - **Immutability**: follow immutable data patterns (never mutate objects in-place).
 - **Component organization**: files under 800 lines; extract utilities and reusable components.
 - **i18n**: bilingual (Spanish/Korean) via `useLanguage` hook and `t` translation object; product metadata fields `name_ko`/`description_ko` for Korean names.
+- **Regression tests on bugfixes**: when a bug is found (especially one a CI gate just caught for the first time), add a test that would have caught it, in the same PR as the fix — not just the fix itself.
+- **Infrastructure changes**: any manual change made directly on a server (permissions, daemon config, SSH setup, cron, etc.) must be reflected as an idempotent task in `deploy/ansible/roles/` in the same PR. Otherwise it's invisible to anyone rebuilding or migrating the box.
 
 ## Environment Variables
 
