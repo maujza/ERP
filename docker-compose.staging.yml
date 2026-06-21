@@ -67,6 +67,12 @@ services:
     environment:
       NODE_ENV: production
       DATABASE_URL: postgres://medusa:medusa@db:5432/medusa?sslmode=disable
+      # backend/.env is tuned for prod, which serves over real HTTPS
+      # (MEDUSA_FORCE_INSECURE_COOKIES=false there). Staging serves over
+      # plain HTTP on 127.0.0.1 — without this override the auth cookie
+      # comes back Secure-flagged and the browser silently drops it,
+      # bouncing every login back to /app/login.
+      MEDUSA_FORCE_INSECURE_COOKIES: "true"
     depends_on:
       db:
         condition: service_healthy
