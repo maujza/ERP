@@ -12,12 +12,14 @@ ENV_FILES=(
   "$ROOT_DIR/storefront/.env.development"
   "$ROOT_DIR/storefront/.env"
 )
+IS_STAGING=false
 
 if [ "${1:-}" = "--project" ]; then
   # erp-staging is the only alternate project this script ever targets, so
   # the matching compose file is implied rather than taking a separate flag.
   COMPOSE_PROJECT_ARGS=(--project-name "$2" --file "$ROOT_DIR/docker-compose.staging.yml")
   ENV_FILES=("$ROOT_DIR/storefront/.env")
+  IS_STAGING=true
 fi
 
 compose() {
@@ -78,6 +80,16 @@ for env_file in "${ENV_FILES[@]}"; do
   upsert_env_var "$env_file" "NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY" "$PUBLISHABLE_KEY"
   upsert_env_var "$env_file" "NEXT_PUBLIC_MEDUSA_REGION_ID" "$REGION_ID"
   upsert_env_var "$env_file" "NEXT_PUBLIC_MEDUSA_COUNTRY_CODE" "ar"
+  if [ "$IS_STAGING" = true ]; then
+    # storefront/.env is the same physical file prod uses, where this is
+    # intentionally set to the real prod domain (e.g. backoffice.aurelia.gleeze.com).
+    # Staging serves over a different origin (127.0.0.1:7458) that prod's CORS
+    # config rightfully doesn't allow, so an inherited absolute backend URL
+    # makes every store API call fail CORS preflight with no products ever
+    # loading. Clearing it falls back to the relative /api/medusa proxy
+    # (same-origin, no CORS involved) per src/lib/medusa.ts's own fallback.
+    upsert_env_var "$env_file" "NEXT_PUBLIC_MEDUSA_BACKEND_URL" ""
+  fi
   echo "Synced ${env_file#"$ROOT_DIR/"}"
 done
 
