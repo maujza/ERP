@@ -147,6 +147,22 @@ jobs:
             node:20-bookworm-slim \
             bash -c 'export ADMIN_EMAIL="$MEDUSA_ADMIN_EMAIL" ADMIN_PASSWORD="$MEDUSA_ADMIN_PASSWORD"; npm ci && npx playwright install --with-deps chromium && npm run test:e2e'
 
+      # Must run before "Tear down staging" removes the containers. Only the
+      # backend/web services matter here — db's logs are just SQL noise, and
+      # backend-init/pos already log inline in their own steps.
+      - name: Dump staging container logs (on failure)
+        if: failure()
+        working-directory: /root/ERP
+        env:
+          IMAGE_TAG: ${{ env.TAG }}
+        run: |
+          echo "::group::backend logs"
+          docker compose --project-name erp-staging -f docker-compose.staging.yml logs backend || true
+          echo "::endgroup::"
+          echo "::group::web logs"
+          docker compose --project-name erp-staging -f docker-compose.staging.yml logs web || true
+          echo "::endgroup::"
+
       - name: Tear down staging
         if: always()
         working-directory: /root/ERP
