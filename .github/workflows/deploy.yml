@@ -64,6 +64,8 @@ jobs:
 
       - name: Build and push web (staging-flavored env)
         working-directory: /root/ERP
+        env:
+          IMAGE_TAG: ${{ env.TAG }}
         run: |
           ./scripts/sync-medusa-env.sh --project erp-staging
           ./scripts/ci-build-and-push.sh web "$TAG"

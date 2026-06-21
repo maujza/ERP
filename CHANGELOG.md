@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+- **.github/workflows/deploy.yml**: "Build and push web (staging-flavored env)" step was missing the `IMAGE_TAG` env var that every other step touching `docker-compose.staging.yml` sets — `sync-medusa-env.sh --project erp-staging` failed to parse the compose file (`IMAGE_TAG` is a required interpolation for `backend`/`backend-init`/`web`/`pos`), surfacing as the misleading "db service is not available" error even though the staging `db` container was healthy
+
 ## [0.2.3.0] - 2026-04-19
 
 ### Changed
