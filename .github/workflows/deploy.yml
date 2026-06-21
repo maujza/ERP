@@ -98,14 +98,16 @@ jobs:
 
       # backend-init creates the staging admin user from MEDUSA_ADMIN_EMAIL/
       # MEDUSA_ADMIN_PASSWORD in backend/.env (not the "supersecret" fallback
-      # the e2e suites default to), so both suites below source that file and
-      # forward it under the ADMIN_EMAIL/ADMIN_PASSWORD names they expect.
+      # the e2e suites default to), so both suites below grep those two values
+      # out and forward them under the ADMIN_EMAIL/ADMIN_PASSWORD names the
+      # suites expect. Not sourcing the file directly: dotenv-style .env files
+      # aren't guaranteed valid shell — e.g. RESEND_FROM's unquoted "<...>"
+      # breaks `source` as redirection syntax.
       - name: Backend admin e2e against staging
         working-directory: /root/ERP
         run: |
-          set -a
-          source backend/.env
-          set +a
+          MEDUSA_ADMIN_EMAIL=$(grep '^MEDUSA_ADMIN_EMAIL=' backend/.env | cut -d= -f2-)
+          MEDUSA_ADMIN_PASSWORD=$(grep '^MEDUSA_ADMIN_PASSWORD=' backend/.env | cut -d= -f2-)
           docker rm -f ci-backend-e2e 2>/dev/null || true
           docker run --rm --network host --name ci-backend-e2e \
             -v /root/ERP:/work -w /work/backend \
@@ -122,9 +124,8 @@ jobs:
       - name: Storefront e2e against staging
         working-directory: /root/ERP
         run: |
-          set -a
-          source backend/.env
-          set +a
+          MEDUSA_ADMIN_EMAIL=$(grep '^MEDUSA_ADMIN_EMAIL=' backend/.env | cut -d= -f2-)
+          MEDUSA_ADMIN_PASSWORD=$(grep '^MEDUSA_ADMIN_PASSWORD=' backend/.env | cut -d= -f2-)
           docker rm -f ci-storefront-e2e 2>/dev/null || true
           docker run --rm --network host --name ci-storefront-e2e \
             -v /root/ERP:/work -w /work/storefront \
