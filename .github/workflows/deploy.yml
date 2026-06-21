@@ -74,33 +74,41 @@ jobs:
           IMAGE_TAG: ${{ env.TAG }}
         run: docker compose --project-name erp-staging -f docker-compose.staging.yml up -d web pos
 
+      # The runner host has no Node installed (everything here runs
+      # dockerized) — these steps run inside a node:20 container instead,
+      # with /root/ERP bind-mounted so npm ci's node_modules and the
+      # Playwright browser cache persist on the host between steps/runs, and
+      # --network host so "localhost" reaches staging's host-bound ports.
       - name: Backend integration tests against staging
-        working-directory: /root/ERP/backend
-        env:
-          DATABASE_URL: postgres://medusa:medusa@localhost:5532/medusa?sslmode=disable
         run: |
-          npm ci --legacy-peer-deps
-          npm run test:integration:modules
-          npm run test:integration:http
+          docker run --rm --network host \
+            -v /root/ERP:/work -w /work/backend \
+            -v /root/.cache/ms-playwright:/root/.cache/ms-playwright \
+            -e DATABASE_URL=postgres://medusa:medusa@localhost:5532/medusa?sslmode=disable \
+            node:20-bookworm-slim \
+            bash -c "npm ci --legacy-peer-deps && npm run test:integration:modules && npm run test:integration:http"
 
       - name: Backend admin e2e against staging
-        working-directory: /root/ERP/backend
-        env:
-          DATABASE_URL: postgres://medusa:medusa@localhost:5532/medusa?sslmode=disable
-          ADMIN_BASE_URL: http://127.0.0.1:9100
-          CI: "true"
-        run: npx playwright install --with-deps chromium && npm run test:e2e
+        run: |
+          docker run --rm --network host \
+            -v /root/ERP:/work -w /work/backend \
+            -v /root/.cache/ms-playwright:/root/.cache/ms-playwright \
+            -e DATABASE_URL=postgres://medusa:medusa@localhost:5532/medusa?sslmode=disable \
+            -e ADMIN_BASE_URL=http://127.0.0.1:9100 \
+            -e CI=true \
+            node:20-bookworm-slim \
+            bash -c "npx playwright install --with-deps chromium && npm run test:e2e"
 
       - name: Storefront e2e against staging
-        working-directory: /root/ERP/storefront
-        env:
-          DATABASE_URL: postgres://medusa:medusa@localhost:5532/medusa?sslmode=disable
-          BASE_URL: http://127.0.0.1:7458
-          CI: "true"
         run: |
-          npm ci
-          npx playwright install --with-deps chromium
-          npm run test:e2e
+          docker run --rm --network host \
+            -v /root/ERP:/work -w /work/storefront \
+            -v /root/.cache/ms-playwright:/root/.cache/ms-playwright \
+            -e DATABASE_URL=postgres://medusa:medusa@localhost:5532/medusa?sslmode=disable \
+            -e BASE_URL=http://127.0.0.1:7458 \
+            -e CI=true \
+            node:20-bookworm-slim \
+            bash -c "npm ci && npx playwright install --with-deps chromium && npm run test:e2e"
 
       - name: Tear down staging
         if: always()

@@ -8,6 +8,11 @@ on:
 jobs:
   checks:
     runs-on: [self-hosted, vps]
+    # Same base image as backend/Dockerfile and storefront/Dockerfile — the
+    # runner host itself has no Node installed (everything here runs
+    # dockerized), so the whole job runs inside this container instead.
+    container:
+      image: node:20-bookworm-slim
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
