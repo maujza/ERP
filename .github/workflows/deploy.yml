@@ -11,7 +11,7 @@ on:
 
 jobs:
   deploy:
-    runs-on: [self-hosted, erp]
+    runs-on: [self-hosted, vps]
     env:
       # promote-to-prod.sh / rollback-prod.sh / infra-healthcheck.sh /
       # production-smoke.sh must run against the persistent clone whose

@@ -7,7 +7,7 @@ on:
 
 jobs:
   checks:
-    runs-on: [self-hosted, erp]
+    runs-on: [self-hosted, vps]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
