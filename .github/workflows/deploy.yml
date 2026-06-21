@@ -81,7 +81,8 @@ jobs:
       # --network host so "localhost" reaches staging's host-bound ports.
       - name: Backend integration tests against staging
         run: |
-          docker run --rm --network host \
+          docker rm -f ci-backend-integration-tests 2>/dev/null || true
+          docker run --rm --network host --name ci-backend-integration-tests \
             -v /root/ERP:/work -w /work/backend \
             -v /root/.cache/ms-playwright:/root/.cache/ms-playwright \
             -v /root/.npm-ci-cache:/root/.npm \
@@ -91,7 +92,8 @@ jobs:
 
       - name: Backend admin e2e against staging
         run: |
-          docker run --rm --network host \
+          docker rm -f ci-backend-e2e 2>/dev/null || true
+          docker run --rm --network host --name ci-backend-e2e \
             -v /root/ERP:/work -w /work/backend \
             -v /root/.cache/ms-playwright:/root/.cache/ms-playwright \
             -v /root/.npm-ci-cache:/root/.npm \
@@ -103,7 +105,8 @@ jobs:
 
       - name: Storefront e2e against staging
         run: |
-          docker run --rm --network host \
+          docker rm -f ci-storefront-e2e 2>/dev/null || true
+          docker run --rm --network host --name ci-storefront-e2e \
             -v /root/ERP:/work -w /work/storefront \
             -v /root/.cache/ms-playwright:/root/.cache/ms-playwright \
             -v /root/.npm-ci-cache:/root/.npm \
