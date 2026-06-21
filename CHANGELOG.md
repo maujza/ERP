@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 - **`storefront/e2e/_customer.ts`**: `PUBLISHABLE_KEY` typed as `string` (was `string | undefined`) — `next build` type-checks `e2e/` since `tsconfig.json` doesn't exclude it, and the old module-level throw guard wasn't narrowed across the functions declared later in the file. This blocked every `web` image rebuild, not just CI.
 - **`storefront/src/app/checkout/__tests__/page.ui.test.tsx`**: updated step assertions for the 3-step checkout flow (shipping method is no longer its own step) — stale since the checkout refactor, never caught because no workflow ran storefront unit tests before `pr-checks.yml`.
+- **`.github/workflows/deploy.yml`**: "Build and push web (staging-flavored env)" step was missing the `IMAGE_TAG` env var that every other step touching `docker-compose.staging.yml` sets — `sync-medusa-env.sh --project erp-staging` failed to parse the compose file (`IMAGE_TAG` is a required interpolation for `backend`/`backend-init`/`web`/`pos`), surfacing as the misleading "db service is not available" error even though the staging `db` container was healthy
 
 ### Changed
 - **`storefront/eslint.config.mjs`**: downgraded `react-hooks/set-state-in-effect` to `warn` — 5 pre-existing call sites are legitimate SSR-sync patterns (window/matchMedia on mount, state resets on dependency change), not bugs, but this is the first time lint has run in CI.
