@@ -11,20 +11,15 @@ jobs:
     # Same base image as backend/Dockerfile and storefront/Dockerfile — the
     # runner host itself has no Node installed (everything here runs
     # dockerized), so the whole job runs inside this container instead.
+    # /root/.npm-ci-cache is the same host-side npm cache deploy.yml's docker
+    # run steps use — a local bind mount, no network round-trip per run.
     container:
       image: node:20-bookworm-slim
+      volumes:
+        - /root/.npm-ci-cache:/root/.npm
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
-
-      # The container is fresh on every run, so without this npm re-downloads
-      # every package from scratch each time. Keyed on both lockfiles so a
-      # change to either invalidates it.
-      - name: Cache npm downloads
-        uses: actions/cache@v4
-        with:
-          path: /root/.npm
-          key: npm-${{ hashFiles('backend/package-lock.json', 'storefront/package-lock.json') }}
 
       - name: Install backend dependencies
         run: npm ci --legacy-peer-deps
