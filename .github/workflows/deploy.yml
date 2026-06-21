@@ -89,6 +89,10 @@ jobs:
             -v /root/.cache/ms-playwright:/root/.cache/ms-playwright \
             -v /root/.npm-ci-cache:/root/.npm \
             -e DATABASE_URL=postgres://medusa:medusa@localhost:5532/medusa?sslmode=disable \
+            -e DB_HOST=localhost \
+            -e DB_PORT=5532 \
+            -e DB_USERNAME=medusa \
+            -e DB_PASSWORD=medusa \
             node:20-bookworm-slim \
             bash -c "npm ci --legacy-peer-deps && npm run test:integration:modules && npm run test:integration:http"
 
