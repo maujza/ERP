@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Added
+- **CI/CD pipeline** (`.github/workflows/pr-checks.yml`, `.github/workflows/deploy.yml`): replaced the deploy-on-the-same-host-as-prod flow with build-once-promote — images are built and pushed to a local Docker registry (`infra/registry/`), validated end-to-end in an ephemeral, resource-capped staging stack (`docker-compose.staging.yml`, its own ports/network/volumes) running migrations, integration tests, and Playwright e2e, and only then promoted to prod (`scripts/promote-to-prod.sh`). A failed post-deploy smoke check triggers an automatic rollback (`scripts/rollback-prod.sh`) to the previously-promoted images. Added a `pr-checks.yml` workflow (lint + unit tests) as a required gate before merging to `main`, where none existed before.
+- **`.github/PULL_REQUEST_TEMPLATE.md`** and a Conventional Commits / changelog convention documented in `CLAUDE.md`, so future decisions are easier to recover (used by Repowise's decision archaeology).
+
+### Fixed
+- **`storefront/e2e/_customer.ts`**: `PUBLISHABLE_KEY` typed as `string` (was `string | undefined`) — `next build` type-checks `e2e/` since `tsconfig.json` doesn't exclude it, and the old module-level throw guard wasn't narrowed across the functions declared later in the file. This blocked every `web` image rebuild, not just CI.
+- **`storefront/src/app/checkout/__tests__/page.ui.test.tsx`**: updated step assertions for the 3-step checkout flow (shipping method is no longer its own step) — stale since the checkout refactor, never caught because no workflow ran storefront unit tests before `pr-checks.yml`.
+
+### Changed
+- **`storefront/eslint.config.mjs`**: downgraded `react-hooks/set-state-in-effect` to `warn` — 5 pre-existing call sites are legitimate SSR-sync patterns (window/matchMedia on mount, state resets on dependency change), not bugs, but this is the first time lint has run in CI.
+
 ## [0.2.3.0] - 2026-04-19
 
 ### Changed
