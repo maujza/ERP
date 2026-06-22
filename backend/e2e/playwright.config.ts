@@ -3,6 +3,14 @@ import path from "path";
 
 export const ADMIN_AUTH_FILE = path.join(__dirname, ".auth/admin.json");
 
+// No fallback to localhost:9000: on the self-hosted CI runner that port is
+// prod's own backend, not a throwaway dev default — a missing var should
+// fail loud, not silently drive admin e2e flows against prod. See
+// CHANGELOG.md.
+if (!process.env.ADMIN_BASE_URL) {
+  throw new Error("ADMIN_BASE_URL is not set. Export it explicitly before running this e2e suite.");
+}
+
 export default defineConfig({
   testDir: ".",
   // Provision a test-scoped catalog before the run and remove it after, so the
@@ -15,7 +23,7 @@ export default defineConfig({
   workers: 1,
   reporter: [["html", { open: "never" }], ["list"]],
   use: {
-    baseURL: process.env.ADMIN_BASE_URL || "http://localhost:9000",
+    baseURL: process.env.ADMIN_BASE_URL,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "on-first-retry",

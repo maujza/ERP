@@ -18,6 +18,12 @@ jobs:
       # directory identity ("erp" by default project naming) is what's
       # actually running prod — not the runner's default checkout workspace.
       DEPLOY_DIR: /root/ERP
+      # Must match the name declared in docker-compose.staging.yml's
+      # `networks.default.name`. The 3 ad-hoc test containers below join
+      # this network instead of the host's, so they can reach staging's
+      # services by name but have no route at all to prod's ports on this
+      # same self-hosted runner — see CHANGELOG.md.
+      STAGING_NETWORK: erp-staging-net
     steps:
       - name: Sync the prod checkout to this commit
         run: |
@@ -91,18 +97,22 @@ jobs:
       # The runner host has no Node installed (everything here runs
       # dockerized) — these steps run inside a node:20 container instead,
       # with /root/ERP bind-mounted so npm ci's node_modules and the
-      # Playwright browser cache persist on the host between steps/runs, and
-      # --network host so "localhost" reaches staging's host-bound ports.
+      # Playwright browser cache persist on the host between steps/runs.
+      # They join $STAGING_NETWORK (the project's own Compose network)
+      # rather than the host's, so service names resolve (db, backend, web)
+      # but there's no network path to whatever else is listening on this
+      # same host — including prod, which runs on this same self-hosted
+      # runner. See CHANGELOG.md.
       - name: Backend integration tests against staging
         run: |
           docker rm -f ci-backend-integration-tests 2>/dev/null || true
-          docker run --rm --network host --name ci-backend-integration-tests \
+          docker run --rm --network "$STAGING_NETWORK" --name ci-backend-integration-tests \
             -v /root/ERP:/work -w /work/backend \
             -v /root/.cache/ms-playwright:/root/.cache/ms-playwright \
             -v /root/.npm-ci-cache:/root/.npm \
-            -e DATABASE_URL=postgres://medusa:medusa@localhost:5532/medusa?sslmode=disable \
-            -e DB_HOST=localhost \
-            -e DB_PORT=5532 \
+            -e DATABASE_URL=postgres://medusa:medusa@db:5432/medusa?sslmode=disable \
+            -e DB_HOST=db \
+            -e DB_PORT=5432 \
             -e DB_USERNAME=medusa \
             -e DB_PASSWORD=medusa \
             node:20-bookworm-slim \
@@ -121,13 +131,13 @@ jobs:
         working-directory: /root/ERP
         run: |
           docker rm -f ci-backend-e2e 2>/dev/null || true
-          docker run --rm --network host --name ci-backend-e2e \
+          docker run --rm --network "$STAGING_NETWORK" --name ci-backend-e2e \
             -v /root/ERP:/work -w /work/backend \
             -v /root/.cache/ms-playwright:/root/.cache/ms-playwright \
             -v /root/.npm-ci-cache:/root/.npm \
             --env-file backend/.env \
-            -e DATABASE_URL=postgres://medusa:medusa@localhost:5532/medusa?sslmode=disable \
-            -e ADMIN_BASE_URL=http://127.0.0.1:9100 \
+            -e DATABASE_URL=postgres://medusa:medusa@db:5432/medusa?sslmode=disable \
+            -e ADMIN_BASE_URL=http://backend:9000 \
             -e CI=true \
             node:20-bookworm-slim \
             bash -c 'export ADMIN_EMAIL="$MEDUSA_ADMIN_EMAIL" ADMIN_PASSWORD="$MEDUSA_ADMIN_PASSWORD"; npx playwright install --with-deps chromium && npm run test:e2e'
@@ -135,20 +145,27 @@ jobs:
       # BACKEND_URL is required by storefront/e2e/_customer.ts (no fallback —
       # see CHANGELOG.md: a missing value here previously defaulted to
       # localhost:9000, which on this self-hosted runner is prod's own
-      # backend port, not staging's). Must point at staging (9100), distinct
-      # from BASE_URL (the storefront under test).
+      # backend port, not staging's). Must point at staging's backend,
+      # distinct from BASE_URL (the storefront under test). --env-file
+      # storefront/.env (synced for staging two steps ago, by "Build and
+      # push web") supplies NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY —
+      # _customer.ts's own fallback reads storefront/.env.development
+      # instead, which sync-medusa-env.sh --project never touches, so
+      # without this it sends a stale (likely prod) key staging's
+      # freshly-bootstrapped database has never seen.
       - name: Storefront e2e against staging
         working-directory: /root/ERP
         run: |
           docker rm -f ci-storefront-e2e 2>/dev/null || true
-          docker run --rm --network host --name ci-storefront-e2e \
+          docker run --rm --network "$STAGING_NETWORK" --name ci-storefront-e2e \
             -v /root/ERP:/work -w /work/storefront \
             -v /root/.cache/ms-playwright:/root/.cache/ms-playwright \
             -v /root/.npm-ci-cache:/root/.npm \
             --env-file backend/.env \
-            -e DATABASE_URL=postgres://medusa:medusa@localhost:5532/medusa?sslmode=disable \
-            -e BASE_URL=http://127.0.0.1:7458 \
-            -e BACKEND_URL=http://127.0.0.1:9100 \
+            --env-file storefront/.env \
+            -e DATABASE_URL=postgres://medusa:medusa@db:5432/medusa?sslmode=disable \
+            -e BASE_URL=http://web:3000 \
+            -e BACKEND_URL=http://backend:9000 \
             -e CI=true \
             node:20-bookworm-slim \
             bash -c 'export ADMIN_EMAIL="$MEDUSA_ADMIN_EMAIL" ADMIN_PASSWORD="$MEDUSA_ADMIN_PASSWORD"; npm ci && npx playwright install --with-deps chromium && npm run test:e2e'
