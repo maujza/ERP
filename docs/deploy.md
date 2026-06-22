@@ -1,150 +1,150 @@
-# Guía de despliegue a producción
+# Production deployment guide
 
-## Arquitectura de producción
+## Production architecture
 
-La aplicación y la infraestructura corren como proyectos Docker Compose
-separados. Nginx Proxy Manager vive en
-`infra/networking/nginx-proxy-manager/compose.yml` y publica los servicios del
-ERP por HTTP/HTTPS mediante la red externa compartida `erp_platform`.
-El monitoreo vive en `infra/monitoring/compose.yml` y se levanta como el
-proyecto `erp-monitoring`.
+The application and the infrastructure run as separate Docker Compose
+projects. Nginx Proxy Manager lives in
+`infra/networking/nginx-proxy-manager/compose.yml` and publishes the ERP's
+services over HTTP/HTTPS via the shared external network `erp_platform`.
+Monitoring lives in `infra/monitoring/compose.yml` and runs as the
+`erp-monitoring` project.
 
-| Servicio | Dominio |
+| Service | Domain |
 |---|---|
 | Storefront | https://aurelia.gleeze.com |
 | Backoffice / Admin | https://backoffice.aurelia.gleeze.com |
 | POS web | https://pos.aurelia.gleeze.com |
-| API Medusa (backend) | https://backoffice.aurelia.gleeze.com (mismo servidor) |
+| Medusa API (backend) | https://backoffice.aurelia.gleeze.com (same server) |
 
 ---
 
-## Deploy automático
+## Automatic deploy
 
-Todo push a `main` (o `workflow_dispatch` manual) dispara
-`.github/workflows/deploy.yml`, que corre en el runner self-hosted (la misma
-VPS que sirve prod) con build-once-promote:
+Every push to `main` (or a manual `workflow_dispatch`) triggers
+`.github/workflows/deploy.yml`, which runs on the self-hosted runner (the
+same VPS that serves prod) with build-once-promote:
 
-1. **Build**: `backend`/`backend-init`/`pos` se buildean una sola vez (sin
-   env baked-in) y se suben al registry local (`scripts/ci-build-and-push.sh`).
-2. **Validación en staging efímero**: se levanta un stack aparte
-   (`docker-compose.staging.yml`, su propia red/puertos/DB) y se corren
-   contra él las migraciones, los tests de integración del backend, y los
-   e2e de Playwright (admin + storefront). `web` se buildea con el
-   `storefront/.env` *staging-flavored* (`NEXT_PUBLIC_*` se hornea en build
-   time, por eso es la única imagen que se buildea dos veces).
-3. **Promote**: solo si todo lo de arriba pasó, `scripts/promote-to-prod.sh`
-   toma un backup de la DB de prod, corre las migraciones contra la base
-   real, y swapea los containers a las imágenes ya validadas.
-4. **Validación post-deploy**: `scripts/infra-healthcheck.sh` (Nginx,
-   Grafana, Prometheus, Portainer, dashboards, alertas, targets, probes) y
-   `scripts/production-smoke.sh` (Playwright contra prod real).
-5. Si el smoke test post-deploy falla, `scripts/rollback-prod.sh` se dispara
-   **automáticamente** y revierte los containers a las imágenes
-   previamente-promovidas (no a la base de datos — ver "Rollback manual"
-   más abajo y `docs/db-restore-runbook.md`).
+1. **Build**: `backend`/`backend-init`/`pos` are built once (no env baked
+   in) and pushed to the local registry (`scripts/ci-build-and-push.sh`).
+2. **Validation in an ephemeral staging stack**: a separate stack is brought
+   up (`docker-compose.staging.yml`, its own network/ports/DB) and
+   migrations, backend integration tests, and Playwright e2e (admin +
+   storefront) run against it. `web` is built with the *staging-flavored*
+   `storefront/.env` (`NEXT_PUBLIC_*` is baked in at build time, which is why
+   it's the only image built twice).
+3. **Promote**: only if everything above passed, `scripts/promote-to-prod.sh`
+   takes a backup of prod's DB, runs migrations against the real database,
+   and swaps the containers to the already-validated images.
+4. **Post-deploy validation**: `scripts/infra-healthcheck.sh` (Nginx,
+   Grafana, Prometheus, Portainer, dashboards, alerts, targets, probes) and
+   `scripts/production-smoke.sh` (Playwright against real prod).
+5. If the post-deploy smoke test fails, `scripts/rollback-prod.sh` fires
+   **automatically** and reverts the containers to the previously-promoted
+   images (not the database — see "Manual rollback" below and
+   `docs/db-restore-runbook.md`).
 
-**Para desplegar**: hacer merge de PR a `main` o push directo a `main`.
+**To deploy**: merge a PR to `main` or push directly to `main`.
 
 ---
 
-## Configuración del servidor (primera vez)
+## Server setup (first time)
 
-El provisioning de una VPS nueva (o migración a otra) está automatizado con
-Ansible — ver **`deploy/ansible/README.md`**: clona el repo, renderiza
-`backend/.env`/`.env` raíz/`storefront/.env` desde el vault, bootstrapea la
-DB, crea el admin, sincroniza claves, y levanta el stack vía
-`scripts/compose-up.sh`. Corré `ansible-playbook site.yml --ask-vault-pass`
-desde tu laptop apuntando a la IP del servidor en `inventory.ini`.
+Provisioning a new VPS (or migrating to another one) is automated with
+Ansible — see **`deploy/ansible/README.md`**: it clones the repo, renders
+`backend/.env`/the root `.env`/`storefront/.env` from the vault, bootstraps
+the DB, creates the admin, syncs keys, and brings up the stack via
+`scripts/compose-up.sh`. Run `ansible-playbook site.yml --ask-vault-pass`
+from your laptop, pointed at the server's IP in `inventory.ini`.
 
-Lo que Ansible **no** automatiza todavía (pasos manuales, una sola vez):
+What Ansible does **not** automate yet (manual, one-time steps):
 
-### 1. Configurar Nginx Proxy Manager
+### 1. Configure Nginx Proxy Manager
 
-El panel de administración escucha solamente en localhost. Abrir un túnel desde
-la máquina local:
+The admin panel only listens on localhost. Open a tunnel from your local
+machine:
 
 ```bash
-ssh -L 8181:127.0.0.1:81 <usuario>@<vps>
+ssh -L 8181:127.0.0.1:81 <user>@<vps>
 ```
 
-Luego entrar a `http://localhost:8181` y crear estos Proxy Hosts:
+Then go to `http://localhost:8181` and create these Proxy Hosts:
 
-| Dominio | Forward hostname | Forward port |
+| Domain | Forward hostname | Forward port |
 |---|---|---|
 | `aurelia.gleeze.com` | `web` | `3000` |
 | `backoffice.aurelia.gleeze.com` | `backend` | `9000` |
 | `pos.aurelia.gleeze.com` | `pos` | `3000` |
 
-Para cada host, solicitar el certificado SSL desde el panel y habilitar
-`Force SSL`. Los puertos públicos de la VPS son `80` y `443`; los servicios
-internos quedan ligados a localhost.
+For each host, request the SSL certificate from the panel and enable
+`Force SSL`. The VPS's public ports are `80` and `443`; the internal
+services stay bound to localhost.
 
-### 2. Registrar el runner de GitHub Actions
+### 2. Register the GitHub Actions runner
 
-En la VPS, instalar el runner self-hosted siguiendo la guía oficial de GitHub:
-**Settings → Actions → Runners → New self-hosted runner** y elegir la
-arquitectura correspondiente al servidor. Una vez instalado y registrado,
-`ansible-playbook site.yml` (role `runner`) le otorga los permisos que
-necesita para correr los deploys (ACLs sobre el checkout, acceso a la deploy
-key, caches de npm/Playwright).
+On the VPS, install the self-hosted runner following GitHub's official
+guide: **Settings → Actions → Runners → New self-hosted runner**, picking
+the architecture that matches the server. Once it's installed and
+registered, `ansible-playbook site.yml` (the `runner` role) grants it the
+permissions it needs to drive deploys (ACLs on the checkout, access to the
+deploy key, npm/Playwright caches).
 
-El runner necesita acceso al directorio del repo y permisos para ejecutar Docker.
-
----
-
-## Flujo de deploy típico
-
-```
-feature/xxx  →  PR a main  →  merge  →  GitHub Actions (deploy.yml)
-  →  build + staging efímero + tests  →  promote-to-prod.sh  →  healthcheck + smoke
-  →  (rollback-prod.sh automático si el smoke falla)
-```
-
-Solo `web` se buildea dos veces (staging y prod tienen `NEXT_PUBLIC_*`
-distintos horneados en build time); el resto se buildea una sola vez y se
-promueve sin reconstruir.
+The runner needs access to the repo directory and permission to run Docker.
 
 ---
 
-## Actualizar credenciales en producción
+## Typical deploy flow
 
-Los archivos `.env` son gitignoreados — no se sobreescriben con `git pull`.
-El checkout de prod en la VPS vive en `/root/ERP` (`DEPLOY_DIR` en
-`deploy.yml`), no en el path de una laptop de desarrollo. Para actualizar:
+```
+feature/xxx  →  PR to main  →  merge  →  GitHub Actions (deploy.yml)
+  →  build + ephemeral staging + tests  →  promote-to-prod.sh  →  healthcheck + smoke
+  →  (automatic rollback-prod.sh if the smoke test fails)
+```
+
+Only `web` is built twice (staging and prod have different `NEXT_PUBLIC_*`
+values baked in at build time); everything else is built once and promoted
+without rebuilding.
+
+---
+
+## Updating production credentials
+
+`.env` files are gitignored — they aren't overwritten by `git pull`. Prod's
+checkout on the VPS lives at `/root/ERP` (`DEPLOY_DIR` in `deploy.yml`), not
+a dev laptop's path. To update:
 
 ```bash
-# En la VPS
+# On the VPS
 nano /root/ERP/backend/.env
 
-# Si cambió una variable de backend
+# If a backend variable changed
 docker compose up -d backend
 
-# Si cambió una NEXT_PUBLIC_* del storefront
+# If a storefront NEXT_PUBLIC_* variable changed
 docker compose up --build web -d
 ```
 
 ---
 
-## Después de destruir el volumen de base de datos
+## After destroying the database volume
 
-`scripts/promote-to-prod.sh` guarda un backup (`.deploy-state/db-backups/`)
-antes de cada migración — ese directorio vive en el filesystem del host, no
-en el volumen Docker (`postgres_data`), así que **sobrevive** si el volumen
-se destruye por error. Antes de reseedear desde cero, revisar si hay un
-backup reciente: ver `docs/db-restore-runbook.md`.
+`scripts/promote-to-prod.sh` saves a backup (`.deploy-state/db-backups/`)
+before every migration — that directory lives on the host filesystem, not
+in the Docker volume (`postgres_data`), so it **survives** if the volume is
+destroyed by mistake. Before reseeding from scratch, check whether there's a
+recent backup: see `docs/db-restore-runbook.md`.
 
-Si de verdad no hay backup usable (o se trata de un ambiente nuevo sin datos
-que recuperar):
+If there's genuinely no usable backup (or this is a new environment with no
+data to recover):
 
 ```bash
 cd /root/ERP
-./scripts/compose-up.sh   # migraciones + bootstrap + sincroniza claves
-# Cargar catálogo manualmente desde https://backoffice.aurelia.gleeze.com/app
+./scripts/compose-up.sh   # migrations + bootstrap + key sync
+# Load the catalog manually from https://backoffice.aurelia.gleeze.com/app
 ```
 
 ---
 
-## Monitoreo básico
+## Basic monitoring
 
 ```bash
 docker compose ps
@@ -157,26 +157,26 @@ curl https://backoffice.aurelia.gleeze.com/health
 
 ---
 
-## Rollback manual
+## Manual rollback
 
-`deploy.yml` ya dispara `scripts/rollback-prod.sh` **automáticamente** si el
-smoke test post-deploy falla — esta sección es para el caso en que el
-problema aparece más tarde (CI ya dio verde, pero algo se rompe horas
-después) y hay que revertir a mano.
+`deploy.yml` already triggers `scripts/rollback-prod.sh` **automatically**
+if the post-deploy smoke test fails — this section is for the case where the
+problem shows up later (CI was already green, but something breaks hours
+afterward) and you need to roll back by hand.
 
-`rollback-prod.sh` solo vuelve a las imágenes previamente-promovidas
-(`erp-*:rollback`, dejadas por la última corrida de `promote-to-prod.sh`) —
-no hace `git reset`, no reconstruye nada, y **deliberadamente no toca la
-base de datos** (las migraciones son forward-only; el código viejo no está
-garantizado a entender un schema que la versión nueva ya migró):
+`rollback-prod.sh` only reverts to the previously-promoted images
+(`erp-*:rollback`, left behind by the last `promote-to-prod.sh` run) — no
+`git reset`, no rebuilding anything, and it **deliberately doesn't touch the
+database** (migrations are forward-only; the old code isn't guaranteed to
+understand a schema the new release already migrated):
 
 ```bash
 cd /root/ERP
 ./scripts/rollback-prod.sh
 ```
 
-Si el problema viene de una migración que corrompió datos (no solo del
-código de la app), el rollback de imágenes no alcanza — ver
-**`docs/db-restore-runbook.md`** para el procedimiento de restore manual de
-la base, deliberadamente separado de este paso porque puede implicar perder
-datos reales escritos después del backup.
+If the problem comes from a migration that corrupted data (not just the
+app's code), an image rollback isn't enough — see
+**`docs/db-restore-runbook.md`** for the manual database restore procedure,
+deliberately kept separate from this step because it can mean losing real
+data written after the backup.
