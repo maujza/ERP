@@ -27,7 +27,19 @@ function readDevEnvVar(key: string): string | undefined {
  * backend. They let the browser test focus on the UI while data is set up via
  * the API.
  */
-export const BACKEND_URL = process.env.BACKEND_URL ?? "http://localhost:9000";
+// No fallback: these helpers call the Medusa admin/store API directly (not
+// through the browser's BASE_URL), and a silent default here once pointed
+// straight at a colocated prod backend on a shared host/port — see
+// CHANGELOG.md. Forcing callers to set this explicitly makes a missing var
+// fail loud instead of writing test data to whatever happens to answer on
+// the default port.
+if (!process.env.BACKEND_URL) {
+  throw new Error(
+    "BACKEND_URL is not set. Export it explicitly (e.g. BACKEND_URL=http://localhost:9000 for local dev " +
+      "against your own backend) before running these e2e helpers."
+  );
+}
+export const BACKEND_URL: string = process.env.BACKEND_URL;
 const _publishableKey =
   process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY ?? readDevEnvVar("NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY");
 
