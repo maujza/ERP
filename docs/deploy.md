@@ -1,184 +1,150 @@
-# Guía de despliegue a producción
+# Production deployment guide
 
-## Arquitectura de producción
+## Production architecture
 
-La aplicación y la infraestructura corren como proyectos Docker Compose
-separados. Nginx Proxy Manager vive en
-`infra/networking/nginx-proxy-manager/compose.yml` y publica los servicios del
-ERP por HTTP/HTTPS mediante la red externa compartida `erp_platform`.
-El monitoreo vive en `infra/monitoring/compose.yml` y se levanta como el
-proyecto `erp-monitoring`.
+The application and the infrastructure run as separate Docker Compose
+projects. Nginx Proxy Manager lives in
+`infra/networking/nginx-proxy-manager/compose.yml` and publishes the ERP's
+services over HTTP/HTTPS via the shared external network `erp_platform`.
+Monitoring lives in `infra/monitoring/compose.yml` and runs as the
+`erp-monitoring` project.
 
-| Servicio | Dominio |
+| Service | Domain |
 |---|---|
 | Storefront | https://aurelia.gleeze.com |
 | Backoffice / Admin | https://backoffice.aurelia.gleeze.com |
 | POS web | https://pos.aurelia.gleeze.com |
-| API Medusa (backend) | https://backoffice.aurelia.gleeze.com (mismo servidor) |
+| Medusa API (backend) | https://backoffice.aurelia.gleeze.com (same server) |
 
 ---
 
-## Deploy automático
+## Automatic deploy
 
-Todo push a `main` dispara el workflow `.github/workflows/deploy-to-rpi.yml`:
+Every push to `main` (or a manual `workflow_dispatch`) triggers
+`.github/workflows/deploy.yml`, which runs on the self-hosted runner (the
+same VPS that serves prod) with build-once-promote:
 
-1. El runner self-hosted en la RPI hace `git pull`
-2. Ejecuta `./scripts/compose-up.sh`
-3. Valida Nginx, Grafana, Prometheus, Portainer, dashboards, alertas y targets
-4. Ejecuta smoke tests de producción con Playwright
-5. Guarda trazas, videos y screenshots como artifacts si hay fallos
+1. **Build**: `backend`/`backend-init`/`pos` are built once (no env baked
+   in) and pushed to the local registry (`scripts/ci-build-and-push.sh`).
+2. **Validation in an ephemeral staging stack**: a separate stack is brought
+   up (`docker-compose.staging.yml`, its own network/ports/DB) and
+   migrations, backend integration tests, and Playwright e2e (admin +
+   storefront) run against it. `web` is built with the *staging-flavored*
+   `storefront/.env` (`NEXT_PUBLIC_*` is baked in at build time, which is why
+   it's the only image built twice).
+3. **Promote**: only if everything above passed, `scripts/promote-to-prod.sh`
+   takes a backup of prod's DB, runs migrations against the real database,
+   and swaps the containers to the already-validated images.
+4. **Post-deploy validation**: `scripts/infra-healthcheck.sh` (Nginx,
+   Grafana, Prometheus, Portainer, dashboards, alerts, targets, probes) and
+   `scripts/production-smoke.sh` (Playwright against real prod).
+5. If the post-deploy smoke test fails, `scripts/rollback-prod.sh` fires
+   **automatically** and reverts the containers to the previously-promoted
+   images (not the database — see "Manual rollback" below and
+   `docs/db-restore-runbook.md`).
 
-El script reconstruye solo las imágenes que cambiaron usando fingerprints en
-`.deploy-state/`. La imagen de Playwright también se reutiliza mientras no
-cambien sus tests, configuración o dependencias.
-
-**Para desplegar**: hacer merge de PR a `main` o push directo a `main`.
+**To deploy**: merge a PR to `main` or push directly to `main`.
 
 ---
 
-## Configuración del servidor (primera vez)
+## Server setup (first time)
 
-### 1. Clonar el repositorio
+Provisioning a new VPS (or migrating to another one) is automated with
+Ansible — see **`deploy/ansible/README.md`**: it clones the repo, renders
+`backend/.env`/the root `.env`/`storefront/.env` from the vault, bootstraps
+the DB, creates the admin, syncs keys, and brings up the stack via
+`scripts/compose-up.sh`. Run `ansible-playbook site.yml --ask-vault-pass`
+from your laptop, pointed at the server's IP in `inventory.ini`.
 
-```bash
-cd /home/akwiek/code
-git clone <repo-url> ERP
-cd ERP
-```
+What Ansible does **not** automate yet (manual, one-time steps):
 
-### 2. Configurar `backend/.env`
+### 1. Configure Nginx Proxy Manager
 
-```bash
-cp backend/.env.example backend/.env
-```
-
-| Variable | Valor en producción |
-|---|---|
-| `DATABASE_URL` | `postgres://medusa:medusa@db:5432/medusa?sslmode=disable` (interno Docker) |
-| `JWT_SECRET` | String secreto |
-| `COOKIE_SECRET` | String secreto |
-| `MEDUSA_ADMIN_PASSWORD` | Contraseña del admin |
-| `MEDUSA_ADMIN_URL` | `https://backoffice.aurelia.gleeze.com` |
-| `MEDUSA_FORCE_INSECURE_COOKIES` | Omitir o `false` en producción con HTTPS |
-| `STORE_CORS` | Dominios de producción + localhost si se necesita |
-| `ADMIN_CORS` | `https://backoffice.aurelia.gleeze.com`, etc. |
-| `AUTH_CORS` | Todos los dominios de producción |
-| `R2_BUCKET` | `aurelia` |
-| `R2_ACCOUNT_ID` | ID de cuenta Cloudflare |
-| `R2_ACCESS_KEY_ID` | Clave de acceso R2 |
-| `R2_SECRET_ACCESS_KEY` | Secret R2 |
-| `R2_ENDPOINT` | `https://<account-id>.r2.cloudflarestorage.com` |
-| `R2_PUBLIC_URL` | `https://pub-xxxx.r2.dev` |
-| `RESEND_API_KEY` | API key de Resend |
-| `RESEND_FROM` | `Aurelia <invitaciones@mail.aurelia.gleeze.com>` |
-| `SEED_DEMO_DATA` | `false` |
-
-### 3. Configurar `infra/.env`
+The admin panel only listens on localhost. Open a tunnel from your local
+machine:
 
 ```bash
-cp infra/.env.example infra/.env
+ssh -L 8181:127.0.0.1:81 <user>@<vps>
 ```
 
-Definir `NGINX_DB_PASSWORD` con una contraseña larga y aleatoria. Este archivo
-es consumido por Docker Compose y no se versiona.
+Then go to `http://localhost:8181` and create these Proxy Hosts:
 
-### 4. Configurar `storefront/.env`
-
-```bash
-cp storefront/.env.example storefront/.env
-```
-
-```bash
-NEXT_PUBLIC_MEDUSA_BACKEND_URL=https://backoffice.aurelia.gleeze.com
-NEXT_PUBLIC_MEDUSA_COUNTRY_CODE=ar
-NEXT_PUBLIC_WHATSAPP_NUMBER=<número>
-NEXT_PUBLIC_SHIPPING_STANDARD_ARS=3900
-NEXT_PUBLIC_SHIPPING_EXPRESS_ARS=7200
-```
-
-`NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY` y `NEXT_PUBLIC_MEDUSA_REGION_ID` se sincronizan automáticamente al correr `compose-up.sh`.
-
-> `MEDUSA_INTERNAL_BACKEND_URL` ya es sobreescrito por `docker-compose.yml` a `http://backend:9000` — no es crítico en este archivo.
-
-### 5. Primer levante
-
-```bash
-./scripts/compose-up.sh
-```
-
-En el primer levante: creación de la red y volúmenes de infraestructura,
-migraciones, bootstrap, creación del admin, sincronización de claves, build de
-las imágenes y arranque de ambos proyectos Compose.
-
-### 6. Configurar Nginx Proxy Manager
-
-El panel de administración escucha solamente en localhost. Abrir un túnel desde
-la máquina local:
-
-```bash
-ssh -L 8181:127.0.0.1:81 <usuario>@<vps>
-```
-
-Luego entrar a `http://localhost:8181` y crear estos Proxy Hosts:
-
-| Dominio | Forward hostname | Forward port |
+| Domain | Forward hostname | Forward port |
 |---|---|---|
 | `aurelia.gleeze.com` | `web` | `3000` |
 | `backoffice.aurelia.gleeze.com` | `backend` | `9000` |
 | `pos.aurelia.gleeze.com` | `pos` | `3000` |
 
-Para cada host, solicitar el certificado SSL desde el panel y habilitar
-`Force SSL`. Los puertos públicos de la VPS son `80` y `443`; los servicios
-internos quedan ligados a localhost.
+For each host, request the SSL certificate from the panel and enable
+`Force SSL`. The VPS's public ports are `80` and `443`; the internal
+services stay bound to localhost.
 
-### 7. Registrar el runner de GitHub Actions
+### 2. Register the GitHub Actions runner
 
-En la VPS, instalar el runner self-hosted siguiendo la guía oficial de GitHub:
-**Settings → Actions → Runners → New self-hosted runner** y elegir la
-arquitectura correspondiente al servidor.
+On the VPS, install the self-hosted runner following GitHub's official
+guide: **Settings → Actions → Runners → New self-hosted runner**, picking
+the architecture that matches the server. Once it's installed and
+registered, `ansible-playbook site.yml` (the `runner` role) grants it the
+permissions it needs to drive deploys (ACLs on the checkout, access to the
+deploy key, npm/Playwright caches).
 
-El runner necesita acceso al directorio del repo y permisos para ejecutar Docker.
-
----
-
-## Flujo de deploy típico
-
-```
-feature/xxx  →  PR a main  →  merge  →  GitHub Actions  →  git pull + compose-up.sh en RPI
-```
-
-Solo se reconstruyen las imágenes cuyo fingerprint cambió.
+The runner needs access to the repo directory and permission to run Docker.
 
 ---
 
-## Actualizar credenciales en producción
+## Typical deploy flow
 
-Los archivos `.env` son gitignoreados — no se sobreescriben con `git pull`. Para actualizar:
+```
+feature/xxx  →  PR to main  →  merge  →  GitHub Actions (deploy.yml)
+  →  build + ephemeral staging + tests  →  promote-to-prod.sh  →  healthcheck + smoke
+  →  (automatic rollback-prod.sh if the smoke test fails)
+```
+
+Only `web` is built twice (staging and prod have different `NEXT_PUBLIC_*`
+values baked in at build time); everything else is built once and promoted
+without rebuilding.
+
+---
+
+## Updating production credentials
+
+`.env` files are gitignored — they aren't overwritten by `git pull`. Prod's
+checkout on the VPS lives at `/root/ERP` (`DEPLOY_DIR` in `deploy.yml`), not
+a dev laptop's path. To update:
 
 ```bash
-# En la VPS
-nano /home/akwiek/code/ERP/backend/.env
+# On the VPS
+nano /root/ERP/backend/.env
 
-# Si cambió una variable de backend
+# If a backend variable changed
 docker compose up -d backend
 
-# Si cambió una NEXT_PUBLIC_* del storefront
+# If a storefront NEXT_PUBLIC_* variable changed
 docker compose up --build web -d
 ```
 
 ---
 
-## Después de destruir el volumen de base de datos
+## After destroying the database volume
+
+`scripts/promote-to-prod.sh` saves a backup (`.deploy-state/db-backups/`)
+before every migration — that directory lives on the host filesystem, not
+in the Docker volume (`postgres_data`), so it **survives** if the volume is
+destroyed by mistake. Before reseeding from scratch, check whether there's a
+recent backup: see `docs/db-restore-runbook.md`.
+
+If there's genuinely no usable backup (or this is a new environment with no
+data to recover):
 
 ```bash
-cd /home/akwiek/code/ERP
-./scripts/compose-up.sh   # migraciones + bootstrap + sincroniza claves
-# Cargar catálogo manualmente desde https://backoffice.aurelia.gleeze.com/app
+cd /root/ERP
+./scripts/compose-up.sh   # migrations + bootstrap + key sync
+# Load the catalog manually from https://backoffice.aurelia.gleeze.com/app
 ```
 
 ---
 
-## Monitoreo básico
+## Basic monitoring
 
 ```bash
 docker compose ps
@@ -191,13 +157,26 @@ curl https://backoffice.aurelia.gleeze.com/health
 
 ---
 
-## Rollback manual
+## Manual rollback
 
-GitHub Actions no hace rollback automático. Si un deploy rompe producción:
+`deploy.yml` already triggers `scripts/rollback-prod.sh` **automatically**
+if the post-deploy smoke test fails — this section is for the case where the
+problem shows up later (CI was already green, but something breaks hours
+afterward) and you need to roll back by hand.
+
+`rollback-prod.sh` only reverts to the previously-promoted images
+(`erp-*:rollback`, left behind by the last `promote-to-prod.sh` run) — no
+`git reset`, no rebuilding anything, and it **deliberately doesn't touch the
+database** (migrations are forward-only; the old code isn't guaranteed to
+understand a schema the new release already migrated):
 
 ```bash
-cd /home/akwiek/code/ERP
-git log --oneline -5
-git reset --hard <hash-bueno>
-./scripts/compose-up.sh
+cd /root/ERP
+./scripts/rollback-prod.sh
 ```
+
+If the problem comes from a migration that corrupted data (not just the
+app's code), an image rollback isn't enough — see
+**`docs/db-restore-runbook.md`** for the manual database restore procedure,
+deliberately kept separate from this step because it can mean losing real
+data written after the backup.

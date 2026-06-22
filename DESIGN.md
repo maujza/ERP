@@ -1,34 +1,34 @@
 # DESIGN.md — Aurelia Frontend Guide
 
-Documento vivo del frontend real de Aurelia. Describe la dirección visual actual, los componentes principales y las decisiones que hoy sí están implementadas.
+Living document of Aurelia's actual frontend. Describes the current visual direction, the main components, and the decisions that are actually implemented today.
 
-**Audiencia:** desarrollo y futuras sesiones sobre UI.  
-**Última actualización:** 2026-04-06
+**Audience:** development and future UI sessions.
+**Last updated:** 2026-04-06
 
-## Producto
+## Product
 
-Aurelia no es solo una tienda. El frontend hoy cubre cuatro superficies distintas:
+Aurelia isn't just a store. The frontend today covers four distinct surfaces:
 
-- storefront B2B/mobile-first
-- catálogo y producto para venta mayorista
+- B2B/mobile-first storefront
+- catalog and product pages for wholesale sales
 - checkout
-- backoffice visual para operación comercial
+- visual backoffice for commercial operations
 
-El stack visual busca que todas esas piezas se sientan parte del mismo producto, sin convertirse en una interfaz corporativa pesada.
+The visual stack aims to make all of those pieces feel like part of the same product, without becoming a heavy corporate interface.
 
-## Dirección visual actual
+## Current visual direction
 
-La app hoy se apoya en estas ideas:
+The app today rests on these ideas:
 
-1. **Base neutra y cálida.** Fondo crema muy claro, superficies blancas y bordes suaves.
-2. **Acento fuerte y comercial.** El color de marca visible es rojo/fucsia, usado para CTA, badges y highlights.
-3. **Tipografía única y limpia.** Toda la app usa Plus Jakarta Sans; no hay hoy una familia display separada.
-4. **Cards primero.** Gran parte de la experiencia vive en tarjetas: producto, filtros, quick actions, módulos de backoffice.
-5. **Header liviano, UI densa abajo.** La navegación es discreta; el contenido importante está en el cuerpo.
+1. **Neutral, warm base.** Very light cream background, white surfaces, soft borders.
+2. **Strong, commercial accent.** The visible brand color is red/fuchsia, used for CTAs, badges, and highlights.
+3. **Single, clean typeface.** The whole app uses Plus Jakarta Sans; there's no separate display family today.
+4. **Cards first.** Most of the experience lives in cards: product, filters, quick actions, backoffice modules.
+5. **Light header, dense UI below.** Navigation is understated; the important content lives in the body.
 
-## Tokens reales
+## Actual tokens
 
-Definidos en [`src/app/globals.css`](/home/akwiek/code/ERP/src/app/globals.css).
+Defined in [`storefront/src/app/globals.css`](storefront/src/app/globals.css).
 
 ```css
 :root {
@@ -47,226 +47,226 @@ Definidos en [`src/app/globals.css`](/home/akwiek/code/ERP/src/app/globals.css).
 }
 ```
 
-## Tipografía real
+## Actual typography
 
-La app usa [`Plus_Jakarta_Sans`](https://fonts.google.com/specimen/Plus+Jakarta+Sans) en [`src/app/layout.tsx`](/home/akwiek/code/ERP/src/app/layout.tsx).
+The app uses [`Plus_Jakarta_Sans`](https://fonts.google.com/specimen/Plus+Jakarta+Sans) in [`storefront/src/app/layout.tsx`](storefront/src/app/layout.tsx).
 
-Reglas actuales:
+Current rules:
 
-- títulos: mismo sans, mayor peso/tamaño
-- cuerpo: mismo sans
-- precios y CTA: mismo sans, mayor contraste y peso
+- headings: same sans, heavier weight/larger size
+- body: same sans
+- prices and CTAs: same sans, higher contrast and weight
 
-No hay hoy una segunda familia serif ni una jerarquía editorial compleja. Si se cambia eso, este documento hay que actualizarlo.
+There's no second serif family or complex editorial hierarchy today. If that changes, this document needs to be updated.
 
-## Superficies principales
+## Main surfaces
 
 ### 1. App shell
 
-Implementada en [`src/components/app-chrome.tsx`](/home/akwiek/code/ERP/src/components/app-chrome.tsx).
+Implemented in [`storefront/src/components/app-chrome.tsx`](storefront/src/components/app-chrome.tsx).
 
-Incluye:
+Includes:
 
 - `SiteHeader`
 - `SiteFooter`
-- botón flotante de WhatsApp
-- sistema de toasts
-- sticky checkout mobile si hay carrito
+- floating WhatsApp button
+- toast system
+- sticky mobile checkout bar if there's a cart
 
-El backoffice convive dentro del mismo shell, pero con menos separación superior.
+The backoffice lives inside the same shell, but with less top-level separation.
 
 ### 2. Header
 
-Características actuales:
+Current characteristics:
 
-- fijo arriba
-- fondo blanco translúcido con blur
-- navegación simple
-- acceso a búsqueda, cuenta y carrito
-- drawer mobile
+- fixed at the top
+- translucent white background with blur
+- simple navigation
+- access to search, account, and cart
+- mobile drawer
 
-La intención correcta es que no robe protagonismo al catálogo.
+The intent is for it not to steal focus from the catalog.
 
-### 3. Fondo global
+### 3. Global background
 
-El `body` no usa color plano. Tiene:
+The `body` doesn't use a flat color. It has:
 
-- gradiente radial rojo suave
-- un radial oscuro casi imperceptible
-- gradiente vertical crema → blanco → crema
+- a soft radial red gradient
+- a barely-perceptible dark radial
+- a vertical cream → white → cream gradient
 
-Eso da atmósfera sin volverse decorativo de más.
+That gives it atmosphere without becoming overly decorative.
 
-## Componentes clave
+## Key components
 
 ### Product Card
 
-Implementada en [`src/components/product-card.tsx`](/home/akwiek/code/ERP/src/components/product-card.tsx).
+Implemented in [`storefront/src/components/product-card.tsx`](storefront/src/components/product-card.tsx).
 
-Comportamiento actual:
+Current behavior:
 
-- imagen como superficie principal
-- corazón de favoritos arriba a la derecha
-- badge de descuento si aplica
-- hover actions en desktop
+- image as the main surface
+- favorites heart in the top right
+- discount badge when applicable
+- hover actions on desktop
 - quick view modal
-- `Seleccionar opciones` en vez de “comprar ya”
-- badge `AGOTADO` si no hay stock
+- "Select options" instead of "buy now"
+- `OUT OF STOCK` badge when there's no inventory
 
-Decisiones de diseño actuales:
+Current design decisions:
 
-- cards blancas con borde negro muy suave
-- radios grandes (`rounded-2xl`)
-- acciones flotantes sobre fondo blanco
-- imagen con leve zoom en hover
+- white cards with a very soft black border
+- large radii (`rounded-2xl`)
+- floating actions over a white background
+- slight zoom on the image on hover
 
 ### Quick View
 
-Se usa para inspección rápida sin salir del contexto.
+Used for quick inspection without leaving the context.
 
-Se dispara desde:
+Triggered from:
 
-- hover button de producto
-- otros puntos interactivos donde corresponda
+- the product hover button
+- other interactive points where it makes sense
 
-La regla correcta es: si el usuario todavía está explorando, evitar sacarlo del flujo con navegación innecesaria.
+The correct rule: if the user is still browsing, avoid pulling them out of the flow with unnecessary navigation.
 
-### Sticky checkout mobile
+### Sticky mobile checkout
 
-Hoy existe y está bien alineado con el producto:
+Exists today and is well aligned with the product:
 
-- solo aparece si hay ítems
-- se oculta en checkout y backoffice
-- muestra cantidad + subtotal + CTA
+- only appears if there are items
+- hidden on checkout and the backoffice
+- shows quantity + subtotal + CTA
 
-Es una pieza importante porque la app tiene uso fuerte en mobile.
+It's an important piece because the app sees heavy mobile usage.
 
-## Páginas y tono visual
+## Pages and visual tone
 
 ### Home
 
-La home hoy combina:
+The home page today combines:
 
-- hero rotativo
-- productos destacados
+- rotating hero
+- featured products
 - quick actions
-- bloques de colecciones
+- collection blocks
 - shop-the-look
 
-Tono visual:
+Visual tone:
 
-- editorial liviano
-- comercial
-- directo
+- light editorial
+- commercial
+- direct
 
-No está diseñada como homepage corporativa sino como arranque de compra.
+It's not designed as a corporate homepage but as a shopping entry point.
 
 ### Catalog
 
-Implementado en [`src/app/catalog/page.tsx`](/home/akwiek/code/ERP/src/app/catalog/page.tsx).
+Implemented in [`storefront/src/app/catalog/page.tsx`](storefront/src/app/catalog/page.tsx).
 
-Patrones actuales:
+Current patterns:
 
-- rail de subcategorías horizontal
-- panel de filtros lateral en desktop
-- modal de filtros en mobile
-- orden y paginación local
-- productos cargados desde Medusa
+- horizontal subcategory rail
+- side filter panel on desktop
+- filter modal on mobile
+- local sorting and pagination
+- products loaded from Medusa
 
-Observación importante:
+Important note:
 
-- hoy la carga de productos es client-side
-- eso hace que el render inicial salga vacío y luego hidrate
-- funcionalmente sirve, pero la UX no es ideal
+- product loading is client-side today
+- that makes the initial render show empty and hydrate afterward
+- it works functionally, but the UX isn't ideal
 
-Mejora recomendada a futuro:
+Recommended future improvement:
 
-- carga inicial server-side para home, catálogo y búsqueda
+- server-side initial load for home, catalog, and search
 
 ### Product page
 
-La product page es más utilitaria que expresiva:
+The product page is more utilitarian than expressive:
 
-- foco en foto, precio, opciones y compra
-- tiene que seguir sintiéndose consistente con la card
+- focus on photo, price, options, and purchase
+- needs to keep feeling consistent with the card
 
 ### Checkout
 
-Debe sentirse más transaccional y menos editorial:
+Should feel more transactional and less editorial:
 
-- claridad
-- validaciones visibles
-- poco ruido visual
-- jerarquía clara entre formulario y resumen
+- clarity
+- visible validation
+- little visual noise
+- clear hierarchy between the form and the summary
 
 ### Backoffice
 
-El backoffice actual no es el admin técnico de Medusa. Es una capa visual propia para operación comercial.
+The current backoffice isn't Medusa's technical admin. It's a custom visual layer for commercial operations.
 
-Debe comunicar:
+It should communicate:
 
 - control
-- lectura rápida
-- módulos
-- datos accionables
+- quick reading
+- modules
+- actionable data
 
-No debería parecer una pantalla heredada del storefront con dos tablas encima. Si se lo siga expandiendo, necesita identidad propia pero manteniendo tokens compartidos.
+It shouldn't look like a storefront screen inherited with two tables bolted on. If it keeps expanding, it needs its own identity while keeping shared tokens.
 
-## Idioma y contenido
+## Language and content
 
-La app ya contempla español y coreano en varias superficies.
+The app already supports Spanish and Korean across several surfaces.
 
-Reglas:
+Rules:
 
-- español es el idioma base
-- coreano es traducción funcional, no una reinterpretación visual
-- labels cortos y comerciales
-- evitar microcopy burocrático
+- Spanish is the base language
+- Korean is a functional translation, not a visual reinterpretation
+- short, commercial labels
+- avoid bureaucratic microcopy
 
 ## Responsive
 
-La app tiene que funcionar bien en:
+The app needs to work well on:
 
-- mobile pequeño
-- tablet vertical
-- desktop ancho
+- small mobile
+- vertical tablet
+- wide desktop
 
-Patrones actuales acertados:
+Current patterns that work well:
 
-- grillas que colapsan a 1 o 2 columnas
-- filtros en drawer mobile
-- sticky checkout mobile
-- hover actions ocultas en touch cuando corresponde
+- grids that collapse to 1 or 2 columns
+- filters in a mobile drawer
+- sticky mobile checkout
+- hover actions hidden on touch where appropriate
 
-## Qué no refleja bien el frontend hoy
+## Where the frontend falls short today
 
-Estos son gaps reales, no bugs de styling:
+These are real gaps, not styling bugs:
 
-1. **Carga de productos demasiado client-side**
-   La home y el catálogo pueden verse vacíos al inicio.
+1. **Product loading too client-side**
+   The home and catalog can look empty at first.
 
-2. **Carga de productos todavía demasiado client-side**
-   Aunque el proxy `/api/medusa` ya simplifica la conectividad, la home y el catálogo siguen hidratando tarde.
+2. **Product loading still too client-side**
+   Even though the `/api/medusa` proxy already simplifies connectivity, the home and catalog still hydrate late.
 
-3. **Documentación visual vieja**
-   La versión anterior de este documento describía otro sistema de color, otra tipografía y otra intención visual.
+3. **Stale visual documentation**
+   The previous version of this document described a different color system, different typography, and a different visual intent.
 
-## Próximas mejoras razonables
+## Reasonable next improvements
 
-Orden recomendado:
+Recommended order:
 
-1. mover carga inicial de productos a server-side
-2. terminar de mover carga inicial a server-side donde tenga sentido
-3. consolidar visualmente storefront y backoffice sin mezclarlos
-4. revisar estados vacíos y de loading para que no parezcan errores
+1. move initial product loading to server-side
+2. finish moving initial loading to server-side wherever it makes sense
+3. visually consolidate the storefront and backoffice without merging them
+4. review empty and loading states so they don't look like errors
 
-## Regla para cambios futuros
+## Rule for future changes
 
-Cuando se cambie alguno de estos elementos, este archivo debe actualizarse:
+When any of these elements changes, this file must be updated:
 
-- tokens en `globals.css`
-- tipografía global
-- comportamiento de `ProductCard`
-- estructura del shell
-- estrategia de carga de productos
-- relación visual entre storefront y backoffice
+- tokens in `globals.css`
+- global typography
+- `ProductCard` behavior
+- shell structure
+- product loading strategy
+- visual relationship between storefront and backoffice

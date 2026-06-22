@@ -195,8 +195,12 @@ Auth uses `emailpass` for both customers and admin users. CORS origins are confi
 
 ## Commits, Pull Requests & Changelog
 
-All commit messages, PR descriptions, CLAUDE.md content, and skills in this
-repo are written in English, regardless of the language used in conversation.
+All commit messages, PR descriptions, CLAUDE.md content, skills, and
+documentation (`README.md`, `DESIGN.md`, everything under `docs/`, runbooks)
+in this repo are written in English, regardless of the language used in
+conversation. This applies to new docs and to edits of existing ones — don't
+leave a doc partially translated; if you're touching a Spanish-language doc
+for any reason, bring the whole file to English in the same change.
 
 ### Commit messages — Conventional Commits
 
