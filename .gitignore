@@ -55,3 +55,6 @@ storefront/.env.development
 !backend/.env.test.example
 !storefront/.env.example
 !storefront/.env.development.example
+
+# repowise local index/cache (regenerable via `repowise init`/`update`, not meant to be shared)
+.repowise/

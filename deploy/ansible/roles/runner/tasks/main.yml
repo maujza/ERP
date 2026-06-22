@@ -73,3 +73,21 @@
     name: docker
     state: restarted
   when: docker_daemon_config.changed
+
+# The CI pipeline's drift-check step (deploy.yml) runs this playbook with
+# --check --diff from the runner itself, rather than over SSH from an
+# operator's laptop — so ansible-playbook needs to exist locally on this box.
+- name: Install ansible-core (needed locally for the CI drift-check step)
+  ansible.builtin.apt:
+    name: ansible-core
+    state: present
+
+# `validate` runs visudo against the rendered file (in a temp location) and
+# only lets `template` move it into place if validation passes — a single
+# atomic, check-mode-safe step, no separate render-then-move dance needed.
+- name: Render the sudoers rule that lets the runner invoke ansible-playbook as root
+  ansible.builtin.template:
+    src: github-runner-ansible.j2
+    dest: /etc/sudoers.d/github-runner-ansible
+    mode: "0440"
+    validate: "visudo -cf %s"

@@ -255,11 +255,41 @@ someone reading the project's history later.
 ### Keeping Repowise current
 
 After pushing a change, run `repowise update` if the `repowise` CLI is
-available — it re-parses changed files and refreshes the dependency graph,
-git history, and the decision records it extracts from `CHANGELOG.md`. This
-is free (index-only; no LLM calls) and keeps `get_why`/`get_risk`/`get_context`
-answering from current commits instead of a stale snapshot. `repowise update
---docs` additionally regenerates the LLM-written wiki pages — that costs real
-tokens, so only run it deliberately (e.g. before relying on `get_context`'s
-full-page summaries for a session of heavy exploration), not as a default
-after every push.
+available — it re-parses changed files and refreshes the dependency graph and
+git history. This is free (index-only; no LLM calls) and keeps
+`get_risk`/`get_context` answering from current commits instead of a stale
+snapshot. `repowise update --docs` additionally regenerates the LLM-written
+wiki pages — that costs real tokens, so only run it deliberately (e.g. before
+relying on `get_context`'s full-page summaries for a session of heavy
+exploration), not as a default after every push.
+
+Note: CHANGELOG-derived decision mining only runs during the initial
+`repowise init`, not incrementally on `update` (confirmed empirically — an
+`update --docs` run produced 18 new wiki pages but added zero new decisions
+despite a session's worth of new `CHANGELOG.md` entries). Until that's
+fixed upstream, record decisions manually — see below.
+
+### Recording architectural decisions
+
+Whenever a change involves a real architectural choice (not just "what
+changed" but "why this approach over the obvious alternative" — e.g. picking
+a CI network topology, reverting an isolation change for one step because of
+an unexplained timeout, removing a dangerous config default after an
+incident), record it directly in Repowise so `get_why` can answer from it
+later instead of surfacing an unrelated old decision or falling back to git
+archaeology:
+
+```bash
+repowise decision add
+```
+
+It's interactive: title, context (what forced the decision), decision (what
+was chosen), rationale (why), then optional rejected alternatives,
+tradeoffs/consequences, affected files, and tags. Pass multi-line answers via
+a heredoc piped to the command if any answer contains an apostrophe or
+backtick, to avoid shell interpolation issues. This is free — no LLM call —
+and the resulting record is `active`/100% confidence immediately, unlike the
+68%-confidence `proposed` records CHANGELOG-mining produces.
+
+Do this in the same PR as the decision, the same way `CHANGELOG.md`'s **Why**
+section is kept current — not as a backlog item.

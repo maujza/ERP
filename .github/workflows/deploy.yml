@@ -32,6 +32,37 @@ jobs:
           git checkout --force "$GITHUB_SHA"
           echo "TAG=$(git rev-parse --short HEAD)" >> "$GITHUB_ENV"
 
+      # Warn-only: compares deploy/ansible/ against the live server's actual
+      # state and flags drift without blocking the deploy or applying
+      # anything. Unlike the app deploy (staged + auto-rollback), infra
+      # changes here touch firewall/sudoers/Docker daemon with no safety net
+      # of their own — auto-applying them unattended on every push is a much
+      # bigger blast radius than a bad app image, so fixing real drift stays
+      # a deliberate, manual `ansible-playbook site.yml --ask-vault-pass`
+      # from an operator's laptop. See CHANGELOG.md.
+      - name: Check for infrastructure drift (Ansible, warn-only)
+        working-directory: /root/ERP
+        continue-on-error: true
+        env:
+          ANSIBLE_VAULT_PASSWORD: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
+        run: |
+          vault_pass_file="$(mktemp)"
+          trap 'rm -f "$vault_pass_file"' EXIT
+          printf '%s' "$ANSIBLE_VAULT_PASSWORD" > "$vault_pass_file"
+          chmod 600 "$vault_pass_file"
+
+          output="$(sudo ansible-playbook \
+            -i deploy/ansible/inventory.ci.ini \
+            --check --diff --become \
+            --vault-password-file "$vault_pass_file" \
+            deploy/ansible/site.yml 2>&1)" || true
+          echo "$output"
+
+          changed="$(printf '%s' "$output" | grep -oP 'changed=\K[0-9]+' | tail -1 || echo 0)"
+          if [ "${changed:-0}" -gt 0 ]; then
+            echo "::warning::Infrastructure drift detected — $changed task(s) in deploy/ansible would change the live server. Review the log above and run 'ansible-playbook site.yml --ask-vault-pass' from your laptop if the change is expected."
+          fi
+
       # If a previous run was cancelled (or the runner crashed) before
       # reaching "Tear down staging", the erp-staging project's containers
       # and anonymous db volume survive — the next run's `up -d db` then
