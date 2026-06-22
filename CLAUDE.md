@@ -251,3 +251,15 @@ When a release is cut, `[Unreleased]` is renamed to the real version + date
 already works, it just stops entries from being lost between PRs. Skip this
 for trivial fixes (typos, formatting) — it's for changes worth explaining to
 someone reading the project's history later.
+
+### Keeping Repowise current
+
+After pushing a change, run `repowise update` if the `repowise` CLI is
+available — it re-parses changed files and refreshes the dependency graph,
+git history, and the decision records it extracts from `CHANGELOG.md`. This
+is free (index-only; no LLM calls) and keeps `get_why`/`get_risk`/`get_context`
+answering from current commits instead of a stale snapshot. `repowise update
+--docs` additionally regenerates the LLM-written wiki pages — that costs real
+tokens, so only run it deliberately (e.g. before relying on `get_context`'s
+full-page summaries for a session of heavy exploration), not as a default
+after every push.
