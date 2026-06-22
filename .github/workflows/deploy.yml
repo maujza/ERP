@@ -132,6 +132,11 @@ jobs:
             node:20-bookworm-slim \
             bash -c 'export ADMIN_EMAIL="$MEDUSA_ADMIN_EMAIL" ADMIN_PASSWORD="$MEDUSA_ADMIN_PASSWORD"; npx playwright install --with-deps chromium && npm run test:e2e'
 
+      # BACKEND_URL is required by storefront/e2e/_customer.ts (no fallback —
+      # see CHANGELOG.md: a missing value here previously defaulted to
+      # localhost:9000, which on this self-hosted runner is prod's own
+      # backend port, not staging's). Must point at staging (9100), distinct
+      # from BASE_URL (the storefront under test).
       - name: Storefront e2e against staging
         working-directory: /root/ERP
         run: |
@@ -143,6 +148,7 @@ jobs:
             --env-file backend/.env \
             -e DATABASE_URL=postgres://medusa:medusa@localhost:5532/medusa?sslmode=disable \
             -e BASE_URL=http://127.0.0.1:7458 \
+            -e BACKEND_URL=http://127.0.0.1:9100 \
             -e CI=true \
             node:20-bookworm-slim \
             bash -c 'export ADMIN_EMAIL="$MEDUSA_ADMIN_EMAIL" ADMIN_PASSWORD="$MEDUSA_ADMIN_PASSWORD"; npm ci && npx playwright install --with-deps chromium && npm run test:e2e'
