@@ -98,21 +98,26 @@ jobs:
       # dockerized) — these steps run inside a node:20 container instead,
       # with /root/ERP bind-mounted so npm ci's node_modules and the
       # Playwright browser cache persist on the host between steps/runs.
-      # They join $STAGING_NETWORK (the project's own Compose network)
-      # rather than the host's, so service names resolve (db, backend, web)
-      # but there's no network path to whatever else is listening on this
-      # same host — including prod, which runs on this same self-hosted
-      # runner. See CHANGELOG.md.
+      #
+      # TEMPORARY A/B: this step alone is back on --network host (with
+      # staging's host-published db port 5532, distinct from prod's 5433 —
+      # see docker-compose.yml — so it still can't reach prod's database)
+      # while we isolate whether $STAGING_NETWORK is what's causing
+      # MedusaTestRunner's inApp boot to hang on its Postgres connection.
+      # Confirmed via manual repro that DNS/raw TCP/pg.Client connect+create
+      # database all work instantly over $STAGING_NETWORK from the same
+      # container — so if this also fails under --network host, the network
+      # change is not the cause. Revert to "$STAGING_NETWORK" once resolved.
       - name: Backend integration tests against staging
         run: |
           docker rm -f ci-backend-integration-tests 2>/dev/null || true
-          docker run --rm --network "$STAGING_NETWORK" --name ci-backend-integration-tests \
+          docker run --rm --network host --name ci-backend-integration-tests \
             -v /root/ERP:/work -w /work/backend \
             -v /root/.cache/ms-playwright:/root/.cache/ms-playwright \
             -v /root/.npm-ci-cache:/root/.npm \
-            -e DATABASE_URL=postgres://medusa:medusa@db:5432/medusa?sslmode=disable \
-            -e DB_HOST=db \
-            -e DB_PORT=5432 \
+            -e DATABASE_URL=postgres://medusa:medusa@localhost:5532/medusa?sslmode=disable \
+            -e DB_HOST=localhost \
+            -e DB_PORT=5532 \
             -e DB_USERNAME=medusa \
             -e DB_PASSWORD=medusa \
             node:20-bookworm-slim \
