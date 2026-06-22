@@ -61,6 +61,33 @@ human in the loop.
 5. Verify before considering this resolved: admin login, the storefront
    catalog loads, and ideally a test order completes end-to-end.
 
+## After restoring: reconcile what the database doesn't know about
+
+A restore only changes what's in Postgres. Two classes of real-world state
+can be out of sync with the now-reverted database, and need manual review —
+this is the actual reason restoring is risky beyond "lost rows":
+
+- **Physical fulfillment already happened.** If an order was picked, packed,
+  or dispatched (`backend/src/workflows/steps/generate-pick-list.ts`,
+  `dispatch-order.ts`) or a purchase order was received into stock
+  (`receive-purchase-order.ts`) after the backup point, restoring puts that
+  order/PO back to an earlier status in the database — but the package may
+  already be with the courier, or the stock may already be on a shelf. Check
+  fulfillment/purchasing activity between the backup timestamp and the
+  restore for anything that needs manual correction (re-marking as shipped,
+  adjusting stock counts) instead of letting the app's normal flow try to
+  redo something that already physically happened.
+- **Customers already got notified.** Order-confirmation
+  (`backend/src/subscribers/order-placed.ts`) and WhatsApp/agent
+  notifications (`backend/src/api/store/notify-agent/route.ts`) for any order
+  placed after the backup point already went out before the restore erased
+  that order from the database. Those customers need a manual, human
+  follow-up — the system has no record to act on afterward.
+
+Cross-check the backup timestamp against order/fulfillment activity in that
+window before considering the incident closed, not just "the app loads
+again."
+
 ## Why this isn't automated
 
 Same reasoning as the warn-only Ansible drift-check in `deploy.yml`: an
