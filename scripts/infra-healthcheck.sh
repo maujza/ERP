@@ -159,40 +159,63 @@ for job in "${expected_jobs[@]}"; do
   echo "  OK: Prometheus job $job"
 done
 
-probe_results="$(
-  curl --get --fail --silent --show-error \
-    --data-urlencode 'query=probe_success' \
-    http://127.0.0.1:9090/api/v1/query
-)"
-failed_probes="$(
-  jq -r '
-    .data.result[]
-    | select(.value[1] != "1")
-    | .metric.instance
-  ' <<<"$probe_results"
-)"
-if [ -n "$failed_probes" ]; then
-  echo "  FAILED: blackbox probes:" >&2
-  printf '%s\n' "$failed_probes" >&2
-  exit 1
-fi
-
 expected_probes=(
   "https://aurelia.gleeze.com/"
   "https://backoffice.aurelia.gleeze.com/health"
   "https://pos.aurelia.gleeze.com/"
   "http://backend:9000/health"
 )
-for probe in "${expected_probes[@]}"; do
-  if ! jq -e --arg probe "$probe" '
-    any(
-      .data.result[];
-      .metric.instance == $probe and .value[1] == "1"
-    )
-  ' <<<"$probe_results" >/dev/null; then
-    echo "  FAILED: expected blackbox probe $probe is missing or down" >&2
+
+# promote-to-prod.sh briefly restarts backend/web/pos when swapping containers
+# (see promote-to-prod.sh). Prometheus's blackbox_exporter only re-probes
+# these targets every scrape_interval (15s, see
+# infra/monitoring/configs/prometheus/prometheus.yml) — querying probe_success
+# immediately after a promote can read the stale pre-restart (down) sample.
+# Retry like every other check in this script instead of failing on a
+# momentary snapshot.
+for attempt in $(seq 1 20); do
+  probe_results="$(
+    curl --get --fail --silent --show-error \
+      --data-urlencode 'query=probe_success' \
+      http://127.0.0.1:9090/api/v1/query
+  )"
+  failed_probes="$(
+    jq -r '
+      .data.result[]
+      | select(.value[1] != "1")
+      | .metric.instance
+    ' <<<"$probe_results"
+  )"
+  missing_probes=()
+  for probe in "${expected_probes[@]}"; do
+    if ! jq -e --arg probe "$probe" '
+      any(
+        .data.result[];
+        .metric.instance == $probe and .value[1] == "1"
+      )
+    ' <<<"$probe_results" >/dev/null; then
+      missing_probes+=("$probe")
+    fi
+  done
+
+  if [ -z "$failed_probes" ] && [ "${#missing_probes[@]}" -eq 0 ]; then
+    break
+  fi
+
+  if [ "$attempt" -eq 20 ]; then
+    if [ -n "$failed_probes" ]; then
+      echo "  FAILED: blackbox probes:" >&2
+      printf '%s\n' "$failed_probes" >&2
+    fi
+    for probe in "${missing_probes[@]:-}"; do
+      [ -n "$probe" ] && echo "  FAILED: expected blackbox probe $probe is missing or down" >&2
+    done
     exit 1
   fi
+  sleep 3
+done
+
+for probe in "${expected_probes[@]}"; do
   echo "  OK: Blackbox probe $probe"
 done
 

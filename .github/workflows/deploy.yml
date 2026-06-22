@@ -99,15 +99,22 @@ jobs:
       # with /root/ERP bind-mounted so npm ci's node_modules and the
       # Playwright browser cache persist on the host between steps/runs.
       #
-      # TEMPORARY A/B: this step alone is back on --network host (with
-      # staging's host-published db port 5532, distinct from prod's 5433 —
-      # see docker-compose.yml — so it still can't reach prod's database)
-      # while we isolate whether $STAGING_NETWORK is what's causing
-      # MedusaTestRunner's inApp boot to hang on its Postgres connection.
-      # Confirmed via manual repro that DNS/raw TCP/pg.Client connect+create
-      # database all work instantly over $STAGING_NETWORK from the same
-      # container — so if this also fails under --network host, the network
-      # change is not the cause. Revert to "$STAGING_NETWORK" once resolved.
+      # Exception to $STAGING_NETWORK below (see CHANGELOG.md): an A/B test
+      # confirmed @medusajs/test-utils' MedusaTestRunner (inApp: true, used
+      # by every integration-tests/http/*.spec.ts suite) reliably hangs on
+      # its Postgres connection under the custom bridge network — 60s
+      # KnexTimeoutErrors on every spec file — even though a manual repro of
+      # DNS/raw TCP/pg.Client connect+create-database all succeeded instantly
+      # over that same network from inside the same container. Root cause
+      # not fully isolated; staying on --network host here, kept safe by
+      # using staging's own host-published db port 5532 (distinct from
+      # prod's 5433) and by this step making no HTTP calls at all (no
+      # BACKEND_URL/ADMIN_BASE_URL — the class of bug that motivated
+      # $STAGING_NETWORK in the first place doesn't apply to this step).
+      # "Backend admin e2e" and "Storefront e2e" below stay on
+      # $STAGING_NETWORK and pass cleanly, confirming the isolation itself
+      # is sound for steps that hit the already-running staging backend over
+      # HTTP rather than booting their own in-process app.
       - name: Backend integration tests against staging
         run: |
           docker rm -f ci-backend-integration-tests 2>/dev/null || true
