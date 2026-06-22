@@ -18,6 +18,12 @@ jobs:
       # directory identity ("erp" by default project naming) is what's
       # actually running prod — not the runner's default checkout workspace.
       DEPLOY_DIR: /root/ERP
+      # Must match the name declared in docker-compose.staging.yml's
+      # `networks.default.name`. The 3 ad-hoc test containers below join
+      # this network instead of the host's, so they can reach staging's
+      # services by name but have no route at all to prod's ports on this
+      # same self-hosted runner — see CHANGELOG.md.
+      STAGING_NETWORK: erp-staging-net
     steps:
       - name: Sync the prod checkout to this commit
         run: |
@@ -25,6 +31,18 @@ jobs:
           git fetch origin "$GITHUB_SHA"
           git checkout --force "$GITHUB_SHA"
           echo "TAG=$(git rev-parse --short HEAD)" >> "$GITHUB_ENV"
+
+      # If a previous run was cancelled (or the runner crashed) before
+      # reaching "Tear down staging", the erp-staging project's containers
+      # and anonymous db volume survive — the next run's `up -d db` then
+      # reuses that stale database, with an admin user/password from
+      # whatever ran before, instead of a clean ephemeral stack. Tearing
+      # down defensively here guarantees every run starts from zero.
+      - name: Clean up any leftover staging stack from a previous run
+        working-directory: /root/ERP
+        env:
+          IMAGE_TAG: ${{ env.TAG }}
+        run: docker compose --project-name erp-staging -f docker-compose.staging.yml down -v --remove-orphans
 
       - name: Build and push backend/backend-init/pos (no env baked in, build-once-promote)
         working-directory: /root/ERP
@@ -79,8 +97,24 @@ jobs:
       # The runner host has no Node installed (everything here runs
       # dockerized) — these steps run inside a node:20 container instead,
       # with /root/ERP bind-mounted so npm ci's node_modules and the
-      # Playwright browser cache persist on the host between steps/runs, and
-      # --network host so "localhost" reaches staging's host-bound ports.
+      # Playwright browser cache persist on the host between steps/runs.
+      #
+      # Exception to $STAGING_NETWORK below (see CHANGELOG.md): an A/B test
+      # confirmed @medusajs/test-utils' MedusaTestRunner (inApp: true, used
+      # by every integration-tests/http/*.spec.ts suite) reliably hangs on
+      # its Postgres connection under the custom bridge network — 60s
+      # KnexTimeoutErrors on every spec file — even though a manual repro of
+      # DNS/raw TCP/pg.Client connect+create-database all succeeded instantly
+      # over that same network from inside the same container. Root cause
+      # not fully isolated; staying on --network host here, kept safe by
+      # using staging's own host-published db port 5532 (distinct from
+      # prod's 5433) and by this step making no HTTP calls at all (no
+      # BACKEND_URL/ADMIN_BASE_URL — the class of bug that motivated
+      # $STAGING_NETWORK in the first place doesn't apply to this step).
+      # "Backend admin e2e" and "Storefront e2e" below stay on
+      # $STAGING_NETWORK and pass cleanly, confirming the isolation itself
+      # is sound for steps that hit the already-running staging backend over
+      # HTTP rather than booting their own in-process app.
       - name: Backend integration tests against staging
         run: |
           docker rm -f ci-backend-integration-tests 2>/dev/null || true
@@ -89,34 +123,80 @@ jobs:
             -v /root/.cache/ms-playwright:/root/.cache/ms-playwright \
             -v /root/.npm-ci-cache:/root/.npm \
             -e DATABASE_URL=postgres://medusa:medusa@localhost:5532/medusa?sslmode=disable \
+            -e DB_HOST=localhost \
+            -e DB_PORT=5532 \
+            -e DB_USERNAME=medusa \
+            -e DB_PASSWORD=medusa \
             node:20-bookworm-slim \
             bash -c "npm ci --legacy-peer-deps && npm run test:integration:modules && npm run test:integration:http"
 
+      # backend-init creates the staging admin user from MEDUSA_ADMIN_EMAIL/
+      # MEDUSA_ADMIN_PASSWORD in backend/.env (not the "supersecret" fallback
+      # the e2e suites default to). --env-file loads that file through
+      # Docker's own dotenv-style parser (same mechanism docker-compose uses
+      # for backend-init/backend, so the value is guaranteed identical to the
+      # one used to create the user) — not bash `source`, which fails on
+      # RESEND_FROM's unquoted "<...>" value. The two vars are remapped to
+      # ADMIN_EMAIL/ADMIN_PASSWORD inside the container, the names the e2e
+      # suites actually read.
       - name: Backend admin e2e against staging
+        working-directory: /root/ERP
         run: |
           docker rm -f ci-backend-e2e 2>/dev/null || true
-          docker run --rm --network host --name ci-backend-e2e \
+          docker run --rm --network "$STAGING_NETWORK" --name ci-backend-e2e \
             -v /root/ERP:/work -w /work/backend \
             -v /root/.cache/ms-playwright:/root/.cache/ms-playwright \
             -v /root/.npm-ci-cache:/root/.npm \
-            -e DATABASE_URL=postgres://medusa:medusa@localhost:5532/medusa?sslmode=disable \
-            -e ADMIN_BASE_URL=http://127.0.0.1:9100 \
+            --env-file backend/.env \
+            -e DATABASE_URL=postgres://medusa:medusa@db:5432/medusa?sslmode=disable \
+            -e ADMIN_BASE_URL=http://backend:9000 \
             -e CI=true \
             node:20-bookworm-slim \
-            bash -c "npx playwright install --with-deps chromium && npm run test:e2e"
+            bash -c 'export ADMIN_EMAIL="$MEDUSA_ADMIN_EMAIL" ADMIN_PASSWORD="$MEDUSA_ADMIN_PASSWORD"; npx playwright install --with-deps chromium && npm run test:e2e'
 
+      # BACKEND_URL is required by storefront/e2e/_customer.ts (no fallback —
+      # see CHANGELOG.md: a missing value here previously defaulted to
+      # localhost:9000, which on this self-hosted runner is prod's own
+      # backend port, not staging's). Must point at staging's backend,
+      # distinct from BASE_URL (the storefront under test). --env-file
+      # storefront/.env (synced for staging two steps ago, by "Build and
+      # push web") supplies NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY —
+      # _customer.ts's own fallback reads storefront/.env.development
+      # instead, which sync-medusa-env.sh --project never touches, so
+      # without this it sends a stale (likely prod) key staging's
+      # freshly-bootstrapped database has never seen.
       - name: Storefront e2e against staging
+        working-directory: /root/ERP
         run: |
           docker rm -f ci-storefront-e2e 2>/dev/null || true
-          docker run --rm --network host --name ci-storefront-e2e \
+          docker run --rm --network "$STAGING_NETWORK" --name ci-storefront-e2e \
             -v /root/ERP:/work -w /work/storefront \
             -v /root/.cache/ms-playwright:/root/.cache/ms-playwright \
             -v /root/.npm-ci-cache:/root/.npm \
-            -e DATABASE_URL=postgres://medusa:medusa@localhost:5532/medusa?sslmode=disable \
-            -e BASE_URL=http://127.0.0.1:7458 \
+            --env-file backend/.env \
+            --env-file storefront/.env \
+            -e DATABASE_URL=postgres://medusa:medusa@db:5432/medusa?sslmode=disable \
+            -e BASE_URL=http://web:3000 \
+            -e BACKEND_URL=http://backend:9000 \
             -e CI=true \
             node:20-bookworm-slim \
-            bash -c "npm ci && npx playwright install --with-deps chromium && npm run test:e2e"
+            bash -c 'export ADMIN_EMAIL="$MEDUSA_ADMIN_EMAIL" ADMIN_PASSWORD="$MEDUSA_ADMIN_PASSWORD"; npm ci && npx playwright install --with-deps chromium && npm run test:e2e'
+
+      # Must run before "Tear down staging" removes the containers. Only the
+      # backend/web services matter here — db's logs are just SQL noise, and
+      # backend-init/pos already log inline in their own steps.
+      - name: Dump staging container logs (on failure)
+        if: failure()
+        working-directory: /root/ERP
+        env:
+          IMAGE_TAG: ${{ env.TAG }}
+        run: |
+          echo "::group::backend logs"
+          docker compose --project-name erp-staging -f docker-compose.staging.yml logs backend || true
+          echo "::endgroup::"
+          echo "::group::web logs"
+          docker compose --project-name erp-staging -f docker-compose.staging.yml logs web || true
+          echo "::endgroup::"
 
       - name: Tear down staging
         if: always()

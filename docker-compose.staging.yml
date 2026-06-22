@@ -15,6 +15,16 @@
 # 127.0.0.1 so they never collide with the prod ports in docker-compose.yml.
 # Resource limits keep a runaway staging build/test run from starving prod on
 # the same host.
+#
+# The network is named explicitly (rather than relying on Compose's implicit
+# "<project>_default" convention) so deploy.yml's ad-hoc test containers can
+# join it by a name declared here, not one inferred from the project flag.
+# Joining this network (instead of --network host) is what makes those test
+# containers physically unable to reach prod's ports on the same host, even
+# if a script/config defaults to the wrong value — see CHANGELOG.md.
+networks:
+  default:
+    name: erp-staging-net
 
 services:
   db:
@@ -67,6 +77,12 @@ services:
     environment:
       NODE_ENV: production
       DATABASE_URL: postgres://medusa:medusa@db:5432/medusa?sslmode=disable
+      # backend/.env is tuned for prod, which serves over real HTTPS
+      # (MEDUSA_FORCE_INSECURE_COOKIES=false there). Staging serves over
+      # plain HTTP on 127.0.0.1 — without this override the auth cookie
+      # comes back Secure-flagged and the browser silently drops it,
+      # bouncing every login back to /app/login.
+      MEDUSA_FORCE_INSECURE_COOKIES: "true"
     depends_on:
       db:
         condition: service_healthy
