@@ -22,3 +22,10 @@ seed_demo_data: true
 whatsapp_number: ""
 shipping_standard_ars: 3900
 shipping_express_ars: 7200
+
+# CI: GitHub Actions self-hosted runner (installed/registered manually, see
+# deploy/ansible/README.md) and the local Docker registry it pushes to.
+runner_user: github-runner
+registry_port: 5000
+npm_cache_dir: /root/.npm-ci-cache
+playwright_cache_dir: /root/.cache/ms-playwright

@@ -149,6 +149,8 @@ Auth uses `emailpass` for both customers and admin users. CORS origins are confi
 - **Immutability**: follow immutable data patterns (never mutate objects in-place).
 - **Component organization**: files under 800 lines; extract utilities and reusable components.
 - **i18n**: bilingual (Spanish/Korean) via `useLanguage` hook and `t` translation object; product metadata fields `name_ko`/`description_ko` for Korean names.
+- **Regression tests on bugfixes**: when a bug is found (especially one a CI gate just caught for the first time), add a test that would have caught it, in the same PR as the fix — not just the fix itself.
+- **Infrastructure changes**: any manual change made directly on a server (permissions, daemon config, SSH setup, cron, etc.) must be reflected as an idempotent task in `deploy/ansible/roles/` in the same PR. Otherwise it's invisible to anyone rebuilding or migrating the box.
 
 ## Environment Variables
 
@@ -190,3 +192,74 @@ Auth uses `emailpass` for both customers and admin users. CORS origins are confi
 - `MEDUSA_INTERNAL_BACKEND_URL` — URL used by `next.config.ts` to rewrite `/api/medusa` requests server-side (defaults to `http://localhost:9000`)
 
 <!-- AUTO-GENERATED END -->
+
+## Commits, Pull Requests & Changelog
+
+All commit messages, PR descriptions, CLAUDE.md content, and skills in this
+repo are written in English, regardless of the language used in conversation.
+
+### Commit messages — Conventional Commits
+
+Follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/):
+
+```text
+<type>(<scope>): <description>
+```
+
+- `type`: `feat`, `fix`, `chore`, `refactor`, `perf`, `test`, `ci`, `docs`, `build`, `style`, `revert`.
+- `scope` (optional): the area touched, e.g. `(storefront)`, `(backend)`, `(e2e)`, `(infra)`.
+- `description`: imperative mood ("add", not "added"/"adds"), no trailing period.
+- Use `!` after the type/scope (e.g. `feat(api)!:`) for breaking changes.
+- A longer body explaining *why* (not just what) is encouraged for anything non-trivial — it's what tools like Repowise use to reconstruct decision rationale when no other record exists.
+
+Example: `fix(e2e): narrow PUBLISHABLE_KEY type to unblock the web build`
+
+### Pull request descriptions
+
+Every PR description follows this structure (see `.github/PULL_REQUEST_TEMPLATE.md`):
+
+```markdown
+## Summary
+- 1-3 bullets on what changed
+
+## Why
+The motivation or decision behind the change — not just what changed, but why this approach.
+
+## Test plan
+- [ ] How this was verified
+```
+
+The **Why** section matters most for non-trivial changes: it's the primary
+signal Repowise indexes (via `CHANGELOG.md` and commit history) to answer
+"why is this code shaped this way" in future sessions.
+
+### Keeping CHANGELOG.md current
+
+Before opening a PR with a non-trivial code or architecture change, add an
+entry to `CHANGELOG.md` under a `## [Unreleased]` section at the top of the
+file (create it if it doesn't exist yet), using the existing format:
+
+```markdown
+## [Unreleased]
+
+### Added | Changed | Removed | Fixed
+- **component/file**: what changed and *why* — not just a description of the diff.
+```
+
+When a release is cut, `[Unreleased]` is renamed to the real version + date
+(matching the existing entries below it) — this doesn't change how versioning
+already works, it just stops entries from being lost between PRs. Skip this
+for trivial fixes (typos, formatting) — it's for changes worth explaining to
+someone reading the project's history later.
+
+### Keeping Repowise current
+
+After pushing a change, run `repowise update` if the `repowise` CLI is
+available — it re-parses changed files and refreshes the dependency graph,
+git history, and the decision records it extracts from `CHANGELOG.md`. This
+is free (index-only; no LLM calls) and keeps `get_why`/`get_risk`/`get_context`
+answering from current commits instead of a stale snapshot. `repowise update
+--docs` additionally regenerates the LLM-written wiki pages — that costs real
+tokens, so only run it deliberately (e.g. before relying on `get_context`'s
+full-page summaries for a session of heavy exploration), not as a default
+after every push.
