@@ -1,8 +1,10 @@
 name: Build, test in staging, promote to prod
 
 # workflow_dispatch lets this run be exercised manually (repeatedly, without
-# waiting for a real push) while the pipeline is being validated. Drop it
-# once confidence is high if a manual trigger isn't wanted long-term.
+# waiting for a real push). Kept intentionally, not just a leftover from
+# validating the pipeline: it carries the same permissions as a push to
+# main (no extra risk) and is the way to deliberately re-trigger a deploy
+# to exercise the automatic rollback path without crafting a broken commit.
 on:
   push:
     branches:
@@ -63,15 +65,35 @@ jobs:
           printf '%s' "$ANSIBLE_VAULT_FILE" > "$vault_file"
           chmod 600 "$vault_file"
 
+          ansible_exit=0
           output="$(sudo ansible-playbook \
             -i deploy/ansible/inventory.ci.ini \
             --check --diff --become \
             --vault-password-file "$vault_pass_file" \
-            deploy/ansible/site.yml 2>&1)" || true
+            deploy/ansible/site.yml 2>&1)" || ansible_exit=$?
           echo "$output"
 
-          changed="$(printf '%s' "$output" | grep -oP 'changed=\K[0-9]+' | tail -1 || echo 0)"
-          if [ "${changed:-0}" -gt 0 ]; then
+          # Isolate the actual PLAY RECAP line ("<host> : ok=.. changed=.. ...")
+          # rather than grepping "changed=" anywhere in the output — and treat
+          # its absence as its own signal. Without this, a vault password
+          # mismatch, broken sudoers rule, or playbook syntax error that kills
+          # ansible-playbook before it reaches the recap left `changed` empty,
+          # which silently read as "no drift" — the exact failure this check
+          # exists to catch, going unnoticed by the check itself.
+          recap="$(printf '%s' "$output" | grep -E '^(localhost|[0-9.]+)\s*: ok=' | tail -1)"
+
+          if [ -z "$recap" ]; then
+            echo "::warning::Infrastructure drift-check did not complete (ansible-playbook exited $ansible_exit before producing a recap) — drift status for this run is UNKNOWN, not necessarily clean. Check the log above (likely a vault password mismatch, sudoers issue, or playbook syntax error) and verify manually with 'ansible-playbook site.yml --check --diff --ask-vault-pass'."
+            exit 0
+          fi
+
+          changed="$(printf '%s' "$recap" | grep -oP 'changed=\K[0-9]+')"
+          failed="$(printf '%s' "$recap" | grep -oP 'failed=\K[0-9]+')"
+          unreachable="$(printf '%s' "$recap" | grep -oP 'unreachable=\K[0-9]+')"
+
+          if [ "${failed:-0}" -gt 0 ] || [ "${unreachable:-0}" -gt 0 ]; then
+            echo "::warning::Infrastructure drift-check ran but $failed task(s) failed / $unreachable host(s) were unreachable during the dry-run — its result for this run can't be trusted as 'no drift'. Check the log above and run 'ansible-playbook site.yml --check --diff --ask-vault-pass' manually."
+          elif [ "${changed:-0}" -gt 0 ]; then
             echo "::warning::Infrastructure drift detected — $changed task(s) in deploy/ansible would change the live server. Review the log above and run 'ansible-playbook site.yml --ask-vault-pass' from your laptop if the change is expected."
           fi
 
