@@ -85,10 +85,26 @@ On the VPS, install the self-hosted runner following GitHub's official
 guide: **Settings → Actions → Runners → New self-hosted runner**, picking
 the architecture that matches the server. Once it's installed and
 registered, `ansible-playbook site.yml` (the `runner` role) grants it the
-permissions it needs to drive deploys (ACLs on the checkout, access to the
-deploy key, npm/Playwright caches).
+permissions it needs to drive deploys (ACLs on the checkout, its own copy of
+the deploy key, npm/Playwright caches), and installs the local `ansible-core`
++ scoped sudoers rule the next step needs.
 
 The runner needs access to the repo directory and permission to run Docker.
+
+### 3. Configure the Ansible vault secrets for the CI drift-check
+
+`deploy.yml` runs a warn-only `ansible-playbook --check --diff` on every
+deploy to catch infrastructure drift (see `CHANGELOG.md`). It needs the same
+vault content the operator's laptop uses, delivered via two repo secrets
+(**Settings → Secrets and variables → Actions → New repository secret**):
+
+| Secret | Value |
+|---|---|
+| `ANSIBLE_VAULT_PASSWORD` | The vault password chosen in `deploy/ansible/README.md`'s first-time setup |
+| `ANSIBLE_VAULT_FILE` | The full encrypted content of `deploy/ansible/group_vars/all/vault.yml` |
+
+Both are written to a temp file on the runner only for the duration of that
+one step, then deleted — never committed to the repo.
 
 ---
 
