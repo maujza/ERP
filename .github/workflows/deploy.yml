@@ -1,8 +1,10 @@
 name: Build, test in staging, promote to prod
 
 # workflow_dispatch lets this run be exercised manually (repeatedly, without
-# waiting for a real push) while the pipeline is being validated. Drop it
-# once confidence is high if a manual trigger isn't wanted long-term.
+# waiting for a real push). Kept intentionally, not just a leftover from
+# validating the pipeline: it carries the same permissions as a push to
+# main (no extra risk) and is the way to deliberately re-trigger a deploy
+# to exercise the automatic rollback path without crafting a broken commit.
 on:
   push:
     branches:
