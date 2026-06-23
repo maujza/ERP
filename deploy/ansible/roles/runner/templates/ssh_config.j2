@@ -1,6 +1,6 @@
 Host github.com
   HostName github.com
   User git
-  IdentityFile {{ deploy_key_path }}
+  IdentityFile /home/{{ runner_user }}/.ssh/erp_deploy
   IdentitiesOnly yes
   StrictHostKeyChecking accept-new

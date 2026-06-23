@@ -39,17 +39,23 @@
     regexp: '- "7358:3000"'
     replace: '- "{{ storefront_port }}:3000"'
 
+# no_log: true here (and on the next task) because this template embeds
+# vault secrets (admin password, seed flag) — a CI drift-check running with
+# --diff would otherwise print the rendered file, secrets included, straight
+# into the GitHub Actions log.
 - name: Render the root .env (admin + seed for compose interpolation)
   ansible.builtin.template:
     src: root.env.j2
     dest: "{{ app_dir }}/.env"
     mode: "0644"
+  no_log: true
 
 - name: Render backend/.env
   ansible.builtin.template:
     src: backend.env.j2
     dest: "{{ app_dir }}/backend/.env"
     mode: "0644"
+  no_log: true
 
 # docker-compose.yml lists storefront/.env as an env_file for the web service,
 # so EVERY compose command (even `up -d db`) fails when it is missing. The

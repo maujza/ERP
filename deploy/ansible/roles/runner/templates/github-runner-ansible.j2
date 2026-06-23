@@ -1,0 +1,5 @@
+# Managed by Ansible (roles/runner) — lets the CI drift-check step invoke
+# ansible-playbook as root without a password. Scoped to the binary, not
+# ALL, since sudoers can't pin the inventory/vault-file paths that vary per
+# invocation without becoming fragile.
+{{ runner_user }} ALL=(root) NOPASSWD: /usr/bin/ansible-playbook

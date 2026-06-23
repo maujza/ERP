@@ -21,12 +21,19 @@
   ansible.builtin.command: setfacl -R -d -m u:{{ runner_user }}:rwx {{ app_dir }}
   changed_when: false
 
-- name: Allow the runner user to traverse /root/.ssh
-  ansible.builtin.command: setfacl -m u:{{ runner_user }}:x /root/.ssh
-  changed_when: false
-
-- name: Allow the runner user to read the deploy key (reused, not duplicated, so key rotation stays in sync)
-  ansible.builtin.command: setfacl -m u:{{ runner_user }}:r {{ deploy_key_path }}
+# Narrower than the rwx grant above: CI only ever greps credentials out of
+# these (see deploy.yml's e2e steps) or doesn't touch them at all — never
+# writes or executes them. Without this override they'd inherit rwx from the
+# recursive grant, which both over-grants write access to production secrets
+# and widens the ACL mask enough that the *.env.j2 templates' `mode: "0644"`
+# never matches reality, making those render tasks falsely report "changed"
+# forever.
+- name: Narrow the runner's access on the rendered .env files to read-only
+  ansible.builtin.command: setfacl -m u:{{ runner_user }}:r {{ item }}
+  loop:
+    - "{{ app_dir }}/.env"
+    - "{{ app_dir }}/backend/.env"
+    - "{{ app_dir }}/storefront/.env"
   changed_when: false
 
 - name: Ensure the runner user's .ssh directory exists
@@ -37,7 +44,25 @@
     group: "{{ runner_user }}"
     mode: "0700"
 
-- name: Configure the runner user's SSH to use the shared deploy key for GitHub
+# A separate copy, not an ACL grant on root's own deploy_key_path: git/ssh's
+# client-side permission check rejects any private key with group/other bits
+# set, regardless of whether the access is really scoped to a named ACL entry
+# (it only looks at the legacy mode bits, which setfacl widens to fit the
+# grant) — sharing the *same* file broke root's own "Clone or update the
+# repository" task the moment this role's ACL grant ran. A plain copy, owned
+# solely by the runner at a clean 0600, sidesteps that entirely. Re-rendered
+# from the same vault secret on every run, so key rotation stays in sync
+# without needing the ACL trick.
+- name: Install the runner's own copy of the deploy key
+  ansible.builtin.copy:
+    content: "{{ vault_github_deploy_key }}"
+    dest: "/home/{{ runner_user }}/.ssh/erp_deploy"
+    owner: "{{ runner_user }}"
+    group: "{{ runner_user }}"
+    mode: "0600"
+  no_log: true
+
+- name: Configure the runner user's SSH to use its own deploy key copy for GitHub
   ansible.builtin.template:
     src: ssh_config.j2
     dest: "/home/{{ runner_user }}/.ssh/config"
@@ -73,3 +98,21 @@
     name: docker
     state: restarted
   when: docker_daemon_config.changed
+
+# The CI pipeline's drift-check step (deploy.yml) runs this playbook with
+# --check --diff from the runner itself, rather than over SSH from an
+# operator's laptop — so ansible-playbook needs to exist locally on this box.
+- name: Install ansible-core (needed locally for the CI drift-check step)
+  ansible.builtin.apt:
+    name: ansible-core
+    state: present
+
+# `validate` runs visudo against the rendered file (in a temp location) and
+# only lets `template` move it into place if validation passes — a single
+# atomic, check-mode-safe step, no separate render-then-move dance needed.
+- name: Render the sudoers rule that lets the runner invoke ansible-playbook as root
+  ansible.builtin.template:
+    src: github-runner-ansible.j2
+    dest: /etc/sudoers.d/github-runner-ansible
+    mode: "0440"
+    validate: "visudo -cf %s"
