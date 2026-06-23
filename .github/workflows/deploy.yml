@@ -45,11 +45,15 @@ jobs:
         continue-on-error: true
         env:
           ANSIBLE_VAULT_PASSWORD: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
+          ANSIBLE_VAULT_FILE: ${{ secrets.ANSIBLE_VAULT_FILE }}
         run: |
           vault_pass_file="$(mktemp)"
-          trap 'rm -f "$vault_pass_file"' EXIT
+          vault_file="deploy/ansible/group_vars/all/vault.yml"
+          trap 'rm -f "$vault_pass_file" "$vault_file"' EXIT
           printf '%s' "$ANSIBLE_VAULT_PASSWORD" > "$vault_pass_file"
           chmod 600 "$vault_pass_file"
+          printf '%s' "$ANSIBLE_VAULT_FILE" > "$vault_file"
+          chmod 600 "$vault_file"
 
           output="$(sudo ansible-playbook \
             -i deploy/ansible/inventory.ci.ini \
