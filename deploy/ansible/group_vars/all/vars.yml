@@ -4,7 +4,10 @@ app_repo: git@github.com:aikirias/ERP.git
 app_branch: main
 deploy_key_path: /root/.ssh/erp_deploy
 
-# Public host used in every URL (an IP today; swap for a domain later).
+# Host-bound ports Nginx Proxy Manager forwards to over the shared
+# erp_platform Docker network (see docs/deploy.md). Used below only for the
+# on-box smoke checks (curl against localhost) and the UFW rules — NOT for
+# the public-facing URLs, which go through the real domains over HTTPS.
 public_host: "159.223.101.210"
 storefront_port: 80
 backend_port: 9000
@@ -12,12 +15,16 @@ backend_port: 9000
 # Docker apt repo architecture (handles both x86 VPS and ARM Raspberry Pi).
 deb_arch: "{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}"
 
-# Derived URLs. Storefront origin omits the port when it is 80.
-storefront_origin: "http://{{ public_host }}{{ '' if storefront_port == 80 else ':' ~ storefront_port }}"
-backend_url: "http://{{ public_host }}:{{ backend_port }}"
+# Public-facing URLs — served over real HTTPS via Nginx Proxy Manager, not
+# directly off public_host/storefront_port/backend_port above (see
+# docs/deploy.md's "Arquitectura de producción" / Proxy Host table).
+storefront_origin: "https://aurelia.gleeze.com"
+backend_url: "https://backoffice.aurelia.gleeze.com"
+pos_origin: "https://pos.aurelia.gleeze.com"
 
 medusa_admin_email: admin@aurelia.com
-seed_demo_data: true
+medusa_force_insecure_cookies: false
+seed_demo_data: false
 
 whatsapp_number: ""
 shipping_standard_ars: 3900
