@@ -1,0 +1,10 @@
+[Interface]
+PrivateKey = {{ vault_wg_vps_private_key }}
+Address = {{ wg_vps_tunnel_address }}
+
+[Peer]
+PublicKey = {{ vault_wg_home_peer_public_key }}
+PresharedKey = {{ vault_wg_preshared_key }}
+AllowedIPs = {{ wg_allowed_ips }}
+Endpoint = {{ vault_wg_endpoint }}
+PersistentKeepalive = 25

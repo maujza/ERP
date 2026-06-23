@@ -1,0 +1,9 @@
+[Unit]
+Description=Run the off-site database backup every {{ nas_backup_interval_hours }} hours
+
+[Timer]
+OnCalendar=*-*-* 0/{{ nas_backup_interval_hours }}:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

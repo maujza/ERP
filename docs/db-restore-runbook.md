@@ -9,21 +9,66 @@ case `rollback-prod.sh` explicitly punts on.
 
 ## Where backups live
 
-`.deploy-state/db-backups/medusa_<TAG>_<UTC timestamp>.sql.gz` on the VPS,
-one per promoted deploy. `<TAG>` is the short commit SHA that was being
-promoted when the backup was taken — match it against deploy history to find
-the backup from right before a specific release.
+`scripts/backup-db.sh` (called by both `promote-to-prod.sh` and a recurring
+systemd timer — see below) writes into one of two independent pools on the
+VPS, never both, and prunes by file age rather than file count (the only
+unit that stays meaningful regardless of how often a deploy happens or how
+the scheduled interval changes):
 
-By default the last **10** backups are kept; older ones are pruned
-automatically after each successful backup. To change that, set
-`DB_BACKUP_RETENTION=<N>` in the VPS's root `.env` (the same file
-`docker-compose.yml` already reads `MEDUSA_ADMIN_PASSWORD`/`SEED_DEMO_DATA`
-from) — no Ansible change needed, it's read directly via `sed` at backup
-time.
+| Pool | Written by | Retention var (root `.env`) | Mirrored to NAS? |
+| --- | --- | --- | --- |
+| `.deploy-state/db-backups/` ("merge") | every deploy (`promote-to-prod.sh`) | `MERGE_BACKUP_RETENTION_DAYS` (default 3) | yes, as a copy — see below |
+| `.deploy-state/db-backups-nas/` ("scheduled") | the `erp-db-backup.timer` systemd timer, every `NAS_BACKUP_INTERVAL_HOURS` hours (default 6) | `NAS_BACKUP_RETENTION_DAYS` (default 10) | yes, newly generated here |
+
+Filenames: `medusa_<label>_<UTC timestamp>.sql.gz`. For the merge pool,
+`<label>` is the short commit SHA being promoted — match it against deploy
+history to find the backup from right before a specific release. For the
+scheduled pool, `<label>` is always `scheduled`.
+
+The merge pool's `--offsite`-less dump never touches the network — a merge
+to `main` must never depend on (or be slowed/blocked by) the home NAS being
+reachable. Only the scheduled run (`--offsite`) talks to the network: it
+mirrors **both** pools (`rsync --delete`, one subfolder per pool so neither
+pool's retention can delete the other's files) over a WireGuard split-tunnel
+into the operator's home LAN, landing on a Synology NAS via its native rsync
+daemon account (`Control Panel -> File Services -> rsync` — not SSH, which
+this NAS restricts to the `administrators` group with no per-user override).
+See `deploy/ansible/roles/backup/` for the Ansible automation (WireGuard
+tunnel + systemd timer) and `deploy/ansible/group_vars/all/vars.yml` for all
+the tunable vars above.
+
+Every dump is integrity-checked immediately after creation (`gzip -t`); a
+corrupt dump is deleted and the script exits non-zero — which, called from
+`promote-to-prod.sh` under `set -euo pipefail`, aborts the deploy rather than
+proceeding without a trustworthy pre-migration backup.
 
 ```bash
-ls -lt .deploy-state/db-backups/
+ls -lt .deploy-state/db-backups/        # merge pool (on the VPS)
+ls -lt .deploy-state/db-backups-nas/    # scheduled pool (on the VPS)
+# On the NAS, both pools also live under the rsync module's merge/ and
+# scheduled/ subfolders — useful if the VPS itself is the thing that's lost.
 ```
+
+### Manual one-time setup (WireGuard peer + NAS rsync account)
+
+The Ansible `backup` role assumes both of these already exist — it doesn't
+create them, since they live outside this repo (the home WireGuard server's
+admin panel and the NAS's own DSM):
+
+1. Add the VPS as a peer on the home WireGuard server (e.g. `wg-easy`),
+   using a **split tunnel**: `AllowedIPs` scoped to the tunnel subnet and the
+   home LAN only (e.g. `10.8.0.0/24,192.168.0.0/24`) — never `0.0.0.0/0`,
+   which would route the VPS's own production traffic through the home
+   connection.
+2. On the NAS (Synology DSM): `Control Panel -> File Services -> rsync` ->
+   enable the rsync service and a dedicated rsync account (not the same as
+   any DSM user/admin login) scoped to a shared folder reserved for backups.
+3. Put the resulting secrets in `vault.yml`: `vault_wg_vps_private_key`,
+   `vault_wg_home_peer_public_key`, `vault_wg_preshared_key`,
+   `vault_wg_endpoint`, `vault_nas_backup_rsync_password`. Put the non-secret
+   connection details (`nas_backup_host`, `nas_backup_module`,
+   `nas_backup_user`, `wg_vps_tunnel_address`, `wg_allowed_ips`) in
+   `vars.yml`.
 
 ## When to restore — and when not to
 

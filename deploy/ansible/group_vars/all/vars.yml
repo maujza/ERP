@@ -36,3 +36,29 @@ runner_user: github-runner
 registry_port: 5000
 npm_cache_dir: /root/.npm-ci-cache
 playwright_cache_dir: /root/.cache/ms-playwright
+
+# Off-site DB backups (see docs/db-restore-runbook.md). Two independent
+# pools, never mixed: "merge" (every deploy, local-only, never touches the
+# network) and "scheduled" (this interval, mirrored to the NAS). Retention is
+# by file age (days), not file count — the only unit that stays meaningful
+# regardless of how often a deploy happens or how nas_backup_interval_hours
+# changes later.
+merge_backup_retention_days: 3
+nas_backup_retention_days: 10
+nas_backup_interval_hours: 6
+
+# WireGuard split-tunnel into the operator's home LAN, where the backup NAS
+# lives — set up manually first (see deploy/ansible/README.md's "First-time
+# setup" for the WireGuard peer + DSM rsync account steps), then automated
+# here. wg_allowed_ips must never include 0.0.0.0/0 — this peer only needs
+# the tunnel subnet and the home LAN, not all of the VPS's own traffic.
+wg_vps_tunnel_address: "10.8.0.5/32"
+wg_allowed_ips: "10.8.0.0/24,192.168.0.0/24"
+
+# Synology DSM rsync daemon account (not SSH — see docs/db-restore-runbook.md
+# for why). nas_backup_module is the DSM shared folder exposed to that
+# account; "merge/" and "scheduled/" subfolders under it map 1:1 to the two
+# local pools above.
+nas_backup_host: "192.168.0.95"
+nas_backup_module: "vps-aurora-backup"
+nas_backup_user: "erp-backup"
