@@ -1,0 +1,70 @@
+---
+# Off-site DB backups: a WireGuard split-tunnel into the operator's home LAN
+# (where the backup NAS lives) plus a systemd timer driving backup-db.sh
+# --offsite. See docs/db-restore-runbook.md for the full design and why NAS
+# instead of R2/WAL archiving, and why a split-tunnel instead of exposing the
+# NAS directly to the internet.
+
+- name: Install WireGuard and rsync
+  ansible.builtin.apt:
+    name: [wireguard, rsync]
+    state: present
+    update_cache: true
+
+# no_log: true — this template embeds the VPS's WireGuard private key and the
+# pre-shared key (see vault.yml.example). Same reasoning as root.env.j2/
+# backend.env.j2 in the app role: a CI drift-check running with --diff would
+# otherwise print the rendered file straight into the GitHub Actions log.
+- name: Render the WireGuard tunnel config
+  ansible.builtin.template:
+    src: wg0.conf.j2
+    dest: /etc/wireguard/wg0.conf
+    mode: "0600"
+  no_log: true
+  register: wg_config
+
+# wg-quick has no built-in "reload" — bouncing the interface is the
+# documented way to pick up a changed PrivateKey/Peer/AllowedIPs.
+- name: Restart the WireGuard tunnel when its config changes
+  ansible.builtin.service:
+    name: wg-quick@wg0
+    state: restarted
+  when: wg_config.changed
+
+- name: Enable the WireGuard tunnel at boot
+  ansible.builtin.service:
+    name: wg-quick@wg0
+    enabled: true
+    state: started
+
+- name: Render the off-site backup systemd service
+  ansible.builtin.template:
+    src: erp-db-backup.service.j2
+    dest: /etc/systemd/system/erp-db-backup.service
+    mode: "0644"
+  register: backup_service
+
+- name: Render the off-site backup systemd timer
+  ansible.builtin.template:
+    src: erp-db-backup.timer.j2
+    dest: /etc/systemd/system/erp-db-backup.timer
+    mode: "0644"
+  register: backup_timer
+
+- name: Reload systemd when the backup unit files change
+  ansible.builtin.systemd:
+    daemon_reload: true
+  when: backup_service.changed or backup_timer.changed
+
+# Skipped under --check on a host that's never run this role before: the
+# unit file render above is itself a no-op in check mode, so the timer
+# genuinely doesn't exist yet for this module to query — not a simulation
+# gap, an actual missing prerequisite check mode can't fake. Once applied
+# for real once, subsequent --check runs see the real unit and this never
+# fires (same reasoning as the medusa role's bootstrap block).
+- name: Enable and start the off-site backup timer
+  ansible.builtin.service:
+    name: erp-db-backup.timer
+    enabled: true
+    state: started
+  when: not ansible_check_mode

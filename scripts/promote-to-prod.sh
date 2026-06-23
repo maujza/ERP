@@ -48,19 +48,10 @@ docker compose up -d db
 # recovery point if a migration corrupts data or breaks the schema. Restore
 # is manual (scripts/restore-db-backup.sh, docs/db-restore-runbook.md), never
 # wired into the automatic rollback path: it would discard any real order/
-# account written between this backup and a later failure.
-echo "Backing up the database before migrating..."
-BACKUP_DIR="$ROOT_DIR/.deploy-state/db-backups"
-mkdir -p "$BACKUP_DIR"
-backup_file="$BACKUP_DIR/medusa_${TAG}_$(date -u +%Y%m%dT%H%M%SZ).sql.gz"
-docker compose exec -T db pg_dump -U medusa -d medusa --clean --if-exists | gzip > "$backup_file"
-echo "Backup written to $backup_file"
-
-DB_BACKUP_RETENTION="$(sed -n 's/^DB_BACKUP_RETENTION=//p' "$ROOT_DIR/.env" 2>/dev/null | tail -1)"
-DB_BACKUP_RETENTION="${DB_BACKUP_RETENTION:-10}"
-ls -1t "$BACKUP_DIR"/medusa_*.sql.gz 2>/dev/null \
-  | tail -n "+$((DB_BACKUP_RETENTION + 1))" \
-  | xargs -r rm -f
+# account written between this backup and a later failure. No --offsite
+# here: a merge to main must never depend on the home NAS being reachable
+# (see scripts/backup-db.sh and docs/db-restore-runbook.md).
+"$ROOT_DIR/scripts/backup-db.sh" "$TAG"
 
 echo "Running migrations and bootstrap against prod..."
 docker compose run --rm backend-init

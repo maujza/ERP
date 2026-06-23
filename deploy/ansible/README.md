@@ -26,6 +26,12 @@ architecture). Run from your laptop; only SSH is required on the target.
    `safe.directory` for that user, ensures the host-side npm/Playwright CI caches exist,
    installs `ansible-core` and a scoped sudoers rule so the CI drift-check below can run
    locally, and points the Docker daemon at the local registry as an insecure registry.
+6. **backup** — installs WireGuard + rsync, renders and brings up a split-tunnel
+   (`/etc/wireguard/wg0.conf`) into the operator's home LAN where the backup NAS lives, and
+   installs a systemd timer (`erp-db-backup.timer`, cadence from `nas_backup_interval_hours`)
+   that runs `scripts/backup-db.sh scheduled --offsite` to mirror DB backups off the VPS. See
+   `docs/db-restore-runbook.md` for the full design and the manual one-time setup (WireGuard
+   peer + Synology rsync account) this role assumes already exists.
 
 Two non-obvious gotchas are codified here: the root `.env` (compose interpolates
 `MEDUSA_ADMIN_PASSWORD`/`SEED_DEMO_DATA` from it, not `backend/.env`), and fetching the
