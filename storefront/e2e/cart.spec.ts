@@ -36,6 +36,8 @@ test.describe("Cart", () => {
   test("cart drawer shows added product (not empty)", async ({ page }) => {
     await addFirstProductToCart(page);
     await page.goto("/");
+    // Wait for localStorage cart hydration before opening the drawer
+    await page.waitForTimeout(1500);
     await page.getByRole("button", { name: /abrir carrito/i }).click();
 
     await expect(
@@ -46,6 +48,8 @@ test.describe("Cart", () => {
   test("can navigate to checkout from cart drawer", async ({ page }) => {
     await addFirstProductToCart(page);
     await page.goto("/");
+    // Wait for localStorage cart hydration before opening the drawer
+    await page.waitForTimeout(1500);
     await page.getByRole("button", { name: /abrir carrito/i }).click();
 
     const checkoutBtn = page.getByRole("link", { name: /checkout|comprar|finalizar/i });

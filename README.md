@@ -1,63 +1,64 @@
 # Aurelia ERP Commerce Stack
 
-Repositorio monorepo para la operación comercial de Aurelia. El stack combina storefront B2B, backoffice visual, backend Medusa, POS y base de datos PostgreSQL.
+Monorepo for Aurelia's commerce operation. The stack combines a B2B storefront, a visual backoffice, a Medusa backend, POS, and a PostgreSQL database.
 
-## Qué incluye
+## What's included
 
-- `storefront/`: storefront y backoffice en Next.js 16.
-- `backend/`: backend Medusa v2 con seeds, migraciones y módulo custom `purchaseDepartment`.
-- `pos/`: POS web/mobile basado en Expo.
-- `docker-compose.yml`: stack local con `db`, `backend-init`, `backend`, `web` y `pos`.
-- `infra/`: stacks de infraestructura independientes, incluido Nginx Proxy Manager.
-- `infra/monitoring/`: Prometheus, Grafana, Node Exporter, Telegraf, Blackbox Exporter y Portainer.
+- `storefront/`: storefront and backoffice in Next.js 16.
+- `backend/`: Medusa v2 backend with seeds, migrations, and the custom `purchaseDepartment` module.
+- `pos/`: Expo-based web/mobile POS.
+- `docker-compose.yml`: local stack with `db`, `backend-init`, `backend`, `web`, and `pos`.
+- `infra/`: independent infrastructure stacks, including Nginx Proxy Manager.
+- `infra/monitoring/`: Prometheus, Grafana, Node Exporter, Telegraf, Blackbox Exporter, and Portainer.
 
-## Documentación
+## Documentation
 
-- [Guía de desarrollo local](docs/local-dev.md) — setup inicial, modos de trabajo, tests, env files
-- [Guía de despliegue](docs/deploy.md) — producción en RPI, GitHub Actions, rollback
-- [Medusa auth & keys](docs/medusa-auth-keys.md) — publishable key, JWT, diagnóstico post-rebuild
+- [Local development guide](docs/local-dev.md) — initial setup, working modes, tests, env files
+- [Deployment guide](docs/deploy.md) — production, CI/CD pipeline, rollback
+- [DB restore runbook](docs/db-restore-runbook.md) — when and how to restore a pre-deploy database backup
+- [Medusa auth & keys](docs/medusa-auth-keys.md) — publishable key, JWT, post-rebuild diagnostics
 
-## Servicios locales
+## Local services
 
-Cuando el stack está levantado:
+When the stack is up:
 
 - Storefront: `http://localhost:7358`
-- Backoffice Medusa: `http://localhost:9000/app`
-- API Medusa: `http://localhost:9000`
+- Medusa backoffice: `http://localhost:9000/app`
+- Medusa API: `http://localhost:9000`
 - POS web: `http://localhost:8081`
 - PostgreSQL: `localhost:5433`
 
-## Levante recomendado
+## Recommended bring-up
 
-El flujo correcto no es `docker compose up` a mano sino:
+The right flow isn't `docker compose up` by hand, but:
 
 ```bash
 ./scripts/compose-up.sh
 ```
 
-Ese script hace lo siguiente:
+That script does the following:
 
-1. levanta PostgreSQL
-2. construye solo las imágenes que cambiaron
-3. corre `backend-init` para migraciones y bootstrap
-4. resincroniza `storefront/.env.development` con publishable key + región actual
-5. recompila `web` solo si cambió su fingerprint
-6. levanta `backend`, `web` y `pos`
-7. levanta Nginx Proxy Manager desde su proyecto Compose independiente
+1. brings up PostgreSQL
+2. builds only the images that changed
+3. runs `backend-init` for migrations and bootstrap
+4. resyncs `storefront/.env.development` with the current publishable key + region
+5. rebuilds `web` only if its fingerprint changed
+6. brings up `backend`, `web`, and `pos`
+7. brings up Nginx Proxy Manager from its own independent Compose project
 
-## Rebuild selectivo
+## Selective rebuild
 
-`./scripts/compose-up.sh` usa fingerprints guardados en `.deploy-state/` para decidir si hay que reconstruir:
+`./scripts/compose-up.sh` uses fingerprints saved under `.deploy-state/` to decide whether a rebuild is needed:
 
 - `backend`
 - `web`
 - `pos`
 
-Eso evita rebuilds innecesarios incluso si el árbol de trabajo tiene cambios locales sin commit.
+That avoids unnecessary rebuilds even if the working tree has uncommitted local changes.
 
-## Variables importantes del storefront
+## Important storefront variables
 
-El storefront depende de estas variables en `storefront/.env` (Docker/prod) o `storefront/.env.development` (local dev):
+The storefront depends on these variables in `storefront/.env` (Docker/prod) or `storefront/.env.development` (local dev):
 
 - `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY`
 - `NEXT_PUBLIC_MEDUSA_REGION_ID`
@@ -66,78 +67,76 @@ El storefront depende de estas variables en `storefront/.env` (Docker/prod) o `s
 - `NEXT_PUBLIC_SHIPPING_STANDARD_ARS`
 - `NEXT_PUBLIC_SHIPPING_EXPRESS_ARS`
 
-La API de Medusa ya no se configura con una URL pública del lado cliente.
-El storefront usa siempre el proxy interno `/api/medusa`, y Next lo reescribe
-hacia `MEDUSA_INTERNAL_BACKEND_URL` del lado servidor.
+The Medusa API is no longer configured with a public client-side URL.
+The storefront always uses the internal `/api/medusa` proxy, and Next
+rewrites it server-side to `MEDUSA_INTERNAL_BACKEND_URL`.
 
-`scripts/sync-medusa-env.sh` actualiza automáticamente:
+`scripts/sync-medusa-env.sh` automatically updates:
 
 - `NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY`
 - `NEXT_PUBLIC_MEDUSA_REGION_ID`
 - `NEXT_PUBLIC_MEDUSA_COUNTRY_CODE`
 
-Después de cambiar una variable `NEXT_PUBLIC_*`, hay que reconstruir `web` para que Next la hornee en el bundle.
+After changing a `NEXT_PUBLIC_*` variable, `web` needs to be rebuilt so Next bakes it into the bundle.
 
-## Docker y build
+## Docker and builds
 
-El repo ya no compila storefront ni backend al arrancar contenedores:
+The repo no longer compiles the storefront or backend when containers start:
 
-- `web` usa Docker multi-stage + `Next standalone`
-- `backend` usa Docker multi-stage con imagen final reducida
-- `backend-init` usa el target `builder` para correr migraciones y bootstrap
+- `web` uses a Docker multi-stage build + `Next standalone`
+- `backend` uses a Docker multi-stage build with a slimmed-down final image
+- `backend-init` uses the `builder` target to run migrations and bootstrap
 
-Tamaños observados luego del ajuste:
+Observed sizes after the adjustment:
 
 - `erp-web:local`: ~`296MB`
 - `erp-backend:local`: ~`673MB`
 - `erp-backend-init:local`: ~`895MB`
 - `erp-pos:local`: ~`241MB`
 
-## Seeds y bootstrap
+## Seeds and bootstrap
 
-El bootstrap corre en `backend/src/scripts/bootstrap.ts`.
+Bootstrap runs in `backend/src/scripts/bootstrap.ts`.
 
-Hace dos chequeos idempotentes:
+It does two idempotent checks:
 
-- si falta la seed base de Medusa, la corre
-- si falta la región de Argentina, corre la seed de Aurelia
+- if Medusa's base seed is missing, it runs it
+- if the Argentina region is missing, it runs Aurelia's seed
 
-Eso evita reseedear todo en cada restart del backend.
+That avoids reseeding everything on every backend restart.
 
-## Desarrollo del frontend
+## Frontend development
 
-El storefront está en `src/` y mezcla:
+The storefront lives under `src/` and mixes:
 
-- home editorial
-- catálogo con filtros
-- producto
+- an editorial home page
+- a catalog with filters
+- product pages
 - checkout
-- búsqueda
-- backoffice visual en `/backoffice`
+- search
+- a visual backoffice at `/backoffice`
 
-Hoy catálogo, búsqueda y destacados cargan productos desde cliente. Eso funciona, pero puede mostrar estado vacío inicial hasta que hidrata. Una mejora pendiente es mover la carga inicial de productos a server-side rendering.
+Today, the catalog, search, and featured products load products client-side. That works, but it can show an empty initial state until it hydrates. A pending improvement is moving the initial product load to server-side rendering.
 
-## Despliegue
+## Deployment
 
-El workflow de GitHub vive en `.github/workflows/deploy-to-rpi.yml` y delega el levante al mismo `./scripts/compose-up.sh`.
+The CI/CD pipeline lives in `.github/workflows/deploy.yml`: build-once-promote with ephemeral staging validation, automatic promotion to prod, and automatic rollback on a failed post-deploy smoke test. See [`docs/deploy.md`](docs/deploy.md) for the full flow.
 
-Eso mantiene alineado el flujo local y el de deploy.
+## Common issues
 
-## Problemas comunes
+- Storefront with no products:
+  usually a stale publishable key/region or an old `web` bundle.
 
-- Storefront sin productos:
-  suele ser una publishable key/región desactualizada o un bundle de `web` viejo.
+- Changed `storefront/.env` and it had no effect:
+  if you touched a `NEXT_PUBLIC_*` variable, rebuild `web`.
 
-- Cambié `storefront/.env` y no impactó:
-  si tocaste una variable `NEXT_PUBLIC_*`, rebuild de `web`.
+- The backend takes a long time on a cold start:
+  the first `backend-init` run can take a while since it runs migrations and a full bootstrap.
 
-- El backend tarda mucho en frío:
-  la primera corrida de `backend-init` puede tardar porque ejecuta migraciones y bootstrap completo.
+- Disk I/O spikes during builds:
+  the big cost is still the backend's first compilation; later runs should reuse the cache and skip rebuilding if nothing changed.
 
-- El HDD se dispara durante builds:
-  el costo grande sigue estando en la primera compilación del backend; las corridas posteriores deberían reutilizar caché y evitar rebuild si no hubo cambios.
-
-## Comandos útiles
+## Useful commands
 
 ```bash
 ./scripts/compose-up.sh
@@ -146,7 +145,7 @@ docker compose ps
 docker compose logs -f backend
 docker compose logs -f web
 docker compose logs -f pos
-docker compose --project-name erp-infra --env-file .env \
+docker compose --project-name erp-infra --env-file infra/.env \
   --file infra/networking/nginx-proxy-manager/compose.yml ps
 ./scripts/sync-medusa-env.sh
 ```
