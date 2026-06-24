@@ -39,7 +39,10 @@ services:
       GF_SMTP_HOST: "smtp.resend.com:587"
       GF_SMTP_USER: "resend"
       GF_SMTP_PASSWORD: ${RESEND_API_KEY:?set RESEND_API_KEY in infra/.env}
-      GF_SMTP_FROM_ADDRESS: ${RESEND_FROM:?set RESEND_FROM in infra/.env}
+      # Bare address only — Grafana's from_address validator rejects the
+      # "Display Name <email>" form RESEND_FROM uses everywhere else; the
+      # display name is supplied separately via GF_SMTP_FROM_NAME above.
+      GF_SMTP_FROM_ADDRESS: ${RESEND_FROM_EMAIL:?set RESEND_FROM_EMAIL in infra/.env}
       GF_SMTP_FROM_NAME: "ERP Monitoring"
       # Read by the $__env{} macro in provisioning/alerting/contact-points.yml.
       MONITORING_ALERT_EMAIL: ${MONITORING_ALERT_EMAIL:?set MONITORING_ALERT_EMAIL in infra/.env}
