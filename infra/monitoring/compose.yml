@@ -32,6 +32,17 @@ services:
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_AUTH_ANONYMOUS_ENABLED: "false"
       GF_SERVER_ROOT_URL: "%(protocol)s://%(domain)s:%(http_port)s/"
+      # Routes alert notifications through Resend's SMTP relay (see
+      # provisioning/alerting/contact-points.yml) instead of a webhook +
+      # custom relay service — reuses what Resend already supports natively.
+      GF_SMTP_ENABLED: "true"
+      GF_SMTP_HOST: "smtp.resend.com:587"
+      GF_SMTP_USER: "resend"
+      GF_SMTP_PASSWORD: ${RESEND_API_KEY:?set RESEND_API_KEY in infra/.env}
+      GF_SMTP_FROM_ADDRESS: ${RESEND_FROM:?set RESEND_FROM in infra/.env}
+      GF_SMTP_FROM_NAME: "ERP Monitoring"
+      # Read by the $__env{} macro in provisioning/alerting/contact-points.yml.
+      MONITORING_ALERT_EMAIL: ${MONITORING_ALERT_EMAIL:?set MONITORING_ALERT_EMAIL in infra/.env}
     volumes:
       - grafana_data:/var/lib/grafana
       - ./configs/grafana/provisioning:/etc/grafana/provisioning:ro

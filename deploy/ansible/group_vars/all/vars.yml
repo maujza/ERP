@@ -46,6 +46,10 @@ playwright_cache_dir: /root/.cache/ms-playwright
 merge_backup_retention_days: 3
 nas_backup_retention_days: 10
 nas_backup_interval_hours: 6
+# Recipients for backup-db.sh's failure alert (scripts/backup-db.sh,
+# notify_failure) — comma-separated, sent via the Resend credentials already
+# in backend/.env. Not a secret, same criterion as public_host below.
+backup_alert_email: "alekwiek@gmail.com,maurojzalazar@gmail.com"
 
 # WireGuard split-tunnel into the operator's home LAN, where the backup NAS
 # lives — set up manually first (see deploy/ansible/README.md's "First-time
