@@ -106,7 +106,15 @@ jobs:
           # ansible-playbook before it reaches the recap left `changed` empty,
           # which silently read as "no drift" — the exact failure this check
           # exists to catch, going unnoticed by the check itself.
-          recap="$(printf '%s' "$output" | grep -E '^(localhost|[0-9.]+)\s*: ok=' | tail -1)"
+          #
+          # Matches the recap's actual field structure (": ok=N changed=N
+          # unreachable=N failed=N"), not a guessed hostname shape — the
+          # previous "^(localhost|[0-9.]+)" pattern never matched this repo's
+          # real host alias ("prod", from inventory.ci.ini), so this check
+          # silently reported "did not complete" on every single run
+          # regardless of the real outcome, confirmed by manually replaying
+          # this exact step against the live VPS.
+          recap="$(printf '%s' "$output" | grep -E ': ok=[0-9]+ +changed=[0-9]+ +unreachable=[0-9]+ +failed=[0-9]+' | tail -1)"
 
           if [ -z "$recap" ]; then
             message="Infrastructure drift-check did not complete (ansible-playbook exited $ansible_exit before producing a recap) — drift status for this run is UNKNOWN, not necessarily clean. Check the log above (likely a vault password mismatch, sudoers issue, or playbook syntax error) and verify manually with 'ansible-playbook site.yml --check --diff --ask-vault-pass'."
