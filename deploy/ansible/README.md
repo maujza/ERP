@@ -14,16 +14,18 @@ architecture). Run from your laptop; only SSH is required on the target.
 3. **app** — installs the GitHub deploy key, clones the repo, maps the storefront to the
    public port, and renders `backend/.env` + the root `.env` with the real domains
    (`storefront_origin`, `backend_url`, `pos_origin`) and secure-cookie setting.
-4. **medusa** — bootstraps the DB (migrate/seed/admin), repairs admin credentials if
-   needed, reads the publishable key, renders `storefront/.env`, brings the stack up via
-   `scripts/compose-up.sh`, and verifies admin login + storefront respond.
-5. **infra** — renders `infra/.env` (nginx-proxy-manager's MariaDB password,
+4. **infra** — renders `infra/.env` (nginx-proxy-manager's MariaDB password,
    Grafana/Portainer admin credentials, the Resend API key/from-address and alert
    recipients used by Grafana's mail contact point), then recreates the `erp-infra` and
    `erp-monitoring` compose projects only when that file actually changed. Closes the one
    `.env` in this repo that was still hand-edited on the VPS — historical accident
    (`infra/monitoring` predates Ansible existing in this repo), not a deliberate choice.
-   Must run before **runner** below, which narrows this file's ACL.
+   Must run before **medusa** below — `medusa`'s `compose-up.sh` step also (re)starts the
+   monitoring compose project, which needs `infra/.env` already in place — and before
+   **runner**, which narrows this file's ACL.
+5. **medusa** — bootstraps the DB (migrate/seed/admin), repairs admin credentials if
+   needed, reads the publishable key, renders `storefront/.env`, brings the stack up via
+   `scripts/compose-up.sh`, and verifies admin login + storefront respond.
 6. **runner** — grants the GitHub Actions self-hosted runner user (`runner_user`, installed
    and registered manually — it's not part of this playbook) the ACLs it needs to drive
    deploys from `app_dir`, a separate copy of the deploy key (re-rendered from the same
