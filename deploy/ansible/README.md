@@ -17,21 +17,34 @@ architecture). Run from your laptop; only SSH is required on the target.
 4. **medusa** — bootstraps the DB (migrate/seed/admin), repairs admin credentials if
    needed, reads the publishable key, renders `storefront/.env`, brings the stack up via
    `scripts/compose-up.sh`, and verifies admin login + storefront respond.
-5. **runner** — grants the GitHub Actions self-hosted runner user (`runner_user`, installed
+5. **infra** — renders `infra/.env` (nginx-proxy-manager's MariaDB password,
+   Grafana/Portainer admin credentials, the Resend API key/from-address and alert
+   recipients used by Grafana's mail contact point), then recreates the `erp-infra` and
+   `erp-monitoring` compose projects only when that file actually changed. Closes the one
+   `.env` in this repo that was still hand-edited on the VPS — historical accident
+   (`infra/monitoring` predates Ansible existing in this repo), not a deliberate choice.
+   Must run before **runner** below, which narrows this file's ACL.
+6. **runner** — grants the GitHub Actions self-hosted runner user (`runner_user`, installed
    and registered manually — it's not part of this playbook) the ACLs it needs to drive
    deploys from `app_dir`, a separate copy of the deploy key (re-rendered from the same
    vault secret every run — not ACL-shared with root's own key, since git/ssh reject any
    private key with group/other bits regardless of whether the access is really scoped to a
-   named ACL entry), read-only access to the rendered `.env` files, marks `app_dir` as a git
-   `safe.directory` for that user, ensures the host-side npm/Playwright CI caches exist,
-   installs `ansible-core` and a scoped sudoers rule so the CI drift-check below can run
-   locally, and points the Docker daemon at the local registry as an insecure registry.
-6. **backup** — installs WireGuard + rsync, renders and brings up a split-tunnel
+   named ACL entry), read-only access to the rendered `.env` files (including `infra/.env`),
+   marks `app_dir` as a git `safe.directory` for that user, ensures the host-side
+   npm/Playwright CI caches exist, installs `ansible-core` and a scoped sudoers rule so the
+   CI drift-check below can run locally, and points the Docker daemon at the local registry
+   as an insecure registry.
+7. **backup** — installs WireGuard + rsync, renders and brings up a split-tunnel
    (`/etc/wireguard/wg0.conf`) into the operator's home LAN where the backup NAS lives, and
    installs a systemd timer (`erp-db-backup.timer`, cadence from `nas_backup_interval_hours`)
    that runs `scripts/backup-db.sh scheduled --offsite` to mirror DB backups off the VPS. See
    `docs/db-restore-runbook.md` for the full design and the manual one-time setup (WireGuard
    peer + Synology rsync account) this role assumes already exists.
+
+The CI drift-check (`.github/workflows/deploy.yml`) also mails
+`MONITORING_ALERT_EMAIL` via the same Resend credentials when it detects drift,
+a failed/unreachable dry-run, or a check that didn't complete — see `scripts/send-resend-mail.sh`. It degrades to just its existing `::warning::` if `infra/.env`
+doesn't have Resend configured yet.
 
 Two non-obvious gotchas are codified here: the root `.env` (compose interpolates
 `MEDUSA_ADMIN_PASSWORD`/`SEED_DEMO_DATA` from it, not `backend/.env`), and fetching the

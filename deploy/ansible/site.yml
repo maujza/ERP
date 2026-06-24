@@ -8,5 +8,9 @@
     - firewall
     - app
     - medusa
+    # infra renders infra/.env before runner narrows that file's ACL to
+    # read-only — must stay ahead of runner in this list, same reasoning as
+    # app/medusa running before runner for backend/.env and storefront/.env.
+    - infra
     - runner
     - backup

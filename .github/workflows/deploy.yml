@@ -57,6 +57,32 @@ jobs:
           ANSIBLE_VAULT_PASSWORD: ${{ secrets.ANSIBLE_VAULT_PASSWORD }}
           ANSIBLE_VAULT_FILE: ${{ secrets.ANSIBLE_VAULT_FILE }}
         run: |
+          # Reads infra/.env directly — the same RESEND_API_KEY/RESEND_FROM/
+          # MONITORING_ALERT_EMAIL already wired to Grafana's alert contact
+          # point (deploy/ansible/roles/infra/). Degrades to just the
+          # ::warning:: below if infra/.env doesn't have these set yet
+          # (e.g. before that role's first real apply) — never fails the
+          # step itself. Body is the same text as the ::warning:: plus a
+          # link to this run, deliberately never the raw $output below —
+          # no need to reason about whether some future no_log-less task's
+          # diff content would be safe to email.
+          notify_drift() {
+            local message="$1"
+            local infra_env=/root/ERP/infra/.env
+            local api_key from to_csv
+            api_key="$(sed -n 's/^RESEND_API_KEY=//p' "$infra_env" 2>/dev/null | tail -1)"
+            from="$(sed -n 's/^RESEND_FROM=//p' "$infra_env" 2>/dev/null | tail -1)"
+            to_csv="$(sed -n 's/^MONITORING_ALERT_EMAIL=//p' "$infra_env" 2>/dev/null | tail -1 | tr ';' ',')"
+            if [ -z "$api_key" ] || [ -z "$to_csv" ]; then
+              return 0
+            fi
+            local run_url="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            RESEND_API_KEY="$api_key" RESEND_FROM="$from" \
+              /root/ERP/scripts/send-resend-mail.sh "$to_csv" "Infrastructure drift-check: $message" \
+              "$message<br><br><a href=\"$run_url\">$run_url</a>" \
+              || echo "::warning::Failed to send the drift-check alert mail itself"
+          }
+
           vault_pass_file="$(mktemp)"
           vault_file="deploy/ansible/group_vars/all/vault.yml"
           trap 'rm -f "$vault_pass_file" "$vault_file"' EXIT
@@ -83,7 +109,9 @@ jobs:
           recap="$(printf '%s' "$output" | grep -E '^(localhost|[0-9.]+)\s*: ok=' | tail -1)"
 
           if [ -z "$recap" ]; then
-            echo "::warning::Infrastructure drift-check did not complete (ansible-playbook exited $ansible_exit before producing a recap) — drift status for this run is UNKNOWN, not necessarily clean. Check the log above (likely a vault password mismatch, sudoers issue, or playbook syntax error) and verify manually with 'ansible-playbook site.yml --check --diff --ask-vault-pass'."
+            message="Infrastructure drift-check did not complete (ansible-playbook exited $ansible_exit before producing a recap) — drift status for this run is UNKNOWN, not necessarily clean. Check the log above (likely a vault password mismatch, sudoers issue, or playbook syntax error) and verify manually with 'ansible-playbook site.yml --check --diff --ask-vault-pass'."
+            echo "::warning::$message"
+            notify_drift "$message"
             exit 0
           fi
 
@@ -92,9 +120,13 @@ jobs:
           unreachable="$(printf '%s' "$recap" | grep -oP 'unreachable=\K[0-9]+')"
 
           if [ "${failed:-0}" -gt 0 ] || [ "${unreachable:-0}" -gt 0 ]; then
-            echo "::warning::Infrastructure drift-check ran but $failed task(s) failed / $unreachable host(s) were unreachable during the dry-run — its result for this run can't be trusted as 'no drift'. Check the log above and run 'ansible-playbook site.yml --check --diff --ask-vault-pass' manually."
+            message="Infrastructure drift-check ran but $failed task(s) failed / $unreachable host(s) were unreachable during the dry-run — its result for this run can't be trusted as 'no drift'. Check the log above and run 'ansible-playbook site.yml --check --diff --ask-vault-pass' manually."
+            echo "::warning::$message"
+            notify_drift "$message"
           elif [ "${changed:-0}" -gt 0 ]; then
-            echo "::warning::Infrastructure drift detected — $changed task(s) in deploy/ansible would change the live server. Review the log above and run 'ansible-playbook site.yml --ask-vault-pass' from your laptop if the change is expected."
+            message="Infrastructure drift detected — $changed task(s) in deploy/ansible would change the live server. Review the log above and run 'ansible-playbook site.yml --ask-vault-pass' from your laptop if the change is expected."
+            echo "::warning::$message"
+            notify_drift "$message"
           fi
 
       # If a previous run was cancelled (or the runner crashed) before
