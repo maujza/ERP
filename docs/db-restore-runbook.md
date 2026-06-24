@@ -40,7 +40,13 @@ the tunable vars above.
 Every dump is integrity-checked immediately after creation (`gzip -t`); a
 corrupt dump is deleted and the script exits non-zero — which, called from
 `promote-to-prod.sh` under `set -euo pipefail`, aborts the deploy rather than
-proceeding without a trustworthy pre-migration backup.
+proceeding without a trustworthy pre-migration backup. Any failure in
+`backup-db.sh` (corrupt dump, `pg_dump` itself failing, the NAS mirror
+failing) also sends a mail via Resend to `BACKUP_ALERT_EMAIL` (root `.env`)
+— see `notify_failure` in the script. The first real alert landed in spam
+for both recipients (cold-sender reputation on a domain that had never
+mailed them before, confirmed `Verified`/`Delivered` end-to-end in Resend —
+not a config issue) — mark it "not spam" once so later ones land in inbox.
 
 ```bash
 ls -lt .deploy-state/db-backups/        # merge pool (on the VPS)

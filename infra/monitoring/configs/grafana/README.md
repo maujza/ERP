@@ -16,5 +16,13 @@ providers also poll for dashboard JSON changes.
 `scripts/grafana-reload-provisioning.sh` reloads all three resource types
 during deployment.
 
-Alert rules are evaluated in Grafana but do not send notifications until a
-contact point and notification policy are added under `provisioning/alerting/`.
+Alert rules notify via the `resend-email` contact point
+(`provisioning/alerting/contact-points.yml`) and the root notification policy
+(`provisioning/alerting/notification-policies.yml`), routed through Grafana's
+own SMTP (`GF_SMTP_*` in `infra/monitoring/compose.yml`) pointed at Resend's
+SMTP relay — see `infra/.env.example` for the required `RESEND_API_KEY`,
+`RESEND_FROM`, and `MONITORING_ALERT_EMAIL` variables. The recipient address
+is read at runtime via Grafana's `$__env{}` provisioning macro rather than
+committed to `contact-points.yml`. Confirmed working end-to-end with a real
+send, but the first one landed in spam (cold-sender reputation, not a config
+issue) — mark it "not spam" once per recipient so future alerts land in inbox.

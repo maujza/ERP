@@ -1,0 +1,20 @@
+apiVersion: 1
+
+# Routes through Grafana's own SMTP (GF_SMTP_* in infra/monitoring/compose.yml,
+# pointed at Resend's SMTP relay) rather than a webhook + custom relay service
+# — Grafana's built-in "email" contact point already does this natively, no
+# new component to host/maintain. See infra/monitoring/README.md.
+contactPoints:
+  - orgId: 1
+    name: resend-email
+    receivers:
+      - uid: resend-email-receiver
+        type: email
+        settings:
+          # $__env{} is Grafana's native provisioning macro for reading an
+          # env var at runtime — keeps the real recipient address out of this
+          # tracked file. Set MONITORING_ALERT_EMAIL in infra/.env (not
+          # committed). Supports multiple addresses separated by ";" or a
+          # newline.
+          addresses: "$__env{MONITORING_ALERT_EMAIL}"
+        disableResolveMessage: false

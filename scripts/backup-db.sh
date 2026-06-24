@@ -14,7 +14,7 @@
 #   the other's files) over a WireGuard tunnel into the NAS's rsync daemon
 #   account — not SSH, which is administrators-only on this NAS with no
 #   per-user override. See docs/db-restore-runbook.md.
-set -euo pipefail
+set -Eeuo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
@@ -27,6 +27,44 @@ OFFSITE=false
 # files already broke a plain `source` once (see CHANGELOG.md).
 env_get() { sed -n "s/^$1=//p" "$ROOT_DIR/.env" 2>/dev/null | tail -1; }
 backend_env_get() { sed -n "s/^$1=//p" "$ROOT_DIR/backend/.env" 2>/dev/null | tail -1; }
+
+# Reuses the same Resend account/payload shape as
+# backend/src/subscribers/invite-created.ts, via a plain HTTP call instead of
+# the Node SDK since this is a bash script. A failed backup is a one-off job
+# event, not a continuous metric — doesn't belong in Prometheus (would need a
+# Pushgateway just for this).
+notify_failure() {
+  local message="$1"
+  local api_key
+  api_key="$(backend_env_get RESEND_API_KEY)"
+  local from
+  from="$(backend_env_get RESEND_FROM)"
+  local to_csv
+  to_csv="$(env_get BACKUP_ALERT_EMAIL)"
+
+  if [ -z "$api_key" ] || [ -z "$to_csv" ]; then
+    echo "Backup failed, but alerting isn't configured (RESEND_API_KEY/BACKUP_ALERT_EMAIL) — see: $message" >&2
+    return 0
+  fi
+
+  # BACKUP_ALERT_EMAIL is comma-separated (multiple recipients); Resend's API
+  # wants a JSON array for "to".
+  local to_json
+  to_json="$(printf '%s' "$to_csv" | tr ',' '\n' | jq -R . | jq -s .)"
+
+  curl --fail --silent --show-error --max-time 10 -X POST https://api.resend.com/emails \
+    -H "Authorization: Bearer $api_key" \
+    -H "Content-Type: application/json" \
+    -d "$(jq -n --arg from "$from" --argjson to "$to_json" --arg msg "$message" \
+      '{from: $from, to: $to, subject: "Backup de la base falló", html: $msg}')" \
+    >/dev/null || echo "Failed to send the failure alert itself" >&2
+}
+
+# Fires on any failed command under set -e (corrupt dump, broken pg_dump,
+# rsync to the NAS down, etc.) without having to wrap each one individually.
+# Never calls exit itself, so the script still propagates the original
+# failing exit code after the trap runs.
+trap 'notify_failure "backup-db.sh failed (exit $?) at line $LINENO: $BASH_COMMAND"' ERR
 
 dump_and_verify() {
   local backup_file="$1"

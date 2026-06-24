@@ -5,9 +5,12 @@
 # instead of R2/WAL archiving, and why a split-tunnel instead of exposing the
 # NAS directly to the internet.
 
-- name: Install WireGuard and rsync
+# jq is also a pre-existing, previously-undeclared dependency of
+# scripts/infra-healthcheck.sh — installing it here closes that gap too,
+# not just the new use in backup-db.sh's notify_failure().
+- name: Install WireGuard, rsync and jq
   ansible.builtin.apt:
-    name: [wireguard, rsync]
+    name: [wireguard, rsync, jq]
     state: present
     update_cache: true
 
