@@ -78,6 +78,7 @@ expected_alerts=(
   erp-infrastructure-target-down
   erp-host-memory-high
   erp-root-disk-high
+  erp-host-cpu-high
 )
 provisioned_alerts="$(
   curl --fail --silent --show-error \
