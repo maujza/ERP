@@ -42,3 +42,14 @@ vault_wg_endpoint: "REPLACE_WITH_HOST:PORT"
 # through the WireGuard tunnel above, never over the public internet, so the
 # protocol's own lack of transport encryption is covered by that lower layer.
 vault_nas_backup_rsync_password: ""
+
+# infra/.env secrets (nginx-proxy-manager's MariaDB, Grafana/Portainer admin
+# logins) — see deploy/ansible/roles/infra/. RESEND_API_KEY/RESEND_FROM for
+# that same file reuse vault_resend_api_key/vault_resend_from above, no
+# separate secret needed. IMPORTANT: when populating this for an
+# already-running VPS, copy the REAL values already in its infra/.env —
+# inventing new ones locks out the live MariaDB/Grafana/Portainer sessions
+# that already depend on the old ones (same rule as every other secret here).
+vault_nginx_db_password: "REPLACE_WITH_A_LONG_RANDOM_PASSWORD"
+vault_monitoring_admin_password: "REPLACE_WITH_A_LONG_RANDOM_PASSWORD"
+vault_portainer_admin_password_hash: "REPLACE_WITH_A_BCRYPT_HASH"

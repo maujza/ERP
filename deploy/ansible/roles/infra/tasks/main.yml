@@ -1,0 +1,52 @@
+---
+# Brings infra/.env (nginx-proxy-manager + monitoring stack secrets) under
+# Ansible, closing the one .env in this repo that was still hand-edited on
+# the VPS — historical accident (infra/monitoring predates Ansible existing
+# in this repo at all), not a deliberate choice; see docs/db-restore-runbook.md
+# and the Repowise decision recorded for this role.
+
+# no_log: true — same reasoning as roles/app's root.env.j2/backend.env.j2:
+# this template embeds real secrets (NGINX DB password, Grafana/Portainer
+# admin credentials, the Resend API key), and a CI drift-check running with
+# --diff would otherwise print them straight into the GitHub Actions log.
+- name: Render infra/.env
+  ansible.builtin.template:
+    src: infra.env.j2
+    dest: "{{ app_dir }}/infra/.env"
+    mode: "0644"
+  no_log: true
+  register: infra_env
+
+# Only recreated when infra/.env actually changed — these are the 2 compose
+# projects that read it (registry_compose does not, see scripts/compose-up.sh).
+# Mirrors how roles/backup only restarts wg-quick@wg0 when its own config
+# changes, rather than unconditionally on every run.
+- name: Recreate nginx-proxy-manager with the new infra/.env
+  ansible.builtin.command: >-
+    docker compose --project-name erp-infra
+    --env-file {{ app_dir }}/infra/.env
+    --file {{ app_dir }}/infra/networking/nginx-proxy-manager/compose.yml
+    up -d
+  when: infra_env.changed and not ansible_check_mode
+  changed_when: true
+
+# telegraf (in the monitoring compose project) needs the host's real
+# docker.sock group id to read container stats without running as root —
+# same value scripts/compose-up.sh computes via `stat -c '%g'` each time,
+# rather than hardcoding a GID that varies by distro/install.
+- name: Look up the docker.sock group id
+  ansible.builtin.stat:
+    path: /var/run/docker.sock
+  register: docker_sock
+  when: infra_env.changed and not ansible_check_mode
+
+- name: Recreate the monitoring stack with the new infra/.env
+  ansible.builtin.command: >-
+    docker compose --project-name erp-monitoring
+    --env-file {{ app_dir }}/infra/.env
+    --file {{ app_dir }}/infra/monitoring/compose.yml
+    up -d
+  environment:
+    DOCKER_GID: "{{ docker_sock.stat.gid }}"
+  when: infra_env.changed and not ansible_check_mode
+  changed_when: true

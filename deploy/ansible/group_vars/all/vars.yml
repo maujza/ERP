@@ -66,3 +66,12 @@ wg_allowed_ips: "10.8.0.0/24,192.168.0.0/24"
 nas_backup_host: "192.168.0.95"
 nas_backup_module: "vps-aurora-backup"
 nas_backup_user: "erp-backup"
+
+# infra/.env (nginx-proxy-manager + monitoring stack) — see
+# deploy/ansible/roles/infra/. Not secret, same criterion as the rest of
+# this file's plaintext operational config.
+monitoring_admin_user: "aurora"
+# Recipients for Grafana's alert contact point (resend-email). Comma-
+# separated like backup_alert_email above — the infra role's template
+# converts to Grafana's expected ";"-separated format.
+monitoring_alert_email: "alekwiek@gmail.com,maurojzalazar@gmail.com"
