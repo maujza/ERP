@@ -7,10 +7,17 @@
     - docker
     - firewall
     - app
-    - medusa
-    # infra renders infra/.env before runner narrows that file's ACL to
-    # read-only — must stay ahead of runner in this list, same reasoning as
+    # infra must run before medusa: medusa's "Build images and bring up the
+    # full stack" task calls compose-up.sh, which also (re)starts the
+    # monitoring compose project — that project's GF_SMTP_* interpolation
+    # reads infra/.env, so infra/.env has to already contain RESEND_FROM/
+    # RESEND_API_KEY by the time medusa runs. A first real apply with infra
+    # ordered after medusa failed on exactly this (interpolation error on
+    # GF_SMTP_FROM_ADDRESS) even though infra/.env got rendered correctly a
+    # few tasks later in the same run — too late for medusa's compose-up.
+    # Also keeps infra ahead of runner in this list, same reasoning as
     # app/medusa running before runner for backend/.env and storefront/.env.
     - infra
+    - medusa
     - runner
     - backup
