@@ -3,8 +3,9 @@
 ## Prerequisites
 
 - Docker Desktop (or Docker Engine + Compose v2)
-- Node 20 (to run services outside Docker)
+- Node 20+ to run backend/storefront outside Docker; Node 22 is recommended for POS
 - Git
+- VS Code with Dev Containers, or GitHub Codespaces, if using the devcontainer
 
 ## Working modes
 
@@ -44,6 +45,50 @@ npm run dev        # Next loads .env.development automatically
 ```
 
 The storefront ends up at `http://localhost:3000`, the backend at `http://localhost:9000`.
+
+### Mode C — devcontainer workspace with hot reload
+
+Use this when you want the Mode B workflow without installing Node, npm, or
+project tooling directly on the host.
+
+1. Open the repo in VS Code.
+2. Run **Dev Containers: Reopen in Container**.
+3. Wait for `.devcontainer/post-create.sh` to finish.
+
+The devcontainer uses Node 22, the host Docker daemon, PostgreSQL client tools,
+and the project VS Code extensions. On first create it:
+
+- copies missing env files from `backend/.env.example`,
+  `backend/.env.dev.example`, `storefront/.env.example`, and
+  `storefront/.env.development.example`
+- runs `npm ci` in `backend/`, `storefront/`, and `pos/`
+- forwards ports `3000`, `5433`, `7358`, `8081`, and `9000`
+
+Inside the devcontainer, start only the shared database through Compose:
+
+```bash
+docker compose up db -d
+```
+
+Then run the services you are editing in separate terminals:
+
+```bash
+cd backend
+npm run dev
+```
+
+```bash
+cd storefront
+npm run dev
+```
+
+```bash
+cd pos
+npm run web
+```
+
+This mode is intentionally for development. Use Mode A when validating the
+production-like container images.
 
 ---
 
