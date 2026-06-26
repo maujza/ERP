@@ -1,0 +1,50 @@
+{
+  "name": "Aurelia ERP",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "."
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+  },
+  "remoteUser": "node",
+  "workspaceFolder": "/workspaces/ERP",
+  "forwardPorts": [3000, 5433, 7358, 8081, 9000],
+  "portsAttributes": {
+    "3000": {
+      "label": "Storefront dev"
+    },
+    "5433": {
+      "label": "PostgreSQL"
+    },
+    "7358": {
+      "label": "Storefront Docker"
+    },
+    "8081": {
+      "label": "POS web"
+    },
+    "9000": {
+      "label": "Medusa API/Admin"
+    }
+  },
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "bradlc.vscode-tailwindcss",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "ms-azuretools.vscode-docker",
+        "ms-playwright.playwright"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "eslint.workingDirectories": [
+          "backend",
+          "storefront",
+          "pos"
+        ]
+      }
+    }
+  }
+}

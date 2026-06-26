@@ -8,6 +8,7 @@ Monorepo for Aurelia's commerce operation. The stack combines a B2B storefront, 
 - `backend/`: Medusa v2 backend with seeds, migrations, and the custom `purchaseDepartment` module.
 - `pos/`: Expo-based web/mobile POS.
 - `docker-compose.yml`: local stack with `db`, `backend-init`, `backend`, `web`, and `pos`.
+- `.devcontainer/`: reproducible VS Code/Codespaces development environment.
 - `infra/`: independent infrastructure stacks, including Nginx Proxy Manager.
 - `infra/monitoring/`: Prometheus, Grafana, Node Exporter, Telegraf, Blackbox Exporter, and Portainer.
 
@@ -45,6 +46,32 @@ That script does the following:
 5. rebuilds `web` only if its fingerprint changed
 6. brings up `backend`, `web`, and `pos`
 7. brings up Nginx Proxy Manager from its own independent Compose project
+
+## Devcontainer
+
+For editor-based development with hot reload, open the repository in a devcontainer.
+The container provides Node 22, Docker/Compose access through the host Docker
+daemon, PostgreSQL client tooling, and VS Code extensions for TypeScript,
+Tailwind, Docker, ESLint, Prettier, and Playwright.
+
+On first create, `.devcontainer/post-create.sh` copies missing local env files
+from the checked-in examples and runs `npm ci` in `backend/`, `storefront/`, and
+`pos/`.
+
+After the container is ready, use the hot-reload flow:
+
+```bash
+docker compose up db -d
+
+cd backend
+npm run dev
+
+cd ../storefront
+npm run dev
+```
+
+See [Local development guide](docs/local-dev.md) for POS, full-stack Docker, and
+test commands.
 
 ## Selective rebuild
 
