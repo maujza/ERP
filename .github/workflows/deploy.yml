@@ -9,14 +9,16 @@ on:
   push:
     branches:
       - main
-    # Doc-only pushes (CLAUDE.md, docs/, *.md anywhere, .claude/) skip the
-    # whole build+staging+promote pipeline — nothing here can affect a
-    # running deploy. workflow_dispatch below is unaffected by this filter,
-    # so a doc-only commit can still be deployed manually if ever needed.
+    # Doc/dev-tooling-only pushes (CLAUDE.md, docs/, *.md anywhere, .claude/,
+    # .devcontainer/) skip the whole build+staging+promote pipeline — nothing
+    # here can affect a running deploy. workflow_dispatch below is unaffected
+    # by this filter, so a skipped commit can still be deployed manually if
+    # ever needed.
     paths-ignore:
       - "**/*.md"
       - "docs/**"
       - ".claude/**"
+      - ".devcontainer/**"
   workflow_dispatch: {}
 
 jobs:
