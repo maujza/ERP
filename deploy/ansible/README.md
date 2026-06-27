@@ -2,7 +2,7 @@
 
 Idempotent provisioning of the full Aurelia ERP stack (Postgres + Medusa backend/admin
 + Next.js storefront + POS) on an Ubuntu VPS, served over real HTTPS via Nginx Proxy
-Manager and the `*.gleeze.com` domains (see `docs/deploy.md` for the full production
+Manager and the `aurorapormayor.com` domains (see `docs/deploy.md` for the full production
 architecture). Run from your laptop; only SSH is required on the target.
 
 ## What it does
@@ -104,7 +104,7 @@ ansible-playbook site.yml --ask-vault-pass
 
 To migrate to a **new instance**: point `aikirias/ERP -> Settings -> Deploy keys` at the
 same key (already in the vault), change `ansible_host` in `inventory.ini`, `public_host` in
-`vars.yml`, and re-point the `*.gleeze.com` domains (or `storefront_origin`/`backend_url`/
+`vars.yml`, and re-point the `aurorapormayor.com` domains (or `storefront_origin`/`backend_url`/
 `pos_origin` if using different domains) at the new instance, then re-run the command above.
 
 ## Secrets

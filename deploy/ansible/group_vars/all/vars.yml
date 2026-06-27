@@ -18,9 +18,9 @@ deb_arch: "{{ 'arm64' if ansible_architecture == 'aarch64' else 'amd64' }}"
 # Public-facing URLs — served over real HTTPS via Nginx Proxy Manager, not
 # directly off public_host/storefront_port/backend_port above (see
 # docs/deploy.md's "Arquitectura de producción" / Proxy Host table).
-storefront_origin: "https://aurelia.gleeze.com"
-backend_url: "https://backoffice.aurelia.gleeze.com"
-pos_origin: "https://pos.aurelia.gleeze.com"
+storefront_origin: "https://aurorapormayor.com"
+backend_url: "https://backoffice.aurorapormayor.com"
+pos_origin: "https://pos.aurorapormayor.com"
 
 medusa_admin_email: admin@aurelia.com
 medusa_force_insecure_cookies: false

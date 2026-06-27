@@ -16,7 +16,7 @@ export default defineConfig({
   ],
   outputDir: "/artifacts/test-results",
   use: {
-    baseURL: process.env.STOREFRONT_URL || "https://aurelia.gleeze.com",
+    baseURL: process.env.STOREFRONT_URL || "https://aurorapormayor.com",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "retain-on-failure",

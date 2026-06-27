@@ -161,9 +161,9 @@ for job in "${expected_jobs[@]}"; do
 done
 
 expected_probes=(
-  "https://aurelia.gleeze.com/"
-  "https://backoffice.aurelia.gleeze.com/health"
-  "https://pos.aurelia.gleeze.com/"
+  "https://aurorapormayor.com/"
+  "https://backoffice.aurorapormayor.com/health"
+  "https://pos.aurorapormayor.com/"
   "http://backend:9000/health"
 )
 

@@ -1,9 +1,9 @@
 import { expect, test } from "@playwright/test";
 
-const storefrontUrl = process.env.STOREFRONT_URL || "https://aurelia.gleeze.com";
+const storefrontUrl = process.env.STOREFRONT_URL || "https://aurorapormayor.com";
 const backendUrl =
-  process.env.BACKEND_URL || "https://backoffice.aurelia.gleeze.com";
-const posUrl = process.env.POS_URL || "https://pos.aurelia.gleeze.com";
+  process.env.BACKEND_URL || "https://backoffice.aurorapormayor.com";
+const posUrl = process.env.POS_URL || "https://pos.aurorapormayor.com";
 
 test.describe("Production smoke tests", () => {
   test("storefront loads products without API errors", async ({ page }) => {

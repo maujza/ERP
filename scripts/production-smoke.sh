@@ -44,9 +44,9 @@ mkdir -p "$ARTIFACTS_DIR"
 echo "Running production smoke tests..."
 docker run --rm \
   --ipc=host \
-  --env STOREFRONT_URL="${STOREFRONT_URL:-https://aurelia.gleeze.com}" \
-  --env BACKEND_URL="${BACKEND_URL:-https://backoffice.aurelia.gleeze.com}" \
-  --env POS_URL="${POS_URL:-https://pos.aurelia.gleeze.com}" \
+  --env STOREFRONT_URL="${STOREFRONT_URL:-https://aurorapormayor.com}" \
+  --env BACKEND_URL="${BACKEND_URL:-https://backoffice.aurorapormayor.com}" \
+  --env POS_URL="${POS_URL:-https://pos.aurorapormayor.com}" \
   --env MEDUSA_PUBLISHABLE_KEY="$(sed -n 's/^NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY=//p' "$ROOT_DIR/storefront/.env")" \
   --volume "$ARTIFACTS_DIR:/artifacts" \
   "$IMAGE_NAME"

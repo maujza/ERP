@@ -11,10 +11,10 @@ Monitoring lives in `infra/monitoring/compose.yml` and runs as the
 
 | Service | Domain |
 |---|---|
-| Storefront | https://aurelia.gleeze.com |
-| Backoffice / Admin | https://backoffice.aurelia.gleeze.com |
-| POS web | https://pos.aurelia.gleeze.com |
-| Medusa API (backend) | https://backoffice.aurelia.gleeze.com (same server) |
+| Storefront | https://aurorapormayor.com |
+| Backoffice / Admin | https://backoffice.aurorapormayor.com |
+| POS web | https://pos.aurorapormayor.com |
+| Medusa API (backend) | https://backoffice.aurorapormayor.com (same server) |
 
 ---
 
@@ -71,9 +71,9 @@ Then go to `http://localhost:8181` and create these Proxy Hosts:
 
 | Domain | Forward hostname | Forward port |
 |---|---|---|
-| `aurelia.gleeze.com` | `web` | `3000` |
-| `backoffice.aurelia.gleeze.com` | `backend` | `9000` |
-| `pos.aurelia.gleeze.com` | `pos` | `3000` |
+| `aurorapormayor.com` | `web` | `3000` |
+| `backoffice.aurorapormayor.com` | `backend` | `9000` |
+| `pos.aurorapormayor.com` | `pos` | `3000` |
 
 For each host, request the SSL certificate from the panel and enable
 `Force SSL`. The VPS's public ports are `80` and `443`; the internal
@@ -155,7 +155,7 @@ data to recover):
 ```bash
 cd /root/ERP
 ./scripts/compose-up.sh   # migrations + bootstrap + key sync
-# Load the catalog manually from https://backoffice.aurelia.gleeze.com/app
+# Load the catalog manually from https://backoffice.aurorapormayor.com/app
 ```
 
 ---
@@ -168,7 +168,7 @@ docker compose logs -f backend
 docker compose logs -f web
 docker compose --project-name erp-infra --env-file infra/.env \
   --file infra/networking/nginx-proxy-manager/compose.yml ps
-curl https://backoffice.aurelia.gleeze.com/health
+curl https://backoffice.aurorapormayor.com/health
 ```
 
 ---

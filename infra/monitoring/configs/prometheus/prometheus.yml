@@ -25,9 +25,9 @@ scrape_configs:
         - http_2xx
     static_configs:
       - targets:
-          - https://aurelia.gleeze.com/
-          - https://backoffice.aurelia.gleeze.com/health
-          - https://pos.aurelia.gleeze.com/
+          - https://aurorapormayor.com/
+          - https://backoffice.aurorapormayor.com/health
+          - https://pos.aurorapormayor.com/
           - http://backend:9000/health
     relabel_configs:
       - source_labels:

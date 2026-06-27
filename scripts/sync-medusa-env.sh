@@ -82,7 +82,7 @@ for env_file in "${ENV_FILES[@]}"; do
   upsert_env_var "$env_file" "NEXT_PUBLIC_MEDUSA_COUNTRY_CODE" "ar"
   if [ "$IS_STAGING" = true ]; then
     # storefront/.env is the same physical file prod uses, where this is
-    # intentionally set to the real prod domain (e.g. backoffice.aurelia.gleeze.com).
+    # intentionally set to the real prod domain (e.g. backoffice.aurorapormayor.com).
     # Staging serves over a different origin (127.0.0.1:7458) that prod's CORS
     # config rightfully doesn't allow, so an inherited absolute backend URL
     # makes every store API call fail CORS preflight with no products ever
