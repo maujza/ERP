@@ -9,16 +9,24 @@ on:
   push:
     branches:
       - main
-    # Doc/dev-tooling-only pushes (CLAUDE.md, docs/, *.md anywhere, .claude/,
-    # .devcontainer/) skip the whole build+staging+promote pipeline — nothing
-    # here can affect a running deploy. workflow_dispatch below is unaffected
-    # by this filter, so a skipped commit can still be deployed manually if
-    # ever needed.
+    # Doc/dev-tooling-only pushes skip the whole build+staging+promote pipeline
+    # — nothing in these paths is an input to any image this pipeline builds
+    # (backend/storefront/pos) or to what promote-to-prod.sh swaps, so running
+    # it would only rebuild + restart prod (and re-run migrations) for no
+    # change. deploy/ansible/** and infra/** are applied by Ansible / manual
+    # runs, never by this pipeline; the only thing here that reads
+    # deploy/ansible/** is the warn-only drift-check, which catches up on the
+    # next app deploy. A push touching BOTH an ignored and a real path still
+    # runs (GitHub runs if any changed file is unignored), so mixed changes
+    # still deploy. workflow_dispatch below is unaffected by this filter, so a
+    # skipped commit can still be deployed manually if ever needed.
     paths-ignore:
       - "**/*.md"
       - "docs/**"
       - ".claude/**"
       - ".devcontainer/**"
+      - "deploy/ansible/**"
+      - "infra/**"
   workflow_dispatch: {}
 
 jobs:

@@ -53,3 +53,21 @@ vault_nas_backup_rsync_password: ""
 vault_nginx_db_password: "REPLACE_WITH_A_LONG_RANDOM_PASSWORD"
 vault_monitoring_admin_password: "REPLACE_WITH_A_LONG_RANDOM_PASSWORD"
 vault_portainer_admin_password_hash: "REPLACE_WITH_A_BCRYPT_HASH"
+
+# Nginx Proxy Manager admin login (the account that owns the proxy hosts in
+# its web UI / API) + the Cloudflare Origin certificate it serves for the
+# production domain. Consumed by roles/infra's NPM provisioning
+# (infra/networking/nginx-proxy-manager/provision-npm.py). The cert is a
+# Cloudflare-issued Origin Certificate (SSL/TLS -> Origin Server -> Create
+# Certificate, hostnames `example.com` + `*.example.com`); CF's edge TLS
+# mode must be Full(strict). To rotate, replace both PEMs and re-run — the
+# provisioner re-uploads on a changed expiry.
+vault_npm_secret: "REPLACE_WITH_NPM_ADMIN_PASSWORD"
+vault_cf_origin_cert: |
+  -----BEGIN CERTIFICATE-----
+  REPLACE_WITH_CLOUDFLARE_ORIGIN_CERT
+  -----END CERTIFICATE-----
+vault_cf_origin_key: |
+  -----BEGIN PRIVATE KEY-----
+  REPLACE_WITH_CLOUDFLARE_ORIGIN_KEY
+  -----END PRIVATE KEY-----

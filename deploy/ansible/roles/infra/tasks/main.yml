@@ -50,3 +50,71 @@
     DOCKER_GID: "{{ docker_sock.stat.gid }}"
   when: infra_env.changed and not ansible_check_mode
   changed_when: true
+
+# ── Nginx Proxy Manager routing + TLS ────────────────────────────────────
+# NPM's proxy hosts and custom certs live only in its own DB volume, never in
+# a rendered file — so a bare-box reprovision (or migrating to a new VPS) used
+# to come up with no TLS and no routing for the production domain. These tasks
+# declare them idempotently via the NPM API (provision-npm.py), so the routing
+# is reproducible like everything else. Runs on every deploy, not just when
+# infra/.env changed, so a drifted/deleted proxy host is reconciled.
+- name: Wait for the Nginx Proxy Manager API to be ready
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:81/api/"
+    status_code: [200, 401]
+  register: npm_api
+  retries: 20
+  delay: 3
+  until: npm_api.status in [200, 401]
+  when: not ansible_check_mode
+
+# Staged to disk (not piped) because provision-npm.py reads them as files and
+# runs openssl against the cert to detect rotation. 0600, removed right after.
+- name: Stage the Cloudflare Origin certificate + key for NPM
+  ansible.builtin.copy:
+    content: "{{ item.content }}"
+    dest: "{{ item.dest }}"
+    mode: "0600"
+  # default('') so the loop templates cleanly under `ansible-playbook --check`
+  # (the CI drift-check) even if that run's vault lacks these vars — Ansible
+  # builds the loop before evaluating `when`, so an undefined var here would
+  # warn despite the task being skipped in check mode. Real runs have the vars.
+  loop:
+    - { content: "{{ vault_cf_origin_cert | default('') }}", dest: /root/.npm-origin-cert.pem }
+    - { content: "{{ vault_cf_origin_key | default('') }}", dest: /root/.npm-origin-key.pem }
+  no_log: true
+  when: not ansible_check_mode
+
+- name: Provision NPM certificate + proxy hosts (idempotent)
+  ansible.builtin.command:
+    cmd: python3 {{ app_dir }}/infra/networking/nginx-proxy-manager/provision-npm.py
+  environment:
+    NPM_IDENTITY: "{{ npm_admin_identity }}"
+    NPM_SECRET: "{{ vault_npm_secret }}"
+    NPM_CERT_NAME: "{{ npm_cert_name }}"
+    NPM_CERT_FILE: /root/.npm-origin-cert.pem
+    NPM_KEY_FILE: /root/.npm-origin-key.pem
+    NPM_HOSTS_JSON: "{{ npm_proxy_hosts | to_json }}"
+  register: npm_provision
+  # no_log because the environment carries NPM_SECRET; the result is surfaced
+  # by the debug task below, which only prints the script's resource lines.
+  no_log: true
+  changed_when: >-
+    'created' in npm_provision.stdout
+    or 'updated' in npm_provision.stdout
+    or 're-uploaded' in npm_provision.stdout
+  when: not ansible_check_mode
+
+- name: Show NPM provisioning result
+  ansible.builtin.debug:
+    var: npm_provision.stdout_lines
+  when: not ansible_check_mode and npm_provision.stdout_lines is defined
+
+- name: Remove the staged certificate material
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /root/.npm-origin-cert.pem
+    - /root/.npm-origin-key.pem
+  when: not ansible_check_mode
