@@ -58,6 +58,12 @@
 # declare them idempotently via the NPM API (provision-npm.py), so the routing
 # is reproducible like everything else. Runs on every deploy, not just when
 # infra/.env changed, so a drifted/deleted proxy host is reconciled.
+#
+# Gated on vault_npm_secret being set: a control node whose vault doesn't carry
+# the NPM/CF-origin secrets (e.g. an operator restoring backend/.env from a
+# pre-NPM vault) skips NPM provisioning entirely rather than failing on an
+# empty-password API auth. NPM is already configured on the live box, so
+# skipping is safe; only a from-scratch reprovision needs these vars present.
 - name: Wait for the Nginx Proxy Manager API to be ready
   ansible.builtin.uri:
     url: "http://127.0.0.1:81/api/"
@@ -66,7 +72,7 @@
   retries: 20
   delay: 3
   until: npm_api.status in [200, 401]
-  when: not ansible_check_mode
+  when: not ansible_check_mode and (vault_npm_secret | default('')) | length > 0
 
 # Staged to disk (not piped) because provision-npm.py reads them as files and
 # runs openssl against the cert to detect rotation. 0600, removed right after.
@@ -83,7 +89,7 @@
     - { content: "{{ vault_cf_origin_cert | default('') }}", dest: /root/.npm-origin-cert.pem }
     - { content: "{{ vault_cf_origin_key | default('') }}", dest: /root/.npm-origin-key.pem }
   no_log: true
-  when: not ansible_check_mode
+  when: not ansible_check_mode and (vault_npm_secret | default('')) | length > 0
 
 - name: Provision NPM certificate + proxy hosts (idempotent)
   ansible.builtin.command:
@@ -103,12 +109,12 @@
     'created' in npm_provision.stdout
     or 'updated' in npm_provision.stdout
     or 're-uploaded' in npm_provision.stdout
-  when: not ansible_check_mode
+  when: not ansible_check_mode and (vault_npm_secret | default('')) | length > 0
 
 - name: Show NPM provisioning result
   ansible.builtin.debug:
     var: npm_provision.stdout_lines
-  when: not ansible_check_mode and npm_provision.stdout_lines is defined
+  when: not ansible_check_mode and (vault_npm_secret | default('')) | length > 0 and npm_provision.stdout_lines is defined
 
 - name: Remove the staged certificate material
   ansible.builtin.file:
@@ -117,4 +123,4 @@
   loop:
     - /root/.npm-origin-cert.pem
     - /root/.npm-origin-key.pem
-  when: not ansible_check_mode
+  when: not ansible_check_mode and (vault_npm_secret | default('')) | length > 0
