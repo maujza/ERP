@@ -199,7 +199,9 @@ an `age`-encrypted companion (`backend/.env.age`, `backend/.env.dev.age`,
 that **is** committed. Run `scripts/secrets-decrypt.sh` after cloning (needs
 the shared private key at `~/.config/age/key.txt`) and
 `scripts/secrets-encrypt.sh` after editing any real `.env` file, before
-committing. See `docs/local-dev.md` → "Secrets encryption (age)".
+committing. `git config core.hooksPath .githooks` (one-time) enables a
+pre-commit check that blocks a commit if a `.env` file drifts from its
+committed `.env.age`. See `docs/local-dev.md` → "Secrets encryption (age)".
 
 ## Commits, Pull Requests & Changelog
 

@@ -162,6 +162,14 @@ MEDUSA_ADMIN_URL=http://localhost:9000
 
 `.age-recipients` at the repo root lists the public key(s) allowed to decrypt; it's safe to commit (public keys aren't secret). Adding a new recipient there and re-running `secrets-encrypt.sh` re-wraps existing `*.env.age` files for them too.
 
+**Enable the pre-commit safety check** (one-time, per clone):
+
+```bash
+git config core.hooksPath .githooks
+```
+
+This wires up `.githooks/pre-commit`, which refuses to let you commit if a real `.env` file's contents no longer match what's inside its committed `.env.age` (e.g. you edited `backend/.env` but forgot to re-run `secrets-encrypt.sh`). It only checks files you already have the `age` identity key for and warns-and-skips (never blocks) if `age` or the key isn't available — so it's safe to enable even on a machine that only touches `pos/` or docs.
+
 ---
 
 ## Tests
