@@ -56,5 +56,12 @@ storefront/.env.development
 !storefront/.env.example
 !storefront/.env.development.example
 
+# age-encrypted env files ARE meant to be committed (see scripts/secrets-*.sh)
+!backend/.env.age
+!backend/.env.dev.age
+!storefront/.env.age
+!storefront/.env.development.age
+!infra/.env.age
+
 # repowise local index/cache (regenerable via `repowise init`/`update`, not meant to be shared)
 .repowise/

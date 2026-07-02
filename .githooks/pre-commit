@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT_DIR"
+
+# Keep in sync with scripts/secrets-{encrypt,decrypt}.sh.
+ENV_FILE_PAIRS=(
+  "backend/.env:backend/.env.age"
+  "backend/.env.dev:backend/.env.dev.age"
+  "storefront/.env:storefront/.env.age"
+  "storefront/.env.development:storefront/.env.development.age"
+  "infra/.env:infra/.env.age"
+)
+
+if ! command -v age >/dev/null 2>&1; then
+  echo "warning: age not installed, skipping .env/.env.age staleness check" >&2
+  exit 0
+fi
+
+IDENTITY_FILE="${AGE_IDENTITY_FILE:-$HOME/.config/age/key.txt}"
+
+if [ ! -f "$IDENTITY_FILE" ]; then
+  echo "warning: no age identity at $IDENTITY_FILE, skipping .env/.env.age staleness check" >&2
+  exit 0
+fi
+
+stale=()
+
+for pair in "${ENV_FILE_PAIRS[@]}"; do
+  plaintext="${pair%%:*}"
+  encrypted="${pair##*:}"
+
+  if [ ! -f "$plaintext" ]; then
+    continue
+  fi
+
+  if [ ! -f "$encrypted" ]; then
+    stale+=("$plaintext (no $encrypted at all)")
+    continue
+  fi
+
+  if ! age -d -i "$IDENTITY_FILE" "$encrypted" 2>/dev/null | diff -q - "$plaintext" >/dev/null 2>&1; then
+    stale+=("$plaintext (differs from $encrypted)")
+  fi
+done
+
+if [ "${#stale[@]}" -gt 0 ]; then
+  echo "error: the following .env files are out of sync with their committed .env.age:" >&2
+  for s in "${stale[@]}"; do
+    echo "  - $s" >&2
+  done
+  echo >&2
+  echo "Run ./scripts/secrets-encrypt.sh, then 'git add' the resulting .env.age file(s), and commit again." >&2
+  exit 1
+fi

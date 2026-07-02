@@ -27,10 +27,20 @@ on:
       - ".devcontainer/**"
       - "deploy/ansible/**"
       - "infra/**"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      bootstrap_secrets:
+        description: "Decrypt committed .env.age files onto disk instead of deploying (bootstrap/disaster-recovery only)"
+        type: boolean
+        default: false
 
 jobs:
   deploy:
+    # Skip the normal build+staging+promote pipeline when this run was
+    # dispatched specifically to bootstrap secrets (see the bootstrap-secrets
+    # job below) — the two are mutually exclusive uses of workflow_dispatch.
+    # `inputs` is empty (falsy) on push events, so this never affects those.
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.bootstrap_secrets != true }}
     runs-on: [self-hosted, vps]
     env:
       # promote-to-prod.sh / rollback-prod.sh / infra-healthcheck.sh /
@@ -346,3 +356,35 @@ jobs:
         if: failure() && steps.promote.outcome == 'success'
         working-directory: /root/ERP
         run: ./scripts/rollback-prod.sh
+
+  # Deliberately NOT part of the deploy job / routine pipeline: this runner
+  # is persistent, and the .env files already on disk (rendered by Ansible
+  # from the vault) are the live source of truth for a running deploy.
+  # Auto-decrypting committed .env.age files on every run would risk
+  # clobbering correct on-disk secrets with stale committed ciphertext if
+  # someone forgot to re-run scripts/secrets-encrypt.sh after an on-VPS
+  # change. This job only runs when explicitly requested via
+  # workflow_dispatch's bootstrap_secrets input — for bootstrapping a fresh
+  # VPS/runner or disaster recovery, not routine deploys. See docs/deploy.md.
+  bootstrap-secrets:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.bootstrap_secrets == true }}
+    runs-on: [self-hosted, vps]
+    env:
+      DEPLOY_DIR: /root/ERP
+    steps:
+      - name: Sync the checkout to this commit
+        run: |
+          cd "$DEPLOY_DIR"
+          git fetch origin "$GITHUB_SHA"
+          git checkout --force "$GITHUB_SHA"
+
+      - name: Decrypt committed .env.age files onto disk
+        working-directory: /root/ERP
+        env:
+          AGE_SECRET_KEY: ${{ secrets.AGE_SECRET_KEY }}
+        run: |
+          identity_file="$(mktemp)"
+          trap 'rm -f "$identity_file"' EXIT
+          printf '%s' "$AGE_SECRET_KEY" > "$identity_file"
+          chmod 600 "$identity_file"
+          AGE_IDENTITY_FILE="$identity_file" ./scripts/secrets-decrypt.sh

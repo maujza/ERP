@@ -106,6 +106,29 @@ vault content the operator's laptop uses, delivered via two repo secrets
 Both are written to a temp file on the runner only for the duration of that
 one step, then deleted — never committed to the repo.
 
+### 4. Configure the age secret for bootstrapping .env files
+
+`backend/.env`, `backend/.env.dev`, `storefront/.env`,
+`storefront/.env.development`, and `infra/.env` are gitignored, but their
+`age`-encrypted counterparts (`*.env.age`) are committed — see
+[`docs/local-dev.md` → Secrets encryption (age)](./local-dev.md#secrets-encryption-age).
+CI can decrypt them onto the runner's disk via a manual
+`workflow_dispatch` run of `deploy.yml` with `bootstrap_secrets: true`
+(the `bootstrap-secrets` job), using the same repo-secret pattern as the
+vault password above:
+
+| Secret | Value |
+|---|---|
+| `AGE_SECRET_KEY` | The shared `age` private key (`AGE-SECRET-KEY-1...`) |
+
+This is **not** part of the routine deploy path — the runner is persistent,
+and the `.env` files already on disk (rendered by Ansible from the vault)
+are the live source of truth for a running deploy. Auto-decrypting on every
+push would risk overwriting correct on-disk secrets with stale committed
+ciphertext if someone forgot to re-run `scripts/secrets-encrypt.sh` after an
+on-VPS change. Use the manual dispatch only to bootstrap a fresh VPS/runner
+or for disaster recovery.
+
 ---
 
 ## Typical deploy flow

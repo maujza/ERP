@@ -1,4 +1,10 @@
 ---
+- name: Install age (decrypts committed .env.age files)
+  ansible.builtin.apt:
+    name: age
+    state: present
+    update_cache: true
+
 - name: Ensure the root SSH directory exists
   ansible.builtin.file:
     path: /root/.ssh
