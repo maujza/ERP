@@ -94,7 +94,15 @@ production-like container images.
 
 ## Initial setup (first time)
 
-### 1. Copy the env files
+### 1. Get the env files
+
+If you have the shared `age` private key (see [Env files → secrets encryption](#secrets-encryption-age) below), decrypt the real values already committed to the repo:
+
+```bash
+./scripts/secrets-decrypt.sh
+```
+
+Otherwise, start from the placeholder templates and fill in real values yourself:
 
 ```bash
 cp backend/.env.example              backend/.env
@@ -142,6 +150,17 @@ MEDUSA_ADMIN_URL=http://localhost:9000
 ```
 
 > R2 and Resend aren't overridden in dev — prod credentials get used locally too. To isolate them, add `R2_BUCKET=` and `RESEND_API_KEY=` to `backend/.env.dev`.
+
+### Secrets encryption (age)
+
+`backend/.env`, `backend/.env.dev`, `storefront/.env`, `storefront/.env.development`, and `infra/.env` are gitignored (never committed as plaintext), but their [`age`](https://age-encryption.org)-encrypted counterparts (`*.env.age`) **are** committed, so the repo is self-contained — no separate secrets channel is needed to get a working local setup.
+
+1. Install `age`: `brew install age` (macOS) or `apt install age` (Debian/Ubuntu).
+2. Get the shared private key from the team password manager and place it at `~/.config/age/key.txt` (or point `AGE_IDENTITY_FILE` at wherever you keep it).
+3. `./scripts/secrets-decrypt.sh` — decrypts every `*.env.age` file present into its real path.
+4. After editing any real `.env` file, run `./scripts/secrets-encrypt.sh` and commit the resulting `*.env.age` file(s) — the plaintext itself must never be committed.
+
+`.age-recipients` at the repo root lists the public key(s) allowed to decrypt; it's safe to commit (public keys aren't secret). Adding a new recipient there and re-running `secrets-encrypt.sh` re-wraps existing `*.env.age` files for them too.
 
 ---
 

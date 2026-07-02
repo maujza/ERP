@@ -4,6 +4,8 @@
 !.env.template
 !.env.example
 !.env.test.example
+!.env.age
+!.env.dev.age
 .DS_Store
 /uploads
 /node_modules

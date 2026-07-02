@@ -1,0 +1,5 @@
+# age public keys allowed to decrypt this repo's committed .env.age files.
+# One key per line. Adding a recipient here does NOT retroactively grant
+# access to already-encrypted files — re-run scripts/secrets-encrypt.sh
+# after adding a key so existing .env.age files are re-wrapped for it too.
+age1j969p9dtghm0nm46nm9pgvg45a45mjts5gndkaq0ruq6uajtg3gsx6ncce
