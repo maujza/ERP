@@ -1,17 +1,23 @@
 import { test, expect } from "@playwright/test";
 
 async function addFirstProductToCart(page: import("@playwright/test").Page) {
+  // Click the card for a known single-variant E2E product (seed-e2e.ts) by
+  // its title text, rather than "/catalog"'s first card: the 4 E2E products
+  // are created in the same batch with identical created_at timestamps, so
+  // their listing order is not guaranteed stable across runs. Landing on the
+  // one multi-variant product ("Set E2E Aurora") intermittently left
+  // add-to-cart showing "Selecciona variante" instead, since nothing here
+  // tests variant selection itself. (Can't link directly to /product/<handle>
+  // — the route takes the product id, which seed-e2e.ts generates per run.)
   await page.goto("/catalog");
-  const firstCard = page.locator("a[href^='/product/']").first();
-  await expect(firstCard).toBeVisible({ timeout: 10000 });
-  await firstCard.click();
+  // product-card.tsx renders the title as a <p> sibling of the <a>, not
+  // inside it — scope to the <article> card by its title text, then grab
+  // the link within it, rather than filtering the <a> itself by hasText.
+  const targetCardContainer = page.locator("article").filter({ hasText: "Aros E2E Aurora" });
+  const targetCard = targetCardContainer.locator("a[href^='/product/']").first();
+  await expect(targetCard).toBeVisible({ timeout: 10000 });
+  await targetCard.click();
   await expect(page).toHaveURL(/\/product\//, { timeout: 5000 });
-
-  // Select first variant if the product requires one before add-to-cart is enabled
-  const firstVariantBtn = page.locator("div.flex.flex-wrap.gap-2 button").first();
-  if (await firstVariantBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-    await firstVariantBtn.click();
-  }
 
   const addBtn = page.locator("button").filter({ hasText: "Agregar al carrito" });
   await expect(addBtn).toBeVisible({ timeout: 5000 });
