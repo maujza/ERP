@@ -1,13 +1,13 @@
-# DESIGN.md — Aurelia Frontend Guide
+# DESIGN.md — Aurora Frontend Guide
 
-Living document of Aurelia's actual frontend. Describes the current visual direction, the main components, and the decisions that are actually implemented today.
+Living document of Aurora's actual frontend. Describes the current visual direction, the main components, and the decisions that are actually implemented today.
 
 **Audience:** development and future UI sessions.
 **Last updated:** 2026-04-06
 
 ## Product
 
-Aurelia isn't just a store. The frontend today covers four distinct surfaces:
+Aurora isn't just a store. The frontend today covers four distinct surfaces:
 
 - B2B/mobile-first storefront
 - catalog and product pages for wholesale sales

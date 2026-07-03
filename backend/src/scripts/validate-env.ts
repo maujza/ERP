@@ -83,7 +83,7 @@ export default async function validateEnv({ container }: { container: any }) {
   }
 
   // ── 3. Admin user ─────────────────────────────────────────────────────────
-  const adminEmail = env["MEDUSA_ADMIN_EMAIL"] ?? process.env.MEDUSA_ADMIN_EMAIL ?? "admin@aurelia.com"
+  const adminEmail = env["MEDUSA_ADMIN_EMAIL"] ?? process.env.MEDUSA_ADMIN_EMAIL ?? "admin@aurorapormayor.com"
   const userService = container.resolve("userModuleService")
   const { users } = await userService.listUsers({ email: adminEmail }, { take: 1 })
   if (users.length > 0) {

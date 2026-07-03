@@ -29,7 +29,7 @@ type TrackingStep = {
   current: boolean;
 };
 
-const DEFAULT_PROMO_CODES = ["AURELIA10"];
+const DEFAULT_PROMO_CODES = ["AURORA10"];
 
 function normalizeStatus(value?: string) {
   return String(value || "").toLowerCase().replaceAll("_", " ").trim();

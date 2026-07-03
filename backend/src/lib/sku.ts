@@ -12,7 +12,7 @@
  */
 
 // The placeholder variant title used by single-variant products in this catalog
-// (see seed-aurelia.ts). It carries no information, so it is omitted from SKUs.
+// (see seed-aurora.ts). It carries no information, so it is omitted from SKUs.
 const DEFAULT_VARIANT_TITLE = "Única"
 
 /**

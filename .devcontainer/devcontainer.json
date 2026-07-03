@@ -1,5 +1,5 @@
 {
-  "name": "Aurelia ERP",
+  "name": "Aurora ERP",
   "build": {
     "dockerfile": "Dockerfile",
     "context": "."

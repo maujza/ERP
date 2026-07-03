@@ -1,5 +1,5 @@
 ---
-- name: Deploy the Aurelia ERP stack
+- name: Deploy the Aurora ERP stack
   hosts: erp
   become: false
   gather_facts: true

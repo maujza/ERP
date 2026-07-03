@@ -16,7 +16,7 @@
  * No external SDK or API calls are made here — this file is pure utility functions.
  */
 
-export const WHATSAPP_DRAFT_KEY = "aurelia-whatsapp-draft";
+export const WHATSAPP_DRAFT_KEY = "aurora-whatsapp-draft";
 
 export type WhatsAppDraft = {
   message: string;

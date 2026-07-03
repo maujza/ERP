@@ -1,6 +1,6 @@
-# Aurelia ERP Commerce Stack
+# Aurora ERP Commerce Stack
 
-Monorepo for Aurelia's commerce operation. The stack combines a B2B storefront, a visual backoffice, a Medusa backend, POS, and a PostgreSQL database.
+Monorepo for Aurora's commerce operation. The stack combines a B2B storefront, a visual backoffice, a Medusa backend, POS, and a PostgreSQL database.
 
 ## What's included
 
@@ -128,7 +128,7 @@ Bootstrap runs in `backend/src/scripts/bootstrap.ts`.
 It does two idempotent checks:
 
 - if Medusa's base seed is missing, it runs it
-- if the Argentina region is missing, it runs Aurelia's seed
+- if the Argentina region is missing, it runs Aurora's seed
 
 That avoids reseeding everything on every backend restart.
 

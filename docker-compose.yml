@@ -44,7 +44,7 @@ services:
   #   1. npx medusa db:migrate       — applies any pending database migrations
   #   2. npx medusa exec bootstrap   — creates sales channels, regions, etc. (idempotent)
   #   3. medusa user -e ... -p ...   — creates/updates the admin user (|| true = safe if exists)
-  #   4. seed-aurelia.ts             — seeds demo jewelry catalog (only if SEED_DEMO_DATA=true)
+  #   4. seed-aurora.ts             — seeds demo jewelry catalog (only if SEED_DEMO_DATA=true)
   backend-init:
     image: erp-backend-init:local
     build:
@@ -54,11 +54,11 @@ services:
       sh -c "
         npx medusa db:migrate &&
         npx medusa exec ./src/scripts/bootstrap.ts &&
-        (npx medusa user -e \"$${MEDUSA_ADMIN_EMAIL:-admin@aurelia.com}\" -p \"$${MEDUSA_ADMIN_PASSWORD}\" >/dev/null 2>&1 || true) &&
+        (npx medusa user -e \"$${MEDUSA_ADMIN_EMAIL:-admin@aurorapormayor.com}\" -p \"$${MEDUSA_ADMIN_PASSWORD}\" >/dev/null 2>&1 || true) &&
         npx medusa exec ./src/scripts/assign-admin-role.ts &&
         if [ \"$${SEED_DEMO_DATA:-false}\" = \"true\" ]; then
           echo 'Seeding demo data...' &&
-          npx medusa exec ./src/scripts/seed-aurelia.ts
+          npx medusa exec ./src/scripts/seed-aurora.ts
         fi
       "
     env_file: ./backend/.env   # reads secrets like JWT_SECRET, COOKIE_SECRET, etc.

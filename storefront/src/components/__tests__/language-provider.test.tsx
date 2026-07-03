@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, act, renderHook } from "@testing-library/react";
 import { LanguageProvider, useLanguage, SUPPORTED_LANGUAGES } from "../language-provider";
 
-const STORAGE_KEY = "aurelia-language";
+const STORAGE_KEY = "aurora-language";
 
 function TestConsumer() {
   const { language, setLanguage, toggleLanguage } = useLanguage();
@@ -84,7 +84,7 @@ describe("LanguageProvider – setLanguage", () => {
     );
     act(() => {
       screen.getByText("Set KO").click();
-      window.dispatchEvent(new Event("aurelia-language-change"));
+      window.dispatchEvent(new Event("aurora-language-change"));
     });
     expect(localStorage.getItem(STORAGE_KEY)).toBe("ko");
   });
@@ -98,7 +98,7 @@ describe("LanguageProvider – setLanguage", () => {
     );
     act(() => {
       screen.getByText("Set ES").click();
-      window.dispatchEvent(new Event("aurelia-language-change"));
+      window.dispatchEvent(new Event("aurora-language-change"));
     });
     expect(localStorage.getItem(STORAGE_KEY)).toBe("es");
   });
@@ -121,7 +121,7 @@ describe("LanguageProvider – toggleLanguage", () => {
     );
     act(() => {
       screen.getByText("Toggle").click();
-      window.dispatchEvent(new Event("aurelia-language-change"));
+      window.dispatchEvent(new Event("aurora-language-change"));
     });
     expect(localStorage.getItem(STORAGE_KEY)).toBe("ko");
   });
@@ -135,7 +135,7 @@ describe("LanguageProvider – toggleLanguage", () => {
     );
     act(() => {
       screen.getByText("Toggle").click();
-      window.dispatchEvent(new Event("aurelia-language-change"));
+      window.dispatchEvent(new Event("aurora-language-change"));
     });
     expect(localStorage.getItem(STORAGE_KEY)).toBe("es");
   });
@@ -149,7 +149,7 @@ describe("LanguageProvider – toggleLanguage", () => {
     );
     act(() => {
       screen.getByText("Toggle").click();
-      window.dispatchEvent(new Event("aurelia-language-change"));
+      window.dispatchEvent(new Event("aurora-language-change"));
     });
     expect(localStorage.getItem(STORAGE_KEY)).toBe("ko");
   });
@@ -225,7 +225,7 @@ describe("useLanguage – inside provider (renderHook)", () => {
     const { result } = renderHook(() => useLanguage(), { wrapper: Wrapper });
     act(() => {
       result.current.setLanguage("ko");
-      window.dispatchEvent(new Event("aurelia-language-change"));
+      window.dispatchEvent(new Event("aurora-language-change"));
     });
     expect(localStorage.getItem(STORAGE_KEY)).toBe("ko");
   });
@@ -234,7 +234,7 @@ describe("useLanguage – inside provider (renderHook)", () => {
     const { result } = renderHook(() => useLanguage(), { wrapper: Wrapper });
     act(() => {
       result.current.toggleLanguage();
-      window.dispatchEvent(new Event("aurelia-language-change"));
+      window.dispatchEvent(new Event("aurora-language-change"));
     });
     expect(localStorage.getItem(STORAGE_KEY)).toBe("ko");
   });
@@ -244,7 +244,7 @@ describe("useLanguage – inside provider (renderHook)", () => {
 // LanguageProvider – event subscription
 // ---------------------------------------------------------------------------
 describe("LanguageProvider – storage event subscription", () => {
-  it("subscribes to aurelia-language-change event", () => {
+  it("subscribes to aurora-language-change event", () => {
     const addEventSpy = vi.spyOn(window, "addEventListener");
     render(
       <LanguageProvider>
@@ -252,7 +252,7 @@ describe("LanguageProvider – storage event subscription", () => {
       </LanguageProvider>
     );
     expect(addEventSpy).toHaveBeenCalledWith(
-      "aurelia-language-change",
+      "aurora-language-change",
       expect.any(Function)
     );
     addEventSpy.mockRestore();
@@ -333,7 +333,7 @@ describe("LanguageProvider – getSnapshot validates against SUPPORTED_LANGUAGES
   });
 
   it("falls back to first SUPPORTED_LANGUAGES entry for an invalid locale", () => {
-    localStorage.setItem("aurelia-language", "fr");
+    localStorage.setItem("aurora-language", "fr");
     render(
       <LanguageProvider>
         <TestConsumer />
@@ -345,7 +345,7 @@ describe("LanguageProvider – getSnapshot validates against SUPPORTED_LANGUAGES
 
   it("accepts all codes listed in SUPPORTED_LANGUAGES", () => {
     for (const lang of SUPPORTED_LANGUAGES) {
-      localStorage.setItem("aurelia-language", lang.code);
+      localStorage.setItem("aurora-language", lang.code);
       const { unmount } = render(
         <LanguageProvider>
           <TestConsumer />

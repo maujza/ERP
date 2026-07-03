@@ -1,8 +1,8 @@
 {
-  "name": "aurelia-backend",
+  "name": "aurora-backend",
   "version": "0.0.1",
-  "description": "Aurelia – bijouterie mayorista Argentina, backend Medusa 2.x.",
-  "author": "Aurelia",
+  "description": "Aurora – bijouterie mayorista Argentina, backend Medusa 2.x.",
+  "author": "Aurora",
   "license": "MIT",
   "keywords": [
     "postgres",
@@ -10,13 +10,13 @@
     "ecommerce",
     "headless",
     "argentina",
-    "aurelia"
+    "aurora"
   ],
   "scripts": {
     "build": "node ./scripts/patch-dashboard-i18n.mjs && medusa build && node ./scripts/patch-admin-branding.mjs",
     "postinstall": "node ./scripts/patch-dashboard-i18n.mjs",
     "seed": "medusa exec ./src/scripts/seed.ts",
-    "seed:aurelia": "medusa exec ./src/scripts/seed-aurelia.ts",
+    "seed:aurora": "medusa exec ./src/scripts/seed-aurora.ts",
     "seed:e2e": "medusa exec ./src/scripts/seed-e2e.ts",
     "cleanup:e2e": "medusa exec ./src/scripts/cleanup-e2e.ts",
     "start": "medusa start",

@@ -33,7 +33,7 @@ medusaIntegrationTestRunner({
         const variantId = product.variants[0].id
 
         const order = await orderService.createOrders({
-          email: "buyer@aurelia.test",
+          email: "buyer@aurora.test",
           currency_code: "ars",
           items: [
             {
@@ -108,7 +108,7 @@ medusaIntegrationTestRunner({
         const orderService = container.resolve<any>(Modules.ORDER)
 
         const order = await orderService.createOrders({
-          email: "buyer@aurelia.test",
+          email: "buyer@aurora.test",
           currency_code: "ars",
         })
 

@@ -5,7 +5,7 @@
  *   cd backend && npx medusa exec src/scripts/seed-e2e.ts
  *   (or `npm run seed:e2e`)
  *
- * Unlike seed-aurelia.ts (the full demo catalog, gated by SEED_DEMO_DATA), this
+ * Unlike seed-aurora.ts (the full demo catalog, gated by SEED_DEMO_DATA), this
  * script creates a *small, tagged* set of products that the Playwright suites
  * need to exercise the storefront and admin flows. Each product carries
  * metadata.e2e="true" and an "E2E-" SKU prefix so cleanup-e2e.ts can remove

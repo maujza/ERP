@@ -22,7 +22,7 @@ type LanguageContextValue = {
   toggleLanguage: () => void;
 };
 
-const LANGUAGE_STORAGE_KEY = "aurelia-language";
+const LANGUAGE_STORAGE_KEY = "aurora-language";
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
@@ -33,10 +33,10 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     }
     const handler = () => onStoreChange();
     window.addEventListener("storage", handler);
-    window.addEventListener("aurelia-language-change", handler);
+    window.addEventListener("aurora-language-change", handler);
     return () => {
       window.removeEventListener("storage", handler);
-      window.removeEventListener("aurelia-language-change", handler);
+      window.removeEventListener("aurora-language-change", handler);
     };
   }, []);
 
@@ -58,7 +58,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const setLanguage = useCallback((nextLanguage: Language) => {
     if (typeof window === "undefined") return;
     localStorage.setItem(LANGUAGE_STORAGE_KEY, nextLanguage);
-    window.dispatchEvent(new Event("aurelia-language-change"));
+    window.dispatchEvent(new Event("aurora-language-change"));
   }, []);
 
   const toggleLanguage = useCallback(() => {
@@ -67,7 +67,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     const currentLanguage: Language = current === "ko" ? "ko" : "es";
     const nextLanguage: Language = currentLanguage === "es" ? "ko" : "es";
     localStorage.setItem(LANGUAGE_STORAGE_KEY, nextLanguage);
-    window.dispatchEvent(new Event("aurelia-language-change"));
+    window.dispatchEvent(new Event("aurora-language-change"));
   }, []);
 
   const value = useMemo(

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
-const STORAGE_KEY = "aurelia_favorites";
+const STORAGE_KEY = "aurora_favorites";
 
 function readFavorites(): string[] {
   try {

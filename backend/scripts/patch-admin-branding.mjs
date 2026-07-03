@@ -1,6 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises"
 
-const TITLE = "Aurelia Backoffice"
+const TITLE = "Aurora Backoffice"
 const THEME_COLOR = "#101114"
 const faviconSvg = `
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">

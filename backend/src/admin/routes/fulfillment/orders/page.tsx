@@ -123,7 +123,7 @@ const FulfillmentOrdersPage = () => {
 
   // Fetch orders that are paid and not yet fulfilled, to show "Ready" rows
   const { data: ordersData, isLoading: ordersLoading } = useQuery({
-    queryKey: ["aurelia-orders-fulfillable"],
+    queryKey: ["aurora-orders-fulfillable"],
     queryFn: () =>
       sdk.client.fetch<{ orders: MedusaOrder[]; count: number }>("/admin/orders", {
         query: {

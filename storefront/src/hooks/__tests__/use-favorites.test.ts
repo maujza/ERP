@@ -33,12 +33,12 @@ describe("useFavorites", () => {
   it("persists favorites to localStorage", () => {
     const { result } = renderHook(() => useFavorites());
     act(() => result.current.toggleFavorite("p1"));
-    const stored = JSON.parse(localStorage.getItem("aurelia_favorites") ?? "[]");
+    const stored = JSON.parse(localStorage.getItem("aurora_favorites") ?? "[]");
     expect(stored).toContain("p1");
   });
 
   it("reads existing favorites from localStorage on mount", () => {
-    localStorage.setItem("aurelia_favorites", JSON.stringify(["p42"]));
+    localStorage.setItem("aurora_favorites", JSON.stringify(["p42"]));
     const { result } = renderHook(() => useFavorites());
     expect(result.current.isFavorite("p42")).toBe(true);
   });

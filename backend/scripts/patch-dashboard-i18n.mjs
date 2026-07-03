@@ -4,8 +4,8 @@ import path from "node:path"
 const root = process.cwd()
 
 const replacements = [
-  ["Welcome to Medusa", "Bienvenido a Aurelia Backoffice"],
-  ["Bienvenido a Medusa", "Bienvenido a Aurelia Backoffice"],
+  ["Welcome to Medusa", "Bienvenido a Aurora Backoffice"],
+  ["Bienvenido a Medusa", "Bienvenido a Aurora Backoffice"],
   ["Create Draft Order", "Crear Pedido Borrador"],
   ["Choose region", "Elige región"],
   ["Select region", "Seleccionar región"],

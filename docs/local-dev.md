@@ -117,7 +117,7 @@ cp storefront/.env.development.example  storefront/.env.development
 |---|---|
 | `JWT_SECRET` | Any secret string |
 | `COOKIE_SECRET` | Any secret string |
-| `MEDUSA_ADMIN_PASSWORD` | Password for `admin@aurelia.com` |
+| `MEDUSA_ADMIN_PASSWORD` | Password for `admin@aurorapormayor.com` |
 | `R2_BUCKET`, `R2_*` | Cloudflare R2 credentials (ask whoever administers the bucket) |
 
 Without `R2_BUCKET`, the backend still starts fine using Medusa's local file provider — images are saved to disk instead of R2.

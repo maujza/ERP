@@ -51,7 +51,7 @@ if (!_publishableKey) {
 }
 
 export const PUBLISHABLE_KEY: string = _publishableKey;
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "admin@aurelia.com";
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "admin@aurorapormayor.com";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "supersecret";
 
 export type StoreCustomer = {

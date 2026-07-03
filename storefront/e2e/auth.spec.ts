@@ -27,7 +27,7 @@ test.describe("Auth page", () => {
   });
 
   test("shows error on invalid credentials", async ({ page }) => {
-    await page.getByLabel(/email/i).fill("noexiste@aurelia.com");
+    await page.getByLabel(/email/i).fill("noexiste@aurorapormayor.com");
     await page.getByLabel(/contraseña/i).fill("wrongpassword");
     await page.locator('main button[type="submit"]').click();
     await expect(

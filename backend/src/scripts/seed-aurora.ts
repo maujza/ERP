@@ -1,15 +1,15 @@
 /**
- * Aurelia Jewelry — Argentina seed script
+ * Aurora Jewelry — Argentina seed script
  *
  * Run with:
- *   cd backend && npx medusa exec src/scripts/seed-aurelia.ts
+ *   cd backend && npx medusa exec src/scripts/seed-aurora.ts
  *
  * Creates:
  *   • Argentina region (ARS)
  *   • Buenos Aires stock location + shipping options
  *   • Jewelry product categories (Aros, Collares, Pulseras, Sets, Kits)
- *   • 10 Aurelia jewelry products with ARS pricing and metadata
- *   • AURELIA10 promotion (10 % off whole order)
+ *   • 10 Aurora jewelry products with ARS pricing and metadata
+ *   • AURORA10 promotion (10 % off whole order)
  *
  * After running, update .env.local with the logged Argentina Region ID.
  */
@@ -34,7 +34,7 @@ import {
 } from "@medusajs/medusa/core-flows";
 import { ensureAdminRole } from "../lib/ensure-admin-role";
 
-export default async function seedAureliaData({ container }: ExecArgs) {
+export default async function seedAuroraData({ container }: ExecArgs) {
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER);
   const link = container.resolve(ContainerRegistrationKeys.LINK);
   const query = container.resolve(ContainerRegistrationKeys.QUERY);
@@ -262,13 +262,13 @@ export default async function seedAureliaData({ container }: ExecArgs) {
   // you can create your own catalog. Set SEED_DEMO_DATA=true to seed demo data.
   if (process.env.SEED_DEMO_DATA !== "true") {
     logger.info(
-      "SEED_DEMO_DATA is not 'true' — skipping Aurelia demo content (categories, collections, products, inventory, promotions, customers, orders). Infrastructure is ready."
+      "SEED_DEMO_DATA is not 'true' — skipping Aurora demo content (categories, collections, products, inventory, promotions, customers, orders). Infrastructure is ready."
     );
     return;
   }
 
   // ── 5. Product Categories ─────────────────────────────────────────────────────
-  logger.info("Seeding Aurelia product categories...");
+  logger.info("Seeding Aurora product categories...");
   const { data: existingCats } = await query.graph({
     entity: "product_category",
     fields: ["id", "name"],
@@ -302,7 +302,7 @@ export default async function seedAureliaData({ container }: ExecArgs) {
   // always-on infrastructure (like categories) so those surfaces are
   // backend-driven and non-empty even with an empty product catalog. Staff
   // assign products to a collection in the Admin UI; the storefront reflects it.
-  logger.info("Seeding Aurelia product collections...");
+  logger.info("Seeding Aurora product collections...");
   const collectionTitles = ["Novedades", "Best Sellers", "Esenciales", "Fiesta", "Kits"];
   const { data: existingCollections } = await query.graph({
     entity: "product_collection",
@@ -323,11 +323,11 @@ export default async function seedAureliaData({ container }: ExecArgs) {
     newCollections.forEach((c: any) => { collectionMap[c.title] = c.id; });
     logger.info(`Created collections: ${collectionsToCreate.join(", ")}`);
   } else {
-    logger.info("Aurelia collections already exist.");
+    logger.info("Aurora collections already exist.");
   }
 
   // ── 6. Jewelry Products ───────────────────────────────────────────────────────
-  logger.info("Seeding Aurelia jewelry products...");
+  logger.info("Seeding Aurora jewelry products...");
   const { data: existingProducts } = await query.graph({
     entity: "product",
     fields: ["id", "handle"],
@@ -339,7 +339,7 @@ export default async function seedAureliaData({ container }: ExecArgs) {
   const shippingProfiles = await fulfillmentModuleService.listShippingProfiles({ type: "default" });
   const shippingProfile = shippingProfiles[0];
 
-  type AureliaProduct = {
+  type AuroraProduct = {
     title: string;
     handle: string;
     description: string;
@@ -350,13 +350,13 @@ export default async function seedAureliaData({ container }: ExecArgs) {
     variants: { title: string; sku: string }[];
   };
 
-  const aureliaProducts: AureliaProduct[] = [
+  const auroraProducts: AuroraProduct[] = [
     {
       title: "Aros Siena Dorado",
       handle: "aros-siena-dorado",
       description:
-        "Aros tono dorado con detalle central texturizado. Livianos y de larga duración. Cierre tipo gancho. Incluyen caja Aurelia.",
-      metadata: { category: "Aros", subcategory: "Novedades", brand: "Aurelia Core" },
+        "Aros tono dorado con detalle central texturizado. Livianos y de larga duración. Cierre tipo gancho. Incluyen caja Aurora.",
+      metadata: { category: "Aros", subcategory: "Novedades", brand: "Aurora Core" },
       categoryName: "Aros",
       price: 18900,
       images: [
@@ -369,7 +369,7 @@ export default async function seedAureliaData({ container }: ExecArgs) {
       handle: "aros-argolla-fina-plateada",
       description:
         "Argollas finas tono plateado. Clásicas, versátiles y de uso diario. Disponibles en tres tamaños para distintos estilos.",
-      metadata: { category: "Aros", subcategory: "Esenciales", brand: "Aurelia Core" },
+      metadata: { category: "Aros", subcategory: "Esenciales", brand: "Aurora Core" },
       categoryName: "Aros",
       price: 12500,
       images: [
@@ -412,7 +412,7 @@ export default async function seedAureliaData({ container }: ExecArgs) {
       handle: "collar-capas-boho",
       description:
         "Collar de múltiples capas con detalles de piedras semi-preciosas y metales mixtos. Tendencia boho para primavera-verano.",
-      metadata: { category: "Collares", subcategory: "Novedades", brand: "Aurelia Studio" },
+      metadata: { category: "Collares", subcategory: "Novedades", brand: "Aurora Studio" },
       categoryName: "Collares",
       price: 32000,
       images: [
@@ -451,7 +451,7 @@ export default async function seedAureliaData({ container }: ExecArgs) {
       handle: "set-vitrina-mix-x5",
       description:
         "Set de 5 piezas combinables: 2 pares de aros, 1 collar, 1 pulsera y 1 anillo. Presentación premium en caja para vitrina.",
-      metadata: { category: "Sets", subcategory: "Best Sellers", brand: "Aurelia Studio" },
+      metadata: { category: "Sets", subcategory: "Best Sellers", brand: "Aurora Studio" },
       categoryName: "Sets",
       price: 89000,
       images: [
@@ -479,8 +479,8 @@ export default async function seedAureliaData({ container }: ExecArgs) {
       title: "Kit Showroom Básico x8",
       handle: "kit-showroom-basico-x8",
       description:
-        "Kit de 8 piezas variadas para armar o renovar vitrina. Mix de aros, collares y pulseras seleccionados por el equipo Aurelia. Dos versiones tonales.",
-      metadata: { category: "Kits", subcategory: "Fiesta", brand: "Aurelia Pro" },
+        "Kit de 8 piezas variadas para armar o renovar vitrina. Mix de aros, collares y pulseras seleccionados por el equipo Aurora. Dos versiones tonales.",
+      metadata: { category: "Kits", subcategory: "Fiesta", brand: "Aurora Pro" },
       categoryName: "Kits",
       price: 125000,
       images: [
@@ -493,7 +493,7 @@ export default async function seedAureliaData({ container }: ExecArgs) {
     },
   ];
 
-  const productsToCreate = aureliaProducts.filter((p) => !existingHandles.has(p.handle));
+  const productsToCreate = auroraProducts.filter((p) => !existingHandles.has(p.handle));
 
   if (productsToCreate.length > 0) {
     await createProductsWorkflow(container).run({
@@ -527,14 +527,14 @@ export default async function seedAureliaData({ container }: ExecArgs) {
         }),
       },
     });
-    logger.info(`Created ${productsToCreate.length} Aurelia jewelry products.`);
+    logger.info(`Created ${productsToCreate.length} Aurora jewelry products.`);
   } else {
-    logger.info("Aurelia jewelry products already exist.");
+    logger.info("Aurora jewelry products already exist.");
   }
 
   // ── 6b. Bulk Dummy Products (storefront depth) ─────────────────────────────
   const BULK_PRODUCT_TARGET = 120;
-  const bulkHandlePrefix = "aurelia-dummy-";
+  const bulkHandlePrefix = "aurora-dummy-";
   logger.info("Ensuring bulk dummy catalog for storefront exploration...");
 
   const { data: productsAfterSeed } = await query.graph({
@@ -563,9 +563,9 @@ export default async function seedAureliaData({ container }: ExecArgs) {
   if (missingBulkCount > 0) {
     const categoryCycle = ["Aros", "Collares", "Pulseras", "Sets", "Kits"];
     const subcategoryCycle = ["Novedades", "Best Sellers", "Esenciales", "Fiesta"];
-    const brandCycle = ["Aurelia Core", "Aurelia Studio", "Lumiere", "Boreal", "Aurelia Pro"];
+    const brandCycle = ["Aurora Core", "Aurora Studio", "Lumiere", "Boreal", "Aurora Pro"];
 
-    const productsToGenerate: AureliaProduct[] = [];
+    const productsToGenerate: AuroraProduct[] = [];
     let candidateIndex = Math.max(existingBulkCount, existingBulkSkuMax) + 1;
     while (productsToGenerate.length < missingBulkCount) {
       const index = candidateIndex;
@@ -579,7 +579,7 @@ export default async function seedAureliaData({ container }: ExecArgs) {
       }
 
       productsToGenerate.push({
-        title: `Aurelia ${categoryName} Demo ${String(index).padStart(3, "0")}`,
+        title: `Aurora ${categoryName} Demo ${String(index).padStart(3, "0")}`,
         handle,
         description:
           "Producto demo generado para pruebas visuales de dashboard/storefront, navegación por catálogo y simulación de compra.",
@@ -681,7 +681,7 @@ export default async function seedAureliaData({ container }: ExecArgs) {
   // ── 8. Promotions ──────────────────────────────────────────────────────────────
   logger.info("Seeding promotions...");
   const promos = [
-    { code: "AURELIA10", value: 10 },
+    { code: "AURORA10", value: 10 },
     { code: "SUMMER15", value: 15 },
   ] as const
 
@@ -723,7 +723,7 @@ export default async function seedAureliaData({ container }: ExecArgs) {
 
   // ── 9. Dummy Customers ───────────────────────────────────────────────────────
   const CUSTOMER_TARGET = 180;
-  const customerDomain = "aurelia-demo.local";
+  const customerDomain = "aurora-demo.local";
   logger.info("Ensuring dummy customers...");
 
   const { data: existingCustomers } = await query.graph({
@@ -773,7 +773,7 @@ export default async function seedAureliaData({ container }: ExecArgs) {
 
   // ── 10. Dummy Orders (dashboard depth) ──────────────────────────────────────
   const ORDER_TARGET = 120;
-  const orderSeedSource = "aurelia_dummy_v1";
+  const orderSeedSource = "aurora_dummy_v1";
   logger.info("Ensuring dummy orders for dashboard analytics...");
 
   // Build email → customer_id map for linking orders to customers
@@ -800,9 +800,9 @@ export default async function seedAureliaData({ container }: ExecArgs) {
   const ordersMissing = Math.max(ORDER_TARGET - existingSeededOrders.length, 0);
 
   if (ordersMissing > 0) {
-    const catalogHandles = new Set(aureliaProducts.map((product) => product.handle));
+    const catalogHandles = new Set(auroraProducts.map((product) => product.handle));
     const priceByHandle = new Map(
-      aureliaProducts.map((product) => [product.handle, product.price])
+      auroraProducts.map((product) => [product.handle, product.price])
     );
     const { data: catalogVariants } = await query.graph({
       entity: "product_variant",
@@ -832,7 +832,7 @@ export default async function seedAureliaData({ container }: ExecArgs) {
       })
       .map((variant) => {
         const handle = String(variant.product?.handle);
-        const productTitle = String(variant.product?.title ?? "Aurelia Demo Product");
+        const productTitle = String(variant.product?.title ?? "Aurora Demo Product");
         const variantTitle = String(variant.title ?? "");
         const normalizedVariantTitle = variantTitle.trim().toLowerCase();
         const lineTitle =
@@ -903,7 +903,7 @@ export default async function seedAureliaData({ container }: ExecArgs) {
           ...(customerId && { customer_id: customerId }),
           currency_code: "ars",
           shipping_address: {
-            first_name: "Aurelia",
+            first_name: "Aurora",
             last_name: "Demo",
             address_1: "Av. Santa Fe 1234",
             city: "Buenos Aires",
@@ -912,7 +912,7 @@ export default async function seedAureliaData({ container }: ExecArgs) {
             postal_code: "C1000",
           },
           billing_address: {
-            first_name: "Aurelia",
+            first_name: "Aurora",
             last_name: "Demo",
             address_1: "Av. Santa Fe 1234",
             city: "Buenos Aires",
@@ -959,7 +959,7 @@ export default async function seedAureliaData({ container }: ExecArgs) {
 
   // ── Done ──────────────────────────────────────────────────────────────────────
   logger.info("═".repeat(60));
-  logger.info("Aurelia seed complete! ✓");
+  logger.info("Aurora seed complete! ✓");
   logger.info("");
   logger.info(`Argentina Region ID: ${argentinaRegion.id}`);
   logger.info("");

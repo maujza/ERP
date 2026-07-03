@@ -108,7 +108,7 @@ export default async function fixJewelryCatalog({ container }: ExecArgs) {
   }
 
   const requiredPromotions = [
-    { code: "AURELIA10", value: 10 },
+    { code: "AURORA10", value: 10 },
     { code: "SUMMER15", value: 15 },
   ] as const
 
