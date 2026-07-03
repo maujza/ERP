@@ -22,7 +22,7 @@ type Logger = {
 export async function ensureAdminRole(
   container: Container,
   logger: Logger,
-  adminEmail = process.env.MEDUSA_ADMIN_EMAIL || "admin@aurelia.com"
+  adminEmail = process.env.MEDUSA_ADMIN_EMAIL || "admin@aurorapormayor.com"
 ): Promise<boolean> {
   const userModule = container.resolve(Modules.USER)
   const [adminUser] = await userModule.listUsers({ email: adminEmail })

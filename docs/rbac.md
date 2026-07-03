@@ -1,6 +1,6 @@
 # RBAC — Role-Based Access Control
 
-How to create users, assign roles, and manage permissions in the Aurelia admin.
+How to create users, assign roles, and manage permissions in the Aurora admin.
 
 ---
 
@@ -32,7 +32,7 @@ Key rules:
 | **Admin** | `admin` | Everything — bypasses all role checks |
 | **Purchasing** | `purchasing` | Suppliers CRUD, purchase orders (create / submit / cancel / receive) |
 | **Inventory** | `inventory` | View purchase orders, receive purchase orders |
-| **Marketing** | `marketing` | Aurelia dashboard (no cost prices shown) |
+| **Marketing** | `marketing` | Aurora dashboard (no cost prices shown) |
 | **Customer Service** | `customer_service` | Reserved — routes not yet implemented |
 
 ---

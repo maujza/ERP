@@ -105,12 +105,12 @@ async function sendInviteEmail(
     "http://localhost:9000"
 
   const inviteUrl = `${adminUrl}/app/invite?token=${invite.token}`
-  const subject = "Te invitaron a unirte a Aurelia"
+  const subject = "Te invitaron a unirte a Aurora"
   const html = `
     <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px">
-      <h2 style="margin:0 0 8px">Bienvenido/a a Aurelia</h2>
+      <h2 style="margin:0 0 8px">Bienvenido/a a Aurora</h2>
       <p style="color:#555;margin:0 0 24px">
-        Fuiste invitado/a a unirte al panel de administración de Aurelia.
+        Fuiste invitado/a a unirte al panel de administración de Aurora.
         Hacé clic en el botón de abajo para crear tu contraseña y activar tu cuenta.
       </p>
       <a href="${inviteUrl}"

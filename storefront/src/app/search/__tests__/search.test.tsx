@@ -85,7 +85,7 @@ const products = [
     title: "Aros Siena",
     description: "Aros dorados de calidad",
     thumbnail: "/img/p1.jpg",
-    metadata: { category: "Aros", subcategory: "Novedades", brand: "Aurelia" },
+    metadata: { category: "Aros", subcategory: "Novedades", brand: "Aurora" },
     variants: [{ id: "v1", title: "default", inventory_quantity: 5, calculated_price: { calculated_amount: 10000 } }],
   },
   {
@@ -93,7 +93,7 @@ const products = [
     title: "Collar Luna",
     description: "Collar elegante de plata",
     thumbnail: "/img/p2.jpg",
-    metadata: { category: "Collares", subcategory: "Best Sellers", brand: "Aurelia" },
+    metadata: { category: "Collares", subcategory: "Best Sellers", brand: "Aurora" },
     variants: [{ id: "v2", title: "default", inventory_quantity: 3, calculated_price: { calculated_amount: 20000 } }],
   },
   {

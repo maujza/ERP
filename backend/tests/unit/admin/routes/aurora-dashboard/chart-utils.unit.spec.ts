@@ -1,4 +1,4 @@
-import { buildTrendPolylinePoints, CHART_BOTTOM, CHART_TOP } from "../../../../../src/admin/routes/aurelia-dashboard/chart-utils"
+import { buildTrendPolylinePoints, CHART_BOTTOM, CHART_TOP } from "../../../../../src/admin/routes/aurora-dashboard/chart-utils"
 
 const parsePoints = (points: string) =>
   points.split(" ").map((pair) => {

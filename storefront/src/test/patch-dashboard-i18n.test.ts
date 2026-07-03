@@ -40,7 +40,7 @@ describe("patch-dashboard-i18n script", () => {
     const nextEs = fs.readFileSync(srcEs, "utf8");
     const nextDistChunk = fs.readFileSync(distChunk, "utf8");
 
-    expect(nextEn).toContain("Bienvenido a Aurelia Backoffice");
+    expect(nextEn).toContain("Bienvenido a Aurora Backoffice");
     expect(nextEs).toContain("Finalizar compra");
     expect(nextDistChunk).toBe("checkout");
   });

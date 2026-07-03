@@ -217,7 +217,7 @@ export function useCheckout() {
         whatsapp_required: true,
         whatsapp_message_sent: false,
         whatsapp_payment_method: "transfer",
-        whatsapp_assignee: "aurelia",
+        whatsapp_assignee: "aurora",
         customer_phone: phone || undefined,
       },
     });

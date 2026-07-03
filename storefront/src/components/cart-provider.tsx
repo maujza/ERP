@@ -13,7 +13,7 @@ import {
 import { CartToast, MiniCartDrawer } from "@/components/cart-drawer";
 import { MEDUSA_COUNTRY_CODE, MEDUSA_REGION_ID, sdk } from "@/lib/medusa";
 
-const CART_ID_KEY = "aurelia-cart-id";
+const CART_ID_KEY = "aurora-cart-id";
 
 export type CartLineItem = {
   id: string;

@@ -2,7 +2,7 @@ import { ExecArgs } from "@medusajs/framework/types"
 import { ContainerRegistrationKeys, Modules } from "@medusajs/framework/utils"
 
 import { ensureAdminRole } from "../lib/ensure-admin-role"
-import seedAureliaData from "./seed-aurelia"
+import seedAuroraData from "./seed-aurora"
 import seedDemoData from "./seed"
 
 export default async function bootstrap({ container }: ExecArgs) {
@@ -31,10 +31,10 @@ export default async function bootstrap({ container }: ExecArgs) {
   )
 
   if (!hasArgentinaRegion) {
-    logger.info("Argentina region not found. Running Aurelia seed...")
-    await seedAureliaData({ container, args: [] })
+    logger.info("Argentina region not found. Running Aurora seed...")
+    await seedAuroraData({ container, args: [] })
   } else {
-    logger.info("Aurelia regional seed already present. Skipping Aurelia seed.")
+    logger.info("Aurora regional seed already present. Skipping Aurora seed.")
   }
 
   try {

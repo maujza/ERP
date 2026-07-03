@@ -4,7 +4,7 @@ import path from "path";
 const ADMIN_AUTH_FILE = path.join(__dirname, "../.auth/admin.json");
 
 setup("authenticate as admin", async ({ page }) => {
-  const email = process.env.ADMIN_EMAIL || "admin@aurelia.com";
+  const email = process.env.ADMIN_EMAIL || "admin@aurorapormayor.com";
   const password = process.env.ADMIN_PASSWORD || "supersecret";
 
   await page.goto("/app");
@@ -13,7 +13,7 @@ setup("authenticate as admin", async ({ page }) => {
   await page.getByPlaceholder(/contraseña/i).fill(password);
   await page.getByRole("button", { name: /continuar con email/i }).click();
 
-  await expect(page).toHaveURL(/\/app\/(dashboard|orders|products|aurelia-dashboard|purchase|fulfillment|team-tasks)/, {
+  await expect(page).toHaveURL(/\/app\/(dashboard|orders|products|aurora-dashboard|purchase|fulfillment|team-tasks)/, {
     timeout: 20000,
   });
 

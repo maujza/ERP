@@ -24,7 +24,7 @@ To avoid this, set `MEDUSA_PUBLISHABLE_KEY` in `backend/.env` (see `backend/.env
 # 1. Authenticate as admin
 TOKEN=$(curl -s -X POST http://localhost:9000/auth/user/emailpass \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@aurelia.com","password":"supersecret"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
+  -d '{"email":"admin@aurorapormayor.com","password":"supersecret"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
 
 # 2. Fetch the new publishable key
 curl -s http://localhost:9000/admin/api-keys \
@@ -89,7 +89,7 @@ const hash = await scryptKdf.kdf('mypassword', { logN: 15, r: 8, p: 1 });
 # Get a fresh token first
 TOKEN=$(curl -s -X POST http://localhost:9000/auth/user/emailpass \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@aurelia.com","password":"currentpassword"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
+  -d '{"email":"admin@aurorapormayor.com","password":"currentpassword"}' | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
 
 # The reset-password endpoint sends a one-time token to email.
 # Without email configured, update the hash directly in the DB:
@@ -99,7 +99,7 @@ docker compose exec backend node -e "
 "
 # Then:
 docker compose exec db psql -U medusa -d medusa -c \
-  \"UPDATE provider_identity SET provider_metadata = '{\"password\": \"<hash>\"}' WHERE entity_id = 'admin@aurelia.com';\"
+  \"UPDATE provider_identity SET provider_metadata = '{\"password\": \"<hash>\"}' WHERE entity_id = 'admin@aurorapormayor.com';\"
 ```
 
 ---
@@ -156,5 +156,5 @@ curl -s "http://localhost:9000/store/products?limit=1" \
 # Can admin authenticate?
 curl -s -X POST http://localhost:9000/auth/user/emailpass \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@aurelia.com","password":"supersecret"}' | python3 -c "import sys,json; d=json.load(sys.stdin); print('OK' if 'token' in d else 'FAIL: ' + d.get('message','?'))"
+  -d '{"email":"admin@aurorapormayor.com","password":"supersecret"}' | python3 -c "import sys,json; d=json.load(sys.stdin); print('OK' if 'token' in d else 'FAIL: ' + d.get('message','?'))"
 ```

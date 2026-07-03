@@ -145,9 +145,9 @@ describe("translateLabel", () => {
   });
 
   it("returns Korean for brands", () => {
-    expect(translateLabel("Aurelia Core", "ko")).toBe("아우렐리아 코어");
-    expect(translateLabel("Aurelia Studio", "ko")).toBe("아우렐리아 스튜디오");
-    expect(translateLabel("Aurelia Pro", "ko")).toBe("아우렐리아 프로");
+    expect(translateLabel("Aurora Core", "ko")).toBe("오로라 코어");
+    expect(translateLabel("Aurora Studio", "ko")).toBe("오로라 스튜디오");
+    expect(translateLabel("Aurora Pro", "ko")).toBe("오로라 프로");
     expect(translateLabel("Lumiere", "ko")).toBe("루미에르");
     expect(translateLabel("Boreal", "ko")).toBe("보레알");
   });

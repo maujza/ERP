@@ -79,7 +79,7 @@ import { CartProvider, useCart } from "../cart-provider";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
-const CART_ID_KEY = "aurelia-cart-id";
+const CART_ID_KEY = "aurora-cart-id";
 
 function DrawerHarness() {
   const { openDrawer } = useCart();

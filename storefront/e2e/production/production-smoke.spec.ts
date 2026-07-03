@@ -27,7 +27,7 @@ test.describe("Production smoke tests", () => {
   test("backoffice login is available", async ({ page }) => {
     await page.goto(`${backendUrl}/app/`);
 
-    await expect(page).toHaveTitle(/Aurelia Backoffice/i);
+    await expect(page).toHaveTitle(/Aurora Backoffice/i);
     await expect(
       page.getByPlaceholder(/correo electrónico|email/i),
     ).toBeVisible();

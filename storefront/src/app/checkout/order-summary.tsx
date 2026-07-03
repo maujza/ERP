@@ -68,7 +68,7 @@ export function OrderSummary({
               value={discountCode}
               onChange={(e) => setDiscountCode(e.target.value)}
               className="h-10 flex-1 rounded-2xl border border-[#9595db]/35 px-3 text-sm"
-              placeholder="AURELIA10"
+              placeholder="AURORA10"
             />
             <Button variant="outline" onClick={() => void applyDiscount()}>
               {t.apply}

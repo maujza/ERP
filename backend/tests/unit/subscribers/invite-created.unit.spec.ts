@@ -49,7 +49,7 @@ async function run(
 
 const validInvite: InviteRecord = {
   id: "invite_01",
-  email: "staff@aurelia.com",
+  email: "staff@aurorapormayor.com",
   token: "tok_abc123",
 }
 
@@ -86,7 +86,7 @@ describe("inviteCreatedHandler", () => {
       const { container, createNotifications } = makeContainer({ invite: validInvite })
       await run(container)
       expect(createNotifications).toHaveBeenCalledWith(
-        expect.objectContaining({ to: "staff@aurelia.com" })
+        expect.objectContaining({ to: "staff@aurorapormayor.com" })
       )
     })
 
@@ -129,7 +129,7 @@ describe("inviteCreatedHandler", () => {
   describe("Resend path (RESEND_API_KEY + RESEND_FROM configured)", () => {
     beforeEach(() => {
       process.env.RESEND_API_KEY = "re_test_key"
-      process.env.RESEND_FROM = "noreply@aurelia.com"
+      process.env.RESEND_FROM = "noreply@aurorapormayor.com"
     })
 
     it("does not call createNotifications when Resend succeeds", async () => {
@@ -146,7 +146,7 @@ describe("inviteCreatedHandler", () => {
       const [url, opts] = (global.fetch as jest.Mock).mock.calls[0]
       expect(url).toBe("https://api.resend.com/emails")
       const body = JSON.parse(opts.body)
-      expect(body.to).toContain("staff@aurelia.com")
+      expect(body.to).toContain("staff@aurorapormayor.com")
       expect(body.subject).toContain("invitaron")
     })
 

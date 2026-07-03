@@ -429,7 +429,7 @@ const buildMomRevenue = (
   return { thisMonth, lastMonth, growth }
 }
 
-const AureliaDashboardPage = () => {
+const AuroraDashboardPage = () => {
   const { i18n } = useTranslation()
   const isSpanish = i18n.language.toLowerCase().startsWith("es")
   const locale = isSpanish ? "es-AR" : "en-US"
@@ -444,7 +444,7 @@ const AureliaDashboardPage = () => {
         customersHint: "Clientes registrados",
         dailyOrders: "Pedidos por día — 14 días",
         dashboardDescription: "Métricas de impacto comercial para operación, pagos y cumplimiento.",
-        dashboardTitle: "Aurelia Backoffice Dashboard",
+        dashboardTitle: "Aurora Backoffice Dashboard",
         failedLoad: "No se pudieron cargar las métricas del dashboard:",
         fulfillmentMix: "Estado de cumplimiento",
         fulfillmentRate: "Tasa de cumplimiento",
@@ -498,7 +498,7 @@ const AureliaDashboardPage = () => {
         customersHint: "Registered customers",
         dailyOrders: "Orders per day — 14 days",
         dashboardDescription: "High-impact metrics for operations, payments, and fulfillment.",
-        dashboardTitle: "Aurelia Backoffice Dashboard",
+        dashboardTitle: "Aurora Backoffice Dashboard",
         failedLoad: "Failed to load dashboard metrics:",
         fulfillmentMix: "Fulfillment Status",
         fulfillmentRate: "Fulfillment Rate",
@@ -545,7 +545,7 @@ const AureliaDashboardPage = () => {
       }
 
   const { data, error, isError, isLoading } = useQuery<DashboardData>({
-    queryKey: ["aurelia-backoffice-metrics-v4", locale],
+    queryKey: ["aurora-backoffice-metrics-v4", locale],
     queryFn: async () => {
       const [ordersResult, productsResult, customersResult, ordersSampleResult, channelsResult, fulfillmentKpis] =
         await Promise.all([
@@ -794,13 +794,13 @@ const AureliaDashboardPage = () => {
                 <div className="relative h-52 w-full">
                   <svg className="h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none">
                     <defs>
-                      <linearGradient id="aureliaRevenueGradient" x1="0" x2="0" y1="0" y2="1">
+                      <linearGradient id="auroraRevenueGradient" x1="0" x2="0" y1="0" y2="1">
                         <stop offset="0%" stopColor="#0f172a" stopOpacity="0.2" />
                         <stop offset="100%" stopColor="#0f172a" stopOpacity="0" />
                       </linearGradient>
                     </defs>
                     <polygon
-                      fill="url(#aureliaRevenueGradient)"
+                      fill="url(#auroraRevenueGradient)"
                       points={`0,100 ${data.revenuePoints} 100,100`}
                     />
                     <polyline
@@ -1229,8 +1229,8 @@ const AureliaDashboardPage = () => {
 }
 
 export const config = defineRouteConfig({
-  label: "Aurelia Dashboard",
+  label: "Aurora Dashboard",
   rank: 1,
 })
 
-export default AureliaDashboardPage
+export default AuroraDashboardPage

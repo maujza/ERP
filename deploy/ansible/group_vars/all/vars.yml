@@ -22,7 +22,7 @@ storefront_origin: "https://aurorapormayor.com"
 backend_url: "https://backoffice.aurorapormayor.com"
 pos_origin: "https://pos.aurorapormayor.com"
 
-medusa_admin_email: admin@aurelia.com
+medusa_admin_email: admin@aurorapormayor.com
 medusa_force_insecure_cookies: false
 seed_demo_data: false
 
@@ -83,7 +83,7 @@ monitoring_alert_email: "alekwiek@gmail.com,maurojzalazar@gmail.com"
 # app containers by their compose service name over the erp_platform network.
 # Admin/monitoring panels (grafana/portainer/npm) are deliberately NOT here —
 # they stay tunnel-only (ssh -L), not exposed on the public domain.
-npm_admin_identity: "admin@aurelia.com"
+npm_admin_identity: "admin@aurorapormayor.com"
 npm_cert_name: "aurorapormayor.com (CF Origin)"
 npm_proxy_hosts:
   - { domain: "aurorapormayor.com", forward_host: "web", forward_port: 3000 }

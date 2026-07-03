@@ -97,7 +97,7 @@ function applyDiscount(code: string, subtotal: number): {
 } {
   const normalized = code.trim().toUpperCase();
   if (!normalized) return { amount: 0, error: t.enterCode };
-  if (normalized === "AURELIA10") {
+  if (normalized === "AURORA10") {
     return { amount: Math.round(subtotal * 0.1), error: "" };
   }
   return { amount: 0, error: t.invalidCode };
@@ -426,20 +426,20 @@ describe("applyDiscount", () => {
     expect(amount).toBe(0);
   });
 
-  it("AURELIA10 applies 10% discount", () => {
-    const { error, amount } = applyDiscount("AURELIA10", 100000);
+  it("AURORA10 applies 10% discount", () => {
+    const { error, amount } = applyDiscount("AURORA10", 100000);
     expect(error).toBe("");
     expect(amount).toBe(10000);
   });
 
-  it("AURELIA10 is case-insensitive (lowercase input)", () => {
-    const { error, amount } = applyDiscount("aurelia10", 50000);
+  it("AURORA10 is case-insensitive (lowercase input)", () => {
+    const { error, amount } = applyDiscount("aurora10", 50000);
     expect(error).toBe("");
     expect(amount).toBe(5000);
   });
 
-  it("AURELIA10 discount rounds to nearest integer", () => {
-    const { amount } = applyDiscount("AURELIA10", 10001);
+  it("AURORA10 discount rounds to nearest integer", () => {
+    const { amount } = applyDiscount("AURORA10", 10001);
     // 10001 * 0.1 = 1000.1 → rounds to 1000
     expect(amount).toBe(1000);
   });
@@ -447,13 +447,13 @@ describe("applyDiscount", () => {
   it("discount amount is 10% of the subtotal", () => {
     const subtotals = [18900, 50000, 200000, 75000];
     for (const subtotal of subtotals) {
-      const { amount } = applyDiscount("AURELIA10", subtotal);
+      const { amount } = applyDiscount("AURORA10", subtotal);
       expect(amount).toBe(Math.round(subtotal * 0.1));
     }
   });
 
-  it("AURELIA10 with surrounding whitespace is accepted", () => {
-    const { error } = applyDiscount("  AURELIA10  ", 10000);
+  it("AURORA10 with surrounding whitespace is accepted", () => {
+    const { error } = applyDiscount("  AURORA10  ", 10000);
     expect(error).toBe("");
   });
 });
@@ -608,7 +608,7 @@ describe("Order total calculation", () => {
     expect(computeTotal(100000, 3900, 15000)).toBe(88900);
   });
 
-  it("AURELIA10 with shipping gives correct total", () => {
+  it("AURORA10 with shipping gives correct total", () => {
     const subtotal = 50000;
     const shipping = 3900;
     const discount = Math.round(subtotal * 0.1); // 5000

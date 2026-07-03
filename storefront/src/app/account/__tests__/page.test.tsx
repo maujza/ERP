@@ -122,7 +122,7 @@ describe("AccountPage authenticated state", () => {
       expect(screen.getByText("Promociones disponibles")).toBeInTheDocument();
     });
 
-    expect(screen.getByRole("button", { name: /AURELIA10 copiar/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /AURORA10 copiar/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /BIENVENIDA20 copiar/i })).toBeInTheDocument();
     expect(screen.getByText("Lista de precios")).toBeInTheDocument();
     expect(screen.getByText("Nivel actual: VIP")).toBeInTheDocument();
@@ -575,7 +575,7 @@ describe("AccountPage – i18n Korean, authenticated", () => {
   it("shows Korean copy label on promo button", async () => {
     render(<AccountPage />);
     await screen.findByText("내 주문");
-    expect(screen.getByRole("button", { name: /AURELIA10 복사/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /AURORA10 복사/ })).toBeInTheDocument();
   });
 
   it("shows Korean order prefix", async () => {

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Aurelia is a bilingual (Spanish/Korean) jewelry e-commerce platform targeting the Argentine market. It is a monorepo with three main applications:
+Aurora is a bilingual (Spanish/Korean) jewelry e-commerce platform targeting the Argentine market. It is a monorepo with three main applications:
 
 - **Frontend**: Next.js 16 App Router storefront + backoffice (`/storefront`)
 - **Backend**: Medusa 2.x headless commerce (`/backend`)
@@ -111,13 +111,13 @@ The full stack runs at: frontend → `localhost:7358`, backend → `localhost:90
   - `lib/rbac.ts` — role-based access control
   - `lib/notification-recipients.ts` — helper for WhatsApp notification eligibility
 - **Seed scripts**:
-  - `seed.ts` / `seed-aurelia.ts` — **infrastructure only by default**: sales channel, ARS currency, Argentina region, tax region, Buenos Aires stock location, shipping options, publishable key, admin role. No content (categories, collections, products, inventory, customers, orders) is seeded. Set `SEED_DEMO_DATA=true` to additionally seed the demo catalog (jewelry categories, collections, ~130 products, customers, orders, `AURELIA10` promo).
+  - `seed.ts` / `seed-aurora.ts` — **infrastructure only by default**: sales channel, ARS currency, Argentina region, tax region, Buenos Aires stock location, shipping options, publishable key, admin role. No content (categories, collections, products, inventory, customers, orders) is seeded. Set `SEED_DEMO_DATA=true` to additionally seed the demo catalog (jewelry categories, collections, ~130 products, customers, orders, `AURORA10` promo).
   - `seed-e2e.ts` / `cleanup-e2e.ts` — test-scoped catalog for the E2E suites (tagged `metadata.e2e`): creates categories, collections, products + inventory; the matching cleanup removes exactly those. Wired into both Playwright suites' `globalSetup`/`globalTeardown`.
   - `seed-demo-historic.ts` — demo data for testing
   - `cleanup-seeded-orders.ts` — cleanup utility
   - `reset-demo-data.ts` — reset utility
 - **Custom admin UI** in `admin/routes/`:
-  - `aurelia-dashboard/` — sales analytics dashboard
+  - `aurora-dashboard/` — sales analytics dashboard
   - `purchase/` — purchase orders and suppliers UI
   - `fulfillment/` — fulfillment orders UI
   - `team-tasks/` — task board UI
@@ -173,11 +173,11 @@ Auth uses `emailpass` for both customers and admin users. CORS origins are confi
 - `STORE_CORS` — comma-separated CORS origins for storefront
 - `ADMIN_CORS` — comma-separated CORS origins for admin UI
 - `AUTH_CORS` — comma-separated CORS origins for auth endpoints
-- `MEDUSA_ADMIN_EMAIL` — admin user email (default: `admin@aurelia.com`)
+- `MEDUSA_ADMIN_EMAIL` — admin user email (default: `admin@aurorapormayor.com`)
 - `MEDUSA_ADMIN_PASSWORD` — admin user password (required)
 - `MEDUSA_ADMIN_URL` — admin UI URL (used in invite emails)
 - `RESEND_API_KEY` — Resend API key for transactional email (invite-created subscriber)
-- `RESEND_FROM` — sender address for Resend emails (e.g. `Aurelia <invitaciones@...>`)
+- `RESEND_FROM` — sender address for Resend emails (e.g. `Aurora <invitaciones@...>`)
 - `WHATSAPP_NOTIFICATION_RECIPIENTS` — comma-separated admin emails eligible for WhatsApp notifications
 - `WHATSAPP_NOTIFICATION_ROLES` — comma-separated roles eligible for WhatsApp notifications
 - `R2_ACCOUNT_ID` — Cloudflare account ID

@@ -1,6 +1,6 @@
 # ERP — reproducible deployment (Ansible)
 
-Idempotent provisioning of the full Aurelia ERP stack (Postgres + Medusa backend/admin
+Idempotent provisioning of the full Aurora ERP stack (Postgres + Medusa backend/admin
 + Next.js storefront + POS) on an Ubuntu VPS, served over real HTTPS via Nginx Proxy
 Manager and the `aurorapormayor.com` domains (see `docs/deploy.md` for the full production
 architecture). Run from your laptop; only SSH is required on the target.

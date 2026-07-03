@@ -51,7 +51,7 @@ const baseProduct: Product = {
   stock: 5,
   category: "Aros",
   subcategory: "Novedades",
-  brand: "Aurelia",
+  brand: "Aurora",
 };
 
 function renderCard(overrides: Partial<Product> = {}, variant?: "catalog" | "featured") {
@@ -177,7 +177,7 @@ describe("ProductCard – favorites heart", () => {
   it("persists favorite to localStorage", () => {
     renderCard();
     fireEvent.click(screen.getByRole("button", { name: "Guardar en favoritos" }));
-    const stored = JSON.parse(localStorage.getItem("aurelia_favorites") ?? "[]");
+    const stored = JSON.parse(localStorage.getItem("aurora_favorites") ?? "[]");
     expect(stored).toContain("p1");
   });
 });
