@@ -29,6 +29,11 @@ import {
   canReceivePurchaseOrder,
   canSubmitPurchaseOrder,
 } from "../../../lib/purchase-order-permissions"
+import {
+  buildAdminCreateProductPayload,
+  buildAdminCreateVariantPayload,
+  validateAdminProductDraft,
+} from "../../../lib/product-sku-form"
 import { type Role } from "../../../lib/roles"
 import { sdk } from "../../../lib/client"
 
@@ -403,10 +408,7 @@ const PurchaseOrdersPage = () => {
           variant: { id: string; title: string; sku: string | null }
         }>(`/admin/products/${targetProductId}/variants`, {
           method: "POST",
-          body: {
-            title: form.variantTitle,
-            sku: form.sku,
-          },
+          body: buildAdminCreateVariantPayload(form),
         })
         return {
           id: targetProductId,
@@ -423,11 +425,7 @@ const PurchaseOrdersPage = () => {
         }
       }>("/admin/products", {
         method: "POST",
-        body: {
-          title: form.title,
-          status: "published",
-          variants: [{ title: form.variantTitle, sku: form.sku }],
-        },
+        body: buildAdminCreateProductPayload(form),
       })
       return result.product
     },
@@ -521,22 +519,17 @@ const PurchaseOrdersPage = () => {
   }
 
   const handleCreateProduct = () => {
-    if (createMode === "new_product" && !newProductForm.title.trim()) {
-      toast.error("Product title is required")
+    const validationError = validateAdminProductDraft({
+      mode: createMode,
+      existingProductId,
+      form: newProductForm,
+    })
+
+    if (validationError) {
+      toast.error(validationError)
       return
     }
-    if (createMode === "new_variant" && !existingProductId) {
-      toast.error("Select an existing product first")
-      return
-    }
-    if (!newProductForm.variantTitle.trim()) {
-      toast.error("Variant title is required")
-      return
-    }
-    if (!newProductForm.sku.trim()) {
-      toast.error("SKU is required")
-      return
-    }
+
     createProductMutation.mutate({
       form: newProductForm,
       mode: createMode,
@@ -1010,16 +1003,22 @@ const PurchaseOrdersPage = () => {
                 />
               </div>
 
-              {/* SKU — required */}
+              {/* SKU — optional for brand-new products */}
               <div className="flex flex-col gap-y-2">
-                <Label htmlFor="np-sku">SKU *</Label>
+                <Label htmlFor="np-sku">
+                  {createMode === "new_variant" ? "SKU *" : "SKU"}
+                </Label>
                 <Input
                   id="np-sku"
                   value={newProductForm.sku}
                   onChange={(e) =>
                     setNewProductForm({ ...newProductForm, sku: e.target.value })
                   }
-                  placeholder="CHAIN-GOLD-42CM"
+                  placeholder={
+                    createMode === "new_variant"
+                      ? "CHAIN-GOLD-42CM"
+                      : "Leave blank to auto-generate"
+                  }
                 />
               </div>
 
