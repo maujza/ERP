@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-import { createManagedProduct, resolveStockLocationId } from "../_seed";
+import { adminDelete, adminGet, adminPost, createManagedProduct, resolveStockLocationId } from "../_seed";
 
 /**
  * Inventory workflow E2E — adds stock to an inventory-managed product and
@@ -14,7 +14,7 @@ test.describe("Inventory — add and verify stock for a managed product", () => 
 
   test.afterEach(async ({ request }) => {
     if (productId) {
-      await request.delete(`/admin/products/${productId}`).catch(() => null);
+      await adminDelete(request, `/admin/products/${productId}`).catch(() => null);
       productId = null;
     }
   });
@@ -25,7 +25,7 @@ test.describe("Inventory — add and verify stock for a managed product", () => 
     const locationId = await resolveStockLocationId(request);
     const QTY = 42;
 
-    const levelRes = await request.post(`/admin/inventory-items/${inventoryItemId}/location-levels`, {
+    const levelRes = await adminPost(request, `/admin/inventory-items/${inventoryItemId}/location-levels`, {
       data: { location_id: locationId, stocked_quantity: QTY },
     });
     expect(
@@ -37,7 +37,7 @@ test.describe("Inventory — add and verify stock for a managed product", () => 
     // stock. (The admin single-product endpoint does not compute
     // variant.inventory_quantity — that computed field is asserted via the store
     // API in the storefront-visibility test below.)
-    const levelsRes = await request.get(`/admin/inventory-items/${inventoryItemId}/location-levels`);
+    const levelsRes = await adminGet(request, `/admin/inventory-items/${inventoryItemId}/location-levels`);
     expect(levelsRes.ok(), `fetch levels failed (${levelsRes.status()})`).toBeTruthy();
     const { inventory_levels } = await levelsRes.json();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -51,18 +51,19 @@ test.describe("Inventory — add and verify stock for a managed product", () => 
     productId = pid;
     const locationId = await resolveStockLocationId(request);
 
-    const create = await request.post(`/admin/inventory-items/${inventoryItemId}/location-levels`, {
+    const create = await adminPost(request, `/admin/inventory-items/${inventoryItemId}/location-levels`, {
       data: { location_id: locationId, stocked_quantity: 10 },
     });
     expect(create.ok(), `create level failed (${create.status()}): ${await create.text()}`).toBeTruthy();
 
-    const update = await request.post(
+    const update = await adminPost(
+      request,
       `/admin/inventory-items/${inventoryItemId}/location-levels/${locationId}`,
       { data: { stocked_quantity: 75 } }
     );
     expect(update.ok(), `update level failed (${update.status()}): ${await update.text()}`).toBeTruthy();
 
-    const levelsRes = await request.get(`/admin/inventory-items/${inventoryItemId}/location-levels`);
+    const levelsRes = await adminGet(request, `/admin/inventory-items/${inventoryItemId}/location-levels`);
     const { inventory_levels } = await levelsRes.json();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const level = inventory_levels?.find((l: any) => l.location_id === locationId);
@@ -75,13 +76,13 @@ test.describe("Inventory — add and verify stock for a managed product", () => 
     const locationId = await resolveStockLocationId(request);
     const QTY = 30;
 
-    const levelRes = await request.post(`/admin/inventory-items/${inventoryItemId}/location-levels`, {
+    const levelRes = await adminPost(request, `/admin/inventory-items/${inventoryItemId}/location-levels`, {
       data: { location_id: locationId, stocked_quantity: QTY },
     });
     expect(levelRes.ok(), `create level failed (${levelRes.status()}): ${await levelRes.text()}`).toBeTruthy();
 
     // The storefront reads stock through the publishable-key-scoped store API.
-    const keysRes = await request.get("/admin/api-keys?fields=id,token,type&limit=20");
+    const keysRes = await adminGet(request, "/admin/api-keys?fields=id,token,type&limit=20");
     expect(keysRes.ok(), `fetch api-keys failed (${keysRes.status()})`).toBeTruthy();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const publishableKey = (await keysRes.json()).api_keys?.find((k: any) => k.type === "publishable")?.token;

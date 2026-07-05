@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { createFreshOrder } from "../_seed";
+import { adminGet, adminPost, createFreshOrder } from "../_seed";
 
 test.describe("Fulfillment — Order lifecycle", () => {
   test("navigates to fulfillment orders list", async ({ page }) => {
@@ -16,8 +16,8 @@ test.describe("Fulfillment — Order lifecycle", () => {
   });
 
   test("fulfillment KPI API returns non-500", async ({ page }) => {
-    const response = await page.request.get("/admin/fulfillment/kpis");
-    expect([200, 401].includes(response.status())).toBeTruthy();
+    const response = await adminGet(page.request, "/admin/fulfillment/kpis");
+    expect(response.status()).toBe(200);
   });
 
   // The fulfillment list shows orders that have a fulfillment record. Seed a
@@ -29,12 +29,12 @@ test.describe("Fulfillment — Order lifecycle", () => {
 
     test.beforeEach(async ({ request }) => {
       orderId = await createFreshOrder(request);
-      const pick = await request.post(`/admin/fulfillment/orders/${orderId}/pick`);
+      const pick = await adminPost(request, `/admin/fulfillment/orders/${orderId}/pick`);
       expect(pick.status(), `start picking failed: ${await pick.text()}`).toBe(200);
     });
 
     test.afterEach(async ({ request }) => {
-      await request.post(`/admin/orders/${orderId}/cancel`, { data: {} }).catch(() => null);
+      await adminPost(request, `/admin/orders/${orderId}/cancel`, { data: {} }).catch(() => null);
     });
 
     test("picked order appears in the fulfillment list", async ({ page }) => {
@@ -63,24 +63,24 @@ test.describe("Fulfillment — Order lifecycle", () => {
 
     test.afterAll(async ({ request }) => {
       // Dispatched orders are terminal and can't be cancelled — ignore that failure.
-      await request.post(`/admin/orders/${orderId}/cancel`, { data: {} }).catch(() => null);
+      await adminPost(request, `/admin/orders/${orderId}/cancel`, { data: {} }).catch(() => null);
     });
 
     test("startPickingWorkflow returns 200", async ({ request }) => {
       orderId = await createFreshOrder(request);
-      const response = await request.post(`/admin/fulfillment/orders/${orderId}/pick`);
+      const response = await adminPost(request, `/admin/fulfillment/orders/${orderId}/pick`);
       expect(response.status(), await response.text()).toBe(200);
     });
 
     test("confirmPackWorkflow returns 200", async ({ request }) => {
-      const response = await request.post(`/admin/fulfillment/orders/${orderId}/pack`, {
+      const response = await adminPost(request, `/admin/fulfillment/orders/${orderId}/pack`, {
         data: { packed_weight: 1.5, packed_dimensions: "20x15x10" },
       });
       expect(response.status(), await response.text()).toBe(200);
     });
 
     test("dispatchOrderWorkflow returns 200", async ({ request }) => {
-      const response = await request.post(`/admin/fulfillment/orders/${orderId}/dispatch`, {
+      const response = await adminPost(request, `/admin/fulfillment/orders/${orderId}/dispatch`, {
         data: { tracking_number: `E2E-${Date.now()}` },
       });
       expect(response.status(), await response.text()).toBe(200);

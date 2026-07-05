@@ -25,6 +25,8 @@ import {
   deleteProductsWorkflow,
 } from "@medusajs/medusa/core-flows";
 
+const QUERY_PAGE_SIZE = 500;
+
 export default async function cleanupE2EData({ container }: ExecArgs) {
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER);
   const query = container.resolve(ContainerRegistrationKeys.QUERY);
@@ -35,6 +37,7 @@ export default async function cleanupE2EData({ container }: ExecArgs) {
   const { data: customers } = await query.graph({
     entity: "customer",
     fields: ["id", "email"],
+    pagination: { take: QUERY_PAGE_SIZE, skip: 0 },
   });
   const e2eCustomers = (customers as Array<{ id: string; email?: string | null }>)
     .filter((c) => /^e2e-(acct|ui)-/.test(c.email ?? ""));
@@ -51,6 +54,7 @@ export default async function cleanupE2EData({ container }: ExecArgs) {
         entity: "order",
         fields: ["id", "status"],
         filters: { customer_id: customer.id },
+        pagination: { take: QUERY_PAGE_SIZE, skip: 0 },
       });
       for (const order of orders as Array<{ id: string; status: string }>) {
         if (!["canceled", "completed"].includes(order.status)) {
@@ -87,6 +91,7 @@ export default async function cleanupE2EData({ container }: ExecArgs) {
   const { data: products } = await query.graph({
     entity: "product",
     fields: ["id", "handle", "metadata"],
+    pagination: { take: QUERY_PAGE_SIZE, skip: 0 },
   });
   const productIds = (products as Array<{ id: string; handle?: string | null; metadata?: Record<string, unknown> | null }>)
     .filter((p) => p?.metadata?.e2e === "true" || String(p.handle ?? "").startsWith("e2e-"))
@@ -116,6 +121,7 @@ export default async function cleanupE2EData({ container }: ExecArgs) {
   const { data: collections } = await query.graph({
     entity: "product_collection",
     fields: ["id", "title", "metadata"],
+    pagination: { take: QUERY_PAGE_SIZE, skip: 0 },
   });
   const collectionIds = (collections as Array<{ id: string; metadata?: Record<string, unknown> | null }>)
     .filter((c) => c?.metadata?.e2e === "true")
@@ -130,6 +136,7 @@ export default async function cleanupE2EData({ container }: ExecArgs) {
   const { data: categories } = await query.graph({
     entity: "product_category",
     fields: ["id", "name", "metadata"],
+    pagination: { take: QUERY_PAGE_SIZE, skip: 0 },
   });
   const categoryIds = (categories as Array<{ id: string; metadata?: Record<string, unknown> | null }>)
     .filter((c) => c?.metadata?.e2e === "true")
@@ -141,7 +148,11 @@ export default async function cleanupE2EData({ container }: ExecArgs) {
   }
 
   // ── Delete orphaned E2E inventory items ─────────────────────────────────────
-  const { data: invItems } = await query.graph({ entity: "inventory_item", fields: ["id", "sku"] });
+  const { data: invItems } = await query.graph({
+    entity: "inventory_item",
+    fields: ["id", "sku"],
+    pagination: { take: QUERY_PAGE_SIZE, skip: 0 },
+  });
   const e2eItemIds = (invItems as Array<{ id: string; sku?: string | null }>)
     .filter((i) => String(i.sku ?? "").startsWith("E2E-"))
     .map((i) => i.id);

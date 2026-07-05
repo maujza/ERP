@@ -11,6 +11,50 @@
  * calls satisfy the requireRole() gates the same way a logged-in admin would.
  */
 import { APIRequestContext, expect } from "@playwright/test";
+import { resolveAdminCredentials } from "./admin-env";
+
+let cachedAdminHeaders: Record<string, string> | null = null;
+
+async function getAdminHeaders(request: APIRequestContext): Promise<Record<string, string>> {
+  if (cachedAdminHeaders) {
+    return cachedAdminHeaders;
+  }
+
+  const { email, password } = resolveAdminCredentials();
+  const loginRes = await request.post("/auth/user/emailpass", {
+    data: { email, password },
+  });
+  expect(loginRes.ok(), `admin login failed (${loginRes.status()}): ${await loginRes.text()}`).toBeTruthy();
+  const token = (await loginRes.json()).token as string | undefined;
+  expect(token, "admin auth token expected").toBeTruthy();
+
+  cachedAdminHeaders = { Authorization: `Bearer ${token}` };
+  return cachedAdminHeaders;
+}
+
+export async function adminGet(request: APIRequestContext, url: string, options: Record<string, unknown> = {}) {
+  const headers = await getAdminHeaders(request);
+  return request.get(url, {
+    ...options,
+    headers: { ...headers, ...((options.headers as Record<string, string> | undefined) ?? {}) },
+  });
+}
+
+export async function adminPost(request: APIRequestContext, url: string, options: Record<string, unknown> = {}) {
+  const headers = await getAdminHeaders(request);
+  return request.post(url, {
+    ...options,
+    headers: { ...headers, ...((options.headers as Record<string, string> | undefined) ?? {}) },
+  });
+}
+
+export async function adminDelete(request: APIRequestContext, url: string, options: Record<string, unknown> = {}) {
+  const headers = await getAdminHeaders(request);
+  return request.delete(url, {
+    ...options,
+    headers: { ...headers, ...((options.headers as Record<string, string> | undefined) ?? {}) },
+  });
+}
 
 /**
  * Ensures a *draft* purchase order exists and returns its id. Reuses an existing
@@ -19,14 +63,14 @@ import { APIRequestContext, expect } from "@playwright/test";
  * because the submit action is only offered on draft orders.
  */
 export async function ensureDraftPurchaseOrder(request: APIRequestContext): Promise<string> {
-  const listed = await request.get("/admin/purchase/orders?limit=100&fields=id,status");
+  const listed = await adminGet(request, "/admin/purchase/orders?limit=100&fields=id,status");
   if (listed.ok()) {
     const { orders } = await listed.json();
     const draft = orders?.find((o: { status?: string }) => o.status === "draft");
     if (draft?.id) return draft.id;
   }
 
-  const supplierRes = await request.post("/admin/purchase/suppliers", {
+  const supplierRes = await adminPost(request, "/admin/purchase/suppliers", {
     data: { name: `E2E Seed Supplier ${Date.now()}` },
   });
   expect(
@@ -37,13 +81,13 @@ export async function ensureDraftPurchaseOrder(request: APIRequestContext): Prom
   const supplierId = supplierBody?.supplier?.id ?? supplierBody?.id;
   expect(supplierId, "seed supplier should return an id").toBeTruthy();
 
-  const productsRes = await request.get("/admin/products?limit=1&fields=id,variants.id");
+  const productsRes = await adminGet(request, "/admin/products?limit=1&fields=id,variants.id");
   expect(productsRes.ok(), `fetch products failed (${productsRes.status()})`).toBeTruthy();
   const { products } = await productsRes.json();
   const variantId = products?.[0]?.variants?.[0]?.id;
   expect(variantId, "need at least one product variant to seed a purchase order").toBeTruthy();
 
-  const poRes = await request.post("/admin/purchase/orders", {
+  const poRes = await adminPost(request, "/admin/purchase/orders", {
     data: {
       supplier_id: supplierId,
       items: [{ variant_id: variantId, quantity: 1, unit_cost: 100 }],
@@ -56,7 +100,7 @@ export async function ensureDraftPurchaseOrder(request: APIRequestContext): Prom
 
   // Resolve the new draft's id (re-query to stay agnostic of the create
   // workflow's response shape).
-  const after = await request.get("/admin/purchase/orders?limit=100&fields=id,status");
+  const after = await adminGet(request, "/admin/purchase/orders?limit=100&fields=id,status");
   const draft = (await after.json()).orders?.find(
     (o: { status?: string }) => o.status === "draft"
   );
@@ -79,21 +123,21 @@ export async function createFreshOrder(
   variantId?: string
 ): Promise<string> {
   // Store config, fetched live via the admin API.
-  const keysRes = await request.get("/admin/api-keys?fields=id,token,type&limit=20");
+  const keysRes = await adminGet(request, "/admin/api-keys?fields=id,token,type&limit=20");
   expect(keysRes.ok(), `fetch api-keys failed (${keysRes.status()})`).toBeTruthy();
   const publishableKey = (await keysRes.json()).api_keys?.find(
     (k: { type?: string }) => k.type === "publishable"
   )?.token;
   expect(publishableKey, "a publishable API key is required to create a store order").toBeTruthy();
 
-  const regionRes = await request.get("/admin/regions?fields=id,countries.iso_2&limit=1");
+  const regionRes = await adminGet(request, "/admin/regions?fields=id,countries.iso_2&limit=1");
   const region = (await regionRes.json()).regions?.[0];
   expect(region?.id, "a region is required to create a store order").toBeTruthy();
   const countryCode = region.countries?.[0]?.iso_2 ?? "ar";
 
   let resolvedVariantId = variantId;
   if (!resolvedVariantId) {
-    const productsRes = await request.get("/admin/products?limit=1&fields=id,variants.id");
+    const productsRes = await adminGet(request, "/admin/products?limit=1&fields=id,variants.id");
     resolvedVariantId = (await productsRes.json()).products?.[0]?.variants?.[0]?.id;
   }
   expect(resolvedVariantId, "a product variant is required to create a store order").toBeTruthy();
@@ -170,7 +214,7 @@ export async function createTask(
   request: APIRequestContext,
   title = `E2E Seed Task ${Date.now()}`
 ): Promise<{ id: string; title: string }> {
-  const res = await request.post("/admin/team-tasks", {
+  const res = await adminPost(request, "/admin/team-tasks", {
     data: { title, status: "todo", priority: "low" },
   });
   expect(
@@ -185,7 +229,7 @@ export async function createTask(
 
 /** Resolves a stock location id, preferring "Buenos Aires" (the seeded one). */
 export async function resolveStockLocationId(request: APIRequestContext): Promise<string> {
-  const res = await request.get("/admin/stock-locations?fields=id,name&limit=100");
+  const res = await adminGet(request, "/admin/stock-locations?fields=id,name&limit=100");
   expect(res.ok(), `fetch stock-locations failed (${res.status()})`).toBeTruthy();
   const { stock_locations } = await res.json();
   const ba = stock_locations?.find((l: { name?: string }) => l.name === "Buenos Aires");
@@ -196,7 +240,7 @@ export async function resolveStockLocationId(request: APIRequestContext): Promis
 
 /** Resolves the default sales channel id (publishable key + storefront live here). */
 export async function resolveDefaultSalesChannelId(request: APIRequestContext): Promise<string> {
-  const res = await request.get("/admin/sales-channels?fields=id,name&limit=100");
+  const res = await adminGet(request, "/admin/sales-channels?fields=id,name&limit=100");
   expect(res.ok(), `fetch sales-channels failed (${res.status()})`).toBeTruthy();
   const { sales_channels } = await res.json();
   const def = sales_channels?.find((c: { name?: string }) => c.name === "Default Sales Channel");
@@ -227,7 +271,7 @@ export async function createManagedProduct(
   const sku = overrides.sku ?? `E2E-INV-${stamp}`;
   const title = overrides.title ?? `E2E Inventory Product ${stamp}`;
 
-  const createRes = await request.post("/admin/products", {
+  const createRes = await adminPost(request, "/admin/products", {
     data: {
       title,
       status: overrides.status ?? "published",
@@ -262,7 +306,8 @@ async function resolveInventoryItemId(
   productId: string,
   sku: string
 ): Promise<string> {
-  const viaProduct = await request.get(
+  const viaProduct = await adminGet(
+    request,
     `/admin/products/${productId}?fields=variants.id,variants.inventory_items.inventory.id,variants.inventory_items.inventory_item_id`
   );
   if (viaProduct.ok()) {
@@ -272,7 +317,8 @@ async function resolveInventoryItemId(
     const id = link?.inventory?.id ?? link?.inventory_item_id;
     if (id) return id;
   }
-  const viaSku = await request.get(
+  const viaSku = await adminGet(
+    request,
     `/admin/inventory-items?q=${encodeURIComponent(sku)}&fields=id,sku&limit=10`
   );
   expect(viaSku.ok(), `inventory-items lookup failed (${viaSku.status()})`).toBeTruthy();
@@ -285,7 +331,7 @@ async function resolveInventoryItemId(
 
 /** Resolves the storefront publishable API key (needed for all /store calls). */
 export async function getPublishableKey(request: APIRequestContext): Promise<string> {
-  const res = await request.get("/admin/api-keys?fields=id,token,type&limit=20");
+  const res = await adminGet(request, "/admin/api-keys?fields=id,token,type&limit=20");
   expect(res.ok(), `fetch api-keys failed (${res.status()})`).toBeTruthy();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const token = (await res.json()).api_keys?.find((k: any) => k.type === "publishable")?.token;
@@ -343,7 +389,8 @@ export async function registerCustomer(
 
 /** Captures every authorized payment on an order → payment_status "captured". */
 export async function captureOrderPayment(request: APIRequestContext, orderId: string): Promise<void> {
-  const res = await request.get(
+  const res = await adminGet(
+    request,
     `/admin/orders/${orderId}?fields=payment_collections.payments.id,payment_collections.payments.amount`
   );
   expect(res.ok(), `fetch order payments failed (${res.status()})`).toBeTruthy();
@@ -352,7 +399,7 @@ export async function captureOrderPayment(request: APIRequestContext, orderId: s
   const payments = (order.payment_collections ?? []).flatMap((pc: any) => pc.payments ?? []);
   expect(payments.length, "order should have a payment to capture").toBeGreaterThan(0);
   for (const payment of payments) {
-    const cap = await request.post(`/admin/payments/${payment.id}/capture`, { data: {} });
+    const cap = await adminPost(request, `/admin/payments/${payment.id}/capture`, { data: {} });
     expect(cap.ok(), `capture failed (${cap.status()}): ${await cap.text()}`).toBeTruthy();
   }
 }
@@ -368,7 +415,7 @@ export async function fulfillOrder(
   opts: { ship?: boolean; deliver?: boolean } = {}
 ): Promise<void> {
   const locationId = await resolveStockLocationId(request);
-  const itemsRes = await request.get(`/admin/orders/${orderId}?fields=*items`);
+  const itemsRes = await adminGet(request, `/admin/orders/${orderId}?fields=*items`);
   expect(itemsRes.ok(), `fetch order items failed (${itemsRes.status()})`).toBeTruthy();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const items = ((await itemsRes.json()).order.items ?? []).map((i: any) => ({
@@ -377,25 +424,26 @@ export async function fulfillOrder(
   }));
   expect(items.length, "order should have items to fulfill").toBeGreaterThan(0);
 
-  const fulRes = await request.post(`/admin/orders/${orderId}/fulfillments`, {
+  const fulRes = await adminPost(request, `/admin/orders/${orderId}/fulfillments`, {
     data: { items, location_id: locationId },
   });
   expect(fulRes.ok(), `create fulfillment failed (${fulRes.status()}): ${await fulRes.text()}`).toBeTruthy();
 
   if (!opts.ship && !opts.deliver) return;
 
-  const fidRes = await request.get(`/admin/orders/${orderId}?fields=fulfillments.id`);
+  const fidRes = await adminGet(request, `/admin/orders/${orderId}?fields=fulfillments.id`);
   const fulfillments = (await fidRes.json()).order.fulfillments ?? [];
   const fid = fulfillments[fulfillments.length - 1]?.id;
   expect(fid, "fulfillment id expected").toBeTruthy();
 
-  const shipRes = await request.post(`/admin/orders/${orderId}/fulfillments/${fid}/shipments`, {
+  const shipRes = await adminPost(request, `/admin/orders/${orderId}/fulfillments/${fid}/shipments`, {
     data: { items },
   });
   expect(shipRes.ok(), `ship failed (${shipRes.status()}): ${await shipRes.text()}`).toBeTruthy();
 
   if (opts.deliver) {
-    const delRes = await request.post(
+    const delRes = await adminPost(
+      request,
       `/admin/orders/${orderId}/fulfillments/${fid}/mark-as-delivered`,
       { data: {} }
     );
@@ -416,7 +464,7 @@ export async function createOrderableProduct(request: APIRequestContext): Promis
   const salesChannelId = await resolveDefaultSalesChannelId(request);
   const locationId = await resolveStockLocationId(request);
 
-  const spRes = await request.get("/admin/shipping-profiles?fields=id,type&limit=10");
+  const spRes = await adminGet(request, "/admin/shipping-profiles?fields=id,type&limit=10");
   expect(spRes.ok(), `fetch shipping-profiles failed (${spRes.status()})`).toBeTruthy();
   const profiles = (await spRes.json()).shipping_profiles ?? [];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -424,7 +472,7 @@ export async function createOrderableProduct(request: APIRequestContext): Promis
   expect(shippingProfileId, "a default shipping profile is required").toBeTruthy();
 
   const sku = `E2E-ORD-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
-  const createRes = await request.post("/admin/products", {
+  const createRes = await adminPost(request, "/admin/products", {
     data: {
       title: `E2E Orderable ${sku}`,
       status: "published",
@@ -451,7 +499,7 @@ export async function createOrderableProduct(request: APIRequestContext): Promis
   expect(variantId, "orderable product variant id expected").toBeTruthy();
 
   const inventoryItemId = await resolveInventoryItemId(request, product.id, sku);
-  const levelRes = await request.post(`/admin/inventory-items/${inventoryItemId}/location-levels`, {
+  const levelRes = await adminPost(request, `/admin/inventory-items/${inventoryItemId}/location-levels`, {
     data: { location_id: locationId, stocked_quantity: 50 },
   });
   expect(levelRes.ok(), `set inventory level failed (${levelRes.status()}): ${await levelRes.text()}`).toBeTruthy();

@@ -46,6 +46,7 @@ const E2E_PRODUCTS = [
 
 const E2E_IMAGE =
   "https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?auto=format&fit=crop&w=600&q=80";
+const QUERY_PAGE_SIZE = 500;
 
 export default async function seedE2EData({ container }: ExecArgs) {
   const logger = container.resolve(ContainerRegistrationKeys.LOGGER);
@@ -65,6 +66,7 @@ export default async function seedE2EData({ container }: ExecArgs) {
   const { data: locations } = await query.graph({
     entity: "stock_location",
     fields: ["id", "name"],
+    pagination: { take: QUERY_PAGE_SIZE, skip: 0 },
   });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const baLocation = (locations as any[]).find((l) => l.name === "Buenos Aires") ?? locations[0];
@@ -76,7 +78,11 @@ export default async function seedE2EData({ container }: ExecArgs) {
   const shippingProfiles = await fulfillmentModuleService.listShippingProfiles({ type: "default" });
   const shippingProfile = shippingProfiles[0];
 
-  const { data: cats } = await query.graph({ entity: "product_category", fields: ["id", "name"] });
+  const { data: cats } = await query.graph({
+    entity: "product_category",
+    fields: ["id", "name"],
+    pagination: { take: QUERY_PAGE_SIZE, skip: 0 },
+  });
   const categoryMap: Record<string, string> = {};
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (cats as any[]).forEach((c) => { categoryMap[c.name] = c.id; });
@@ -101,7 +107,11 @@ export default async function seedE2EData({ container }: ExecArgs) {
     logger.info(`seed-e2e: created ${categoriesToCreate.length} E2E category(ies): ${categoriesToCreate.join(", ")}.`);
   }
 
-  const { data: cols } = await query.graph({ entity: "product_collection", fields: ["id", "title"] });
+  const { data: cols } = await query.graph({
+    entity: "product_collection",
+    fields: ["id", "title"],
+    pagination: { take: QUERY_PAGE_SIZE, skip: 0 },
+  });
   const collectionMap: Record<string, string> = {};
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (cols as any[]).forEach((c) => { collectionMap[c.title] = c.id; });
@@ -128,7 +138,11 @@ export default async function seedE2EData({ container }: ExecArgs) {
   }
 
   // ── Create the tagged E2E products (idempotent by handle) ───────────────────
-  const { data: existingProducts } = await query.graph({ entity: "product", fields: ["id", "handle"] });
+  const { data: existingProducts } = await query.graph({
+    entity: "product",
+    fields: ["id", "handle"],
+    pagination: { take: QUERY_PAGE_SIZE, skip: 0 },
+  });
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const existingHandles = new Set((existingProducts as any[]).map((p) => p.handle));
   const toCreate = E2E_PRODUCTS.filter((p) => !existingHandles.has(p.handle));
@@ -170,7 +184,11 @@ export default async function seedE2EData({ container }: ExecArgs) {
   }
 
   // ── Inventory levels for the E2E variants at Buenos Aires ────────────────────
-  const { data: invItems } = await query.graph({ entity: "inventory_item", fields: ["id", "sku"] });
+  const { data: invItems } = await query.graph({
+    entity: "inventory_item",
+    fields: ["id", "sku"],
+    pagination: { take: QUERY_PAGE_SIZE, skip: 0 },
+  });
   const e2eItems = (invItems as Array<{ id: string; sku?: string | null }>).filter((i) =>
     String(i.sku ?? "").startsWith("E2E-")
   );

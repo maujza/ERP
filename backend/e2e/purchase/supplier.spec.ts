@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { adminGet } from "../_seed";
 
 test.describe("Purchase — Supplier workflows", () => {
   test("navigates to suppliers list", async ({ page }) => {
@@ -27,7 +28,7 @@ test.describe("Purchase — Supplier workflows", () => {
   });
 
   test("views supplier detail page", async ({ page }) => {
-    const res = await page.request.get("/admin/purchase/suppliers");
+    const res = await adminGet(page.request, "/admin/purchase/suppliers");
     const json = await res.json();
     const id = json?.suppliers?.[0]?.id ?? json?.[0]?.id;
     if (!id) { test.skip(); return; }

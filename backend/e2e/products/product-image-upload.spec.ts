@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import sharp from "sharp";
+import { adminDelete, adminPost } from "../_seed";
 
 /**
  * Minimal 1×1 transparent PNG (67 bytes) embedded directly so the test needs
@@ -31,13 +32,13 @@ test.describe("Product — image upload to Cloudflare R2", () => {
 
   test.afterEach(async ({ request }) => {
     if (productId) {
-      await request.delete(`/admin/products/${productId}`).catch(() => null);
+      await adminDelete(request, `/admin/products/${productId}`).catch(() => null);
       productId = null;
     }
   });
 
   test("upload endpoint returns an R2 URL", async ({ request }) => {
-    const res = await request.post("/admin/uploads", {
+    const res = await adminPost(request, "/admin/uploads", {
       multipart: {
         files: {
           name: "test-upload.png",
@@ -57,7 +58,7 @@ test.describe("Product — image upload to Cloudflare R2", () => {
   });
 
   test("uploaded image is publicly reachable via HTTP GET", async ({ request }) => {
-    const uploadRes = await request.post("/admin/uploads", {
+    const uploadRes = await adminPost(request, "/admin/uploads", {
       multipart: {
         files: {
           name: "test-reach.png",
@@ -80,7 +81,7 @@ test.describe("Product — image upload to Cloudflare R2", () => {
 
   test("product created with uploaded image stores the R2 URL as thumbnail", async ({ request }) => {
     // 1. Upload the image
-    const uploadRes = await request.post("/admin/uploads", {
+    const uploadRes = await adminPost(request, "/admin/uploads", {
       multipart: {
         files: {
           name: "test-thumbnail.png",
@@ -96,7 +97,7 @@ test.describe("Product — image upload to Cloudflare R2", () => {
 
     // 2. Create a draft product with that image as thumbnail.
     //    Medusa requires at least one option and one variant on creation.
-    const createRes = await request.post("/admin/products", {
+    const createRes = await adminPost(request, "/admin/products", {
       data: {
         title: `E2E R2 Upload Test ${Date.now()}`,
         status: "draft",
@@ -132,7 +133,7 @@ test.describe("Product — image upload to Cloudflare R2", () => {
       .png()
       .toBuffer();
 
-    const res = await request.post("/admin/uploads", {
+    const res = await adminPost(request, "/admin/uploads", {
       multipart: { files: { name: "large-source.png", mimeType: "image/png", buffer: largePng } },
     });
     expect(res.ok(), `Upload failed (${res.status()}): ${await res.text()}`).toBeTruthy();
@@ -153,7 +154,7 @@ test.describe("Product — image upload to Cloudflare R2", () => {
 
   test("product created with multiple images stores every R2 URL", async ({ request }) => {
     const upload = async (name: string): Promise<string> => {
-      const r = await request.post("/admin/uploads", {
+      const r = await adminPost(request, "/admin/uploads", {
         multipart: { files: { name, mimeType: "image/png", buffer: TINY_PNG } },
       });
       expect(r.ok(), `Upload ${name} failed (${r.status()})`).toBeTruthy();
@@ -163,7 +164,7 @@ test.describe("Product — image upload to Cloudflare R2", () => {
     const urls = [await upload("m1.png"), await upload("m2.png"), await upload("m3.png")];
     test.skip(!urls.every(isR2Url), "R2 not configured — uploads returned non-R2 URLs");
 
-    const createRes = await request.post("/admin/products", {
+    const createRes = await adminPost(request, "/admin/products", {
       data: {
         title: `E2E Multi-Image ${Date.now()}`,
         status: "draft",

@@ -20,6 +20,12 @@ import { loadEnv, defineConfig } from '@medusajs/framework/utils'
 // Load environment variables from the .env file before any process.env access below
 loadEnv(process.env.NODE_ENV || 'development', process.cwd())
 
+// The Medusa dashboard login flow returns a JWT and persists it under this key.
+// Compiling the dashboard with session auth causes /admin/users/me to 401 after
+// a successful login, which bounces the user back to /app/login.
+process.env.ADMIN_AUTH_TYPE ??= "jwt"
+process.env.ADMIN_JWT_TOKEN_STORAGE_KEY ??= "medusa_auth_token"
+
 // In development, cookies can't be marked `secure` because the site runs over http://
 // Set MEDUSA_FORCE_INSECURE_COOKIES=true in .env to allow cookies over plain http
 const forceInsecureCookies = process.env.MEDUSA_FORCE_INSECURE_COOKIES === "true"

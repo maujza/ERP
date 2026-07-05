@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { ensureDraftPurchaseOrder } from "../_seed";
+import { adminGet, ensureDraftPurchaseOrder } from "../_seed";
 
 test.describe("Purchase — Order lifecycle", () => {
   // Guarantee a draft purchase order exists (and capture its id) so the
@@ -55,12 +55,12 @@ test.describe("Purchase — Order lifecycle", () => {
   });
 
   test("purchase orders API returns non-500", async ({ page }) => {
-    const response = await page.request.get("/admin/purchase/orders");
+    const response = await adminGet(page.request, "/admin/purchase/orders");
     expect([200, 401].includes(response.status())).toBeTruthy();
   });
 
   test("suppliers API returns non-500", async ({ page }) => {
-    const response = await page.request.get("/admin/purchase/suppliers");
+    const response = await adminGet(page.request, "/admin/purchase/suppliers");
     expect([200, 401].includes(response.status())).toBeTruthy();
   });
 });

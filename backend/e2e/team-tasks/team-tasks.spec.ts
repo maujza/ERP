@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { createTask } from "../_seed";
+import { adminDelete, adminGet, createTask } from "../_seed";
 
 test.describe("Team Tasks — board CRUD", () => {
   test("navigates to team tasks board", async ({ page }) => {
@@ -16,7 +16,7 @@ test.describe("Team Tasks — board CRUD", () => {
   });
 
   test("team-tasks API returns non-500", async ({ page }) => {
-    const response = await page.request.get("/admin/team-tasks");
+    const response = await adminGet(page.request, "/admin/team-tasks");
     expect([200, 401].includes(response.status())).toBeTruthy();
   });
 
@@ -69,7 +69,7 @@ test.describe("Team Tasks — board CRUD", () => {
     // Create via API then delete to verify the DELETE endpoint works.
     const { id } = await createTask(request, `E2E Delete Test ${Date.now()}`);
 
-    const deleteRes = await request.delete(`/admin/team-tasks/${id}`);
+    const deleteRes = await adminDelete(request, `/admin/team-tasks/${id}`);
     expect([200, 204].includes(deleteRes.status())).toBeTruthy();
   });
 });

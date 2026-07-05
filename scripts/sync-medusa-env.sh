@@ -23,7 +23,11 @@ if [ "${1:-}" = "--project" ]; then
 fi
 
 compose() {
-  docker compose "${COMPOSE_PROJECT_ARGS[@]}" "$@"
+  if [ "${#COMPOSE_PROJECT_ARGS[@]}" -gt 0 ]; then
+    docker compose "${COMPOSE_PROJECT_ARGS[@]}" "$@"
+  else
+    docker compose "$@"
+  fi
 }
 
 if ! command -v docker >/dev/null 2>&1; then

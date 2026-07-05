@@ -1,26 +1,5 @@
-import { readFileSync } from "node:fs";
-import path from "node:path";
 import { APIRequestContext, expect } from "@playwright/test";
-
-/**
- * Reads a single KEY=VALUE entry from storefront/.env.development. Playwright
- * doesn't load .env files, so this is the only way to pick up the publishable
- * key/region that scripts/sync-medusa-env.sh keeps in sync with the database.
- */
-function readDevEnvVar(key: string): string | undefined {
-  const envPath = path.resolve(__dirname, "../.env.development");
-  let contents: string;
-  try {
-    contents = readFileSync(envPath, "utf-8");
-  } catch {
-    return undefined;
-  }
-  for (const line of contents.split("\n")) {
-    const [k, ...rest] = line.split("=");
-    if (k === key) return rest.join("=").trim();
-  }
-  return undefined;
-}
+import { resolveBackendAdminCredentials, resolveStorefrontPublishableKey } from "../src/lib/e2e-env";
 
 /**
  * API helpers for the storefront account E2E. These talk directly to the Medusa
@@ -40,8 +19,7 @@ if (!process.env.BACKEND_URL) {
   );
 }
 export const BACKEND_URL: string = process.env.BACKEND_URL;
-const _publishableKey =
-  process.env.NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY ?? readDevEnvVar("NEXT_PUBLIC_MEDUSA_PUBLISHABLE_KEY");
+const _publishableKey = resolveStorefrontPublishableKey();
 
 if (!_publishableKey) {
   throw new Error(
@@ -51,8 +29,7 @@ if (!_publishableKey) {
 }
 
 export const PUBLISHABLE_KEY: string = _publishableKey;
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "admin@aurorapormayor.com";
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "supersecret";
+const { email: ADMIN_EMAIL, password: ADMIN_PASSWORD } = resolveBackendAdminCredentials();
 
 export type StoreCustomer = {
   customerId: string;

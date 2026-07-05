@@ -1,6 +1,9 @@
 import { test, expect } from "@playwright/test";
 
 import {
+  adminDelete,
+  adminGet,
+  adminPost,
   captureOrderPayment,
   createFreshOrder,
   createOrderableProduct,
@@ -30,15 +33,15 @@ test.describe("Customer account workflow", () => {
     // their dedicated products can then be deleted. Delivered orders cannot be
     // cancelled (and hold no reservation) — ignore those failures.
     for (const orderId of orderIds) {
-      await request.post(`/admin/orders/${orderId}/cancel`, { data: {} }).catch(() => null);
+      await adminPost(request, `/admin/orders/${orderId}/cancel`, { data: {} }).catch(() => null);
     }
     for (const productId of productIds) {
-      await request.delete(`/admin/products/${productId}`).catch(() => null);
+      await adminDelete(request, `/admin/products/${productId}`).catch(() => null);
     }
     orderIds = [];
     productIds = [];
     if (customer) {
-      await request.delete(`/admin/customers/${customer.customerId}`).catch(() => null);
+      await adminDelete(request, `/admin/customers/${customer.customerId}`).catch(() => null);
       customer = null;
     }
   });
@@ -48,7 +51,8 @@ test.describe("Customer account workflow", () => {
   }) => {
     customer = await registerCustomer(request, { firstName: "Valentina", lastName: "Gómez" });
 
-    const res = await request.get(
+    const res = await adminGet(
+      request,
       `/admin/customers?q=${encodeURIComponent(customer.email)}&fields=id,email,first_name,last_name`
     );
     expect(res.ok(), `admin customer lookup failed (${res.status()})`).toBeTruthy();
